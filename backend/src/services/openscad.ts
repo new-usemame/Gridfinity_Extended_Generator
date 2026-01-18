@@ -71,11 +71,11 @@ wall_pattern_spacing = ${config.wallPatternSpacing};
 
 /* [Constants] */
 // SIMPLE TAPER foot - ONE taper from small bottom to larger top
-// foot_lower_taper_height + foot_riser_height = total foot taper height
-// foot_upper_taper_height = chamfer from foot top to box walls
 foot_taper_height = foot_lower_taper_height + foot_riser_height + foot_upper_taper_height;
-// Total base height (foot taper only, no extra lip)
-base_height = foot_taper_height;
+// Base plate thickness - solid plate on top of feet connecting to walls
+base_plate_thickness = 1.0;
+// Total base height = foot taper + base plate
+base_height = foot_taper_height + base_plate_thickness;
 stacking_lip_height = 4.4;
 gf_corner_radius = 3.75;  // Standard Gridfinity corner radius
 clearance = 0.25;  // Gap from grid edge
@@ -93,9 +93,19 @@ module gridfinity_box() {
     // Base with stacking feet - ONE simple taper each
     gridfinity_base();
     
-    // Box walls - start directly after the foot taper
+    // Solid base plate on top of feet - connects feet to walls
+    translate([0, 0, foot_taper_height])
+    gridfinity_base_plate();
+    
+    // Box walls - start on top of the base plate
     translate([0, 0, base_height])
     gridfinity_walls();
+}
+
+// Solid plate connecting feet tops to box walls
+module gridfinity_base_plate() {
+    outer_radius = corner_radius > 0 ? corner_radius : gf_corner_radius;
+    rounded_rect(box_width, box_depth, base_plate_thickness, outer_radius);
 }
 
 // Rounded rectangle module for corner rounding
