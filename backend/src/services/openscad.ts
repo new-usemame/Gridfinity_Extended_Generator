@@ -155,24 +155,25 @@ module grid_base(r=0) {
     }
 }
 
-// Main box body
+// Main box body - starts at base_height so the feet are exposed underneath
 module box_body() {
+    translate([0, 0, base_height])
     difference() {
-        // Outer shell
-        rounded_rect(box_width, box_depth, box_height, corner_radius);
+        // Outer shell (walls only, starting from top of base)
+        rounded_rect(box_width, box_depth, box_height - base_height, corner_radius);
         
         // Inner cavity
         translate([wall_thickness, wall_thickness, floor_thickness])
         rounded_rect(
             box_width - wall_thickness*2, 
             box_depth - wall_thickness*2, 
-            box_height, 
+            box_height - base_height, 
             corner_radius > 0 ? max(0, corner_radius - wall_thickness) : 0
         );
         
         // Stacking lip cutout at top
         if (lip_style != "none") {
-            translate([0, 0, box_height - lip_height])
+            translate([0, 0, box_height - base_height - lip_height])
             difference() {
                 cube([box_width, box_depth, lip_height + 1]);
                 translate([stacking_lip, stacking_lip, 0])
@@ -192,7 +193,7 @@ module finger_slide_cut() {
     if (finger_slide) {
         slide_width = box_width * 0.6;
         slide_depth = 15;
-        slide_height = box_height * 0.5;
+        slide_height = (box_height - base_height) * 0.5;
         
         if (finger_slide_position == "front") {
             translate([(box_width - slide_width)/2, -1, box_height - slide_height])
@@ -225,13 +226,13 @@ module dividers() {
     if (dividers_x > 0 || dividers_y > 0) {
         inner_width = box_width - wall_thickness*2;
         inner_depth = box_depth - wall_thickness*2;
-        divider_height = box_height - floor_thickness - lip_height;
+        divider_height = box_height - base_height - floor_thickness - lip_height;
         
         // X dividers
         if (dividers_x > 0) {
             spacing_x = inner_width / (dividers_x + 1);
             for (i = [1:dividers_x]) {
-                translate([wall_thickness + i * spacing_x - 0.6, wall_thickness, floor_thickness])
+                translate([wall_thickness + i * spacing_x - 0.6, wall_thickness, base_height + floor_thickness])
                 cube([1.2, inner_depth, divider_height]);
             }
         }
@@ -240,7 +241,7 @@ module dividers() {
         if (dividers_y > 0) {
             spacing_y = inner_depth / (dividers_y + 1);
             for (i = [1:dividers_y]) {
-                translate([wall_thickness, wall_thickness + i * spacing_y - 0.6, floor_thickness])
+                translate([wall_thickness, wall_thickness + i * spacing_y - 0.6, base_height + floor_thickness])
                 cube([inner_width, 1.2, divider_height]);
             }
         }
