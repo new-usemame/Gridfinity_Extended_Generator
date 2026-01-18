@@ -582,38 +582,48 @@ module socket_rounded_rect(width, depth, height, radius) {
 
 module grid_socket() {
     // Socket that receives Gridfinity bin foot
-    // Profile is inverse of bin foot - matches foot profile exactly
+    // Profile is inverse of bin foot - matches foot profile exactly with clearance
+    // Based on official pad_oversize with margins=1 for socket cutout
     // OPEN SOCKET - goes all the way through!
     
     socket_full_size = grid_unit - clearance * 2;  // 41.5mm
     socket_corner_radius = 3.75;  // Standard Gridfinity corner radius for sockets
     bonus_ht = 0.2;  // Match foot bonus height for smooth transition
+    radialgap = 0.25;  // Clearance gap for socket (margins=1 in official code)
     
     // Calculate sizes at different heights (matching foot profile)
     riser_start_size = socket_full_size - upper_taper * 2;
     
     // Top bevel extends above plate_height with bonus_ht and increased radius (matching foot)
-    top_radius_increase = 0.25 + bonus_ht;  // 0.45mm total increase
-    top_size = socket_full_size + top_radius_increase * 2;  // Larger at top
+    // Official: d2=(env_corner_radius()+0.25+radialgap+bonus_ht)*2
+    top_radius_increase = 0.25 + radialgap + bonus_ht;  // 0.7mm total increase (0.25 + 0.25 + 0.2)
+    top_size = socket_full_size + top_radius_increase * 2;  // Larger at top with clearance
     top_radius = socket_corner_radius + top_radius_increase;
     
     // The socket is an open hole with chamfered profile and rounded corners
     // Cut from top all the way through to bottom
-    // Profile matches foot exactly (inverse)
+    // Profile matches foot exactly (inverse) with radialgap for clearance
     
     translate([clearance, clearance, -0.1]) {
         hull() {
             // Top with bonus height and increased radius (matching foot smooth transition)
-            // This extends above plate_height by bonus_ht (0.2mm) with larger radius
+            // This extends above plate_height by bonus_ht (0.2mm) with larger radius + clearance
+            // Official: extends to bevel2_top + bonus_ht = 5 + 0.2 = 5.2mm
+            // But socket plate_height = 4.65mm, so we extend to 4.65 + 0.2 = 4.85mm
+            // However, foot extends to 5.2mm, so socket should extend to match
+            // Actually, socket should accommodate foot's full height including bonus_ht
             top_inset = -top_radius_increase;  // Negative inset = extends outward
             translate([top_inset, top_inset, plate_height + bonus_ht])
             socket_rounded_rect(top_size, top_size, 0.2, top_radius);
             
-            // End of upper taper - full size at z = plate_height (matching foot base_height)
+            // End of upper taper - full size at z = plate_height (matching foot base_height - 0.25)
+            // With radialgap for clearance: d = (env_corner_radius()-2.15+radialgap)*2
+            // But at full size, we use socket_full_size which already accounts for clearance
             translate([0, 0, plate_height])
             socket_rounded_rect(socket_full_size, socket_full_size, 0.01, socket_corner_radius);
             
             // End of riser, start of upper taper at z = lower_taper + riser_height
+            // Size = riser_start_size (socket_full_size - upper_taper * 2)
             mid_radius = max(0.5, socket_corner_radius - upper_taper);
             translate([upper_taper, upper_taper, lower_taper + riser_height])
             socket_rounded_rect(riser_start_size, riser_start_size, 0.01, mid_radius);
@@ -625,6 +635,7 @@ module grid_socket() {
             // Bottom - goes all the way through
             if (lower_taper > 0 && !remove_bottom_taper) {
                 // Has lower taper - calculate bottom size
+                // Official: d = 1.6+2*radialgap at bottom
                 total_inset = upper_taper + lower_taper;
                 bottom_size = socket_full_size - total_inset * 2;
                 bottom_radius = max(0.5, socket_corner_radius - total_inset);
