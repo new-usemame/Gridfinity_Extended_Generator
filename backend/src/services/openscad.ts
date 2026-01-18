@@ -87,16 +87,11 @@ module gridfinity_base() {
 
 module single_base_unit() {
     // Gridfinity base profile - matches baseplate sockets
+    // Uses official dimensions from gridfinity_constants.scad
+    
     difference() {
-        union() {
-            // Main base block with 0.25mm clearance
-            translate([0.25, 0.25, 0])
-            cube([grid_unit - 0.5, grid_unit - 0.5, base_height]);
-            
-            // Stacking lip profile (the part that clicks into baseplates)
-            translate([0.25, 0.25, 0])
-            stacking_lip();
-        }
+        // The stacking foot with proper chamfer profile
+        gridfinity_foot();
         
         // Magnet holes
         if (magnet_enabled) {
@@ -110,29 +105,56 @@ module single_base_unit() {
     }
 }
 
-module stacking_lip() {
-    // Gridfinity standard stacking lip profile
-    // Creates the chamfered edge that fits into baseplate sockets
-    base_inset = 0.25;
-    lip_size = grid_unit - 0.5;
+module gridfinity_foot() {
+    // Official Gridfinity base profile dimensions:
+    // gf_cupbase_lower_taper_height = 0.8 (bottom 45° chamfer)
+    // gf_cupbase_riser_height = 1.8 (vertical section)
+    // gf_cupbase_upper_taper_height = 2.15 (upper 45° taper)
+    // Total base height = 0.8 + 1.8 + 2.15 + 0.25 = 5mm
     
+    lower_taper = 0.8;
+    riser = 1.8;
+    upper_taper = 2.15;
+    clearance = 0.25;  // Gap from grid edge
+    
+    // Corner radius for the foot (standard is 3.75mm but we use 4mm for simplicity with cube approximation)
+    foot_full_size = grid_unit - clearance * 2;  // 41.5mm
+    
+    // The foot profile tapers from a small point at bottom to full size at top
+    // At z=0: inset by lower_taper (0.8mm) on each side = starts small
+    // At z=0.8: same size (end of lower taper)
+    // At z=0.8 to z=2.6: vertical riser section
+    // At z=2.6: starts upper taper
+    // At z=4.75 (2.6 + 2.15): full size
+    
+    translate([clearance, clearance, 0])
     hull() {
-        // Bottom - chamfered inward by 0.8mm
-        translate([0.8, 0.8, 0])
-        cube([lip_size - 1.6, lip_size - 1.6, 0.01]);
+        // Bottom point - inset by lower_taper + upper_taper = 2.95mm on each side
+        // Actually per spec: bottom starts at 1.6mm diameter corners
+        // For a square approximation, inset = (full_size - 1.6) / 2 ≈ 20mm inset
+        // But that's for rounded corners. For our cube approximation:
+        bottom_inset = lower_taper + upper_taper;  // 2.95mm total inset at bottom
         
-        // At 0.8mm height - still chamfered
-        translate([0.8, 0.8, 0.7])
-        cube([lip_size - 1.6, lip_size - 1.6, 0.01]);
+        // z=0: smallest point
+        translate([bottom_inset, bottom_inset, 0])
+        cube([foot_full_size - bottom_inset * 2, foot_full_size - bottom_inset * 2, 0.01]);
         
-        // At 2.15mm - full size (45° transition)
-        translate([0, 0, 2.15])
-        cube([lip_size, lip_size, 0.01]);
+        // z=0.8: after lower taper (45°), expanded by 0.8mm
+        translate([upper_taper, upper_taper, lower_taper])
+        cube([foot_full_size - upper_taper * 2, foot_full_size - upper_taper * 2, 0.01]);
+        
+        // z=2.6: end of riser, start of upper taper
+        translate([upper_taper, upper_taper, lower_taper + riser])
+        cube([foot_full_size - upper_taper * 2, foot_full_size - upper_taper * 2, 0.01]);
+        
+        // z=4.75: full size (end of upper taper)
+        translate([0, 0, lower_taper + riser + upper_taper])
+        cube([foot_full_size, foot_full_size, 0.01]);
+        
+        // z=5: top of base (with 0.25 clearance height)
+        translate([0, 0, base_height - 0.01])
+        cube([foot_full_size, foot_full_size, 0.01]);
     }
-    
-    // Rest of base
-    translate([0, 0, 2.15])
-    cube([lip_size, lip_size, base_height - 2.15]);
 }
 
 module magnet_holes() {
