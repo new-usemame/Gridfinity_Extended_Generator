@@ -67,6 +67,18 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           unit="units"
           onChange={(v) => update('height', v)}
         />
+        <NumberInput
+          label="Grid Unit Size"
+          value={config.gridSize}
+          min={30}
+          max={60}
+          step={1}
+          unit="mm"
+          onChange={(v) => update('gridSize', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Standard Gridfinity is 42mm.
+        </p>
       </CollapsibleSection>
 
       {/* Wall & Floor Section */}
@@ -112,18 +124,6 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           ]}
           onChange={(v) => update('flatBase', v as BoxConfig['flatBase'])}
         />
-        <NumberInput
-          label="Grid Unit Size"
-          value={config.gridSize}
-          min={30}
-          max={60}
-          step={1}
-          unit="mm"
-          onChange={(v) => update('gridSize', v)}
-        />
-        <p className="text-xs text-slate-500">
-          Standard Gridfinity is 42mm. Adjust for custom grid sizes.
-        </p>
         <SliderInput
           label="Feet Corner Radius"
           value={config.feetCornerRadius}

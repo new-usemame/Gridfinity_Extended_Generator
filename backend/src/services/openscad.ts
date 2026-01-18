@@ -500,10 +500,29 @@ plate_depth = depth_units * grid_unit;
 // Main module
 gridfinity_baseplate();
 
+// Rounded rectangle module for baseplate
+module rounded_rect_plate(width, depth, height, radius) {
+    if (radius <= 0) {
+        cube([width, depth, height]);
+    } else {
+        r = min(radius, min(width, depth) / 2 - 0.01);
+        hull() {
+            translate([r, r, 0])
+            cylinder(r = r, h = height);
+            translate([width - r, r, 0])
+            cylinder(r = r, h = height);
+            translate([r, depth - r, 0])
+            cylinder(r = r, h = height);
+            translate([width - r, depth - r, 0])
+            cylinder(r = r, h = height);
+        }
+    }
+}
+
 module gridfinity_baseplate() {
     difference() {
-        // Main plate body
-        baseplate_body();
+        // Main plate body with rounded corners
+        rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
         
         // Socket cutouts for each grid unit
         for (gx = [0:width_units-1]) {
@@ -512,16 +531,26 @@ module gridfinity_baseplate() {
                 grid_socket();
             }
         }
-        
-        // Corner rounding
-        if (corner_radius > 0) {
-            corner_cuts();
-        }
     }
 }
 
-module baseplate_body() {
-    cube([plate_width, plate_depth, plate_height]);
+// Rounded rectangle profile for sockets - used in hull operations
+module socket_rounded_rect(width, depth, height, radius) {
+    if (radius <= 0) {
+        cube([width, depth, height]);
+    } else {
+        r = min(radius, min(width, depth) / 2 - 0.01);
+        hull() {
+            translate([r, r, 0])
+            cylinder(r = r, h = height);
+            translate([width - r, r, 0])
+            cylinder(r = r, h = height);
+            translate([r, depth - r, 0])
+            cylinder(r = r, h = height);
+            translate([width - r, depth - r, 0])
+            cylinder(r = r, h = height);
+        }
+    }
 }
 
 module grid_socket() {
@@ -530,34 +559,36 @@ module grid_socket() {
     // OPEN SOCKET - goes all the way through!
     
     socket_full_size = grid_unit - clearance * 2;  // 41.5mm at top
+    socket_corner_radius = 3.75;  // Standard Gridfinity corner radius for sockets
     
-    // Determine if we should remove the bottom taper
-    bottom_z = remove_bottom_taper ? lower_taper : 0;
-    
-    // The socket is an open hole with chamfered profile
+    // The socket is an open hole with chamfered profile and rounded corners
     // Cut from top all the way through to bottom
     
     translate([clearance, clearance, -0.1]) {
         hull() {
-            // Top of socket - full size (41.5mm)
+            // Top of socket - full size (41.5mm) with rounded corners
             translate([0, 0, plate_height])
-            cube([socket_full_size, socket_full_size, 0.2]);
+            socket_rounded_rect(socket_full_size, socket_full_size, 0.2, socket_corner_radius);
             
             // After upper taper (at z = lower_taper + riser_height)
             // Inset by upper_taper (2.15mm) on each side
+            mid_size = socket_full_size - upper_taper * 2;
+            mid_radius = max(0.5, socket_corner_radius - upper_taper);
             translate([upper_taper, upper_taper, lower_taper + riser_height])
-            cube([socket_full_size - upper_taper * 2, socket_full_size - upper_taper * 2, 0.01]);
+            socket_rounded_rect(mid_size, mid_size, 0.01, mid_radius);
             
             // After riser, start of lower taper (at z = lower_taper)
             translate([upper_taper, upper_taper, lower_taper])
-            cube([socket_full_size - upper_taper * 2, socket_full_size - upper_taper * 2, 0.01]);
+            socket_rounded_rect(mid_size, mid_size, 0.01, mid_radius);
             
             // Bottom - goes all the way through (z=0 and below)
             // If remove_bottom_taper, keep flat at lower_taper level
             if (!remove_bottom_taper) {
                 total_inset = upper_taper + lower_taper;
+                bottom_size = socket_full_size - total_inset * 2;
+                bottom_radius = max(0.5, socket_corner_radius - total_inset);
                 translate([total_inset, total_inset, 0])
-                cube([socket_full_size - total_inset * 2, socket_full_size - total_inset * 2, 0.2]);
+                socket_rounded_rect(bottom_size, bottom_size, 0.2, bottom_radius);
             }
         }
     }
@@ -651,47 +682,6 @@ module screw_holes() {
     }
 }
 
-module corner_cuts() {
-    // Cut corners for rounded appearance using proper cylinder positioning
-    r = corner_radius;
-    fudge = 0.1;
-    
-    // Bottom-left corner (0,0)
-    difference() {
-        translate([-fudge, -fudge, -fudge])
-        cube([r + fudge, r + fudge, plate_height + fudge * 2]);
-        
-        translate([r, r, -fudge * 2])
-        cylinder(r = r, h = plate_height + fudge * 4);
-    }
-    
-    // Bottom-right corner (width,0)
-    difference() {
-        translate([plate_width - r, -fudge, -fudge])
-        cube([r + fudge, r + fudge, plate_height + fudge * 2]);
-        
-        translate([plate_width - r, r, -fudge * 2])
-        cylinder(r = r, h = plate_height + fudge * 4);
-    }
-    
-    // Top-left corner (0,depth)
-    difference() {
-        translate([-fudge, plate_depth - r, -fudge])
-        cube([r + fudge, r + fudge, plate_height + fudge * 2]);
-        
-        translate([r, plate_depth - r, -fudge * 2])
-        cylinder(r = r, h = plate_height + fudge * 4);
-    }
-    
-    // Top-right corner (width,depth)
-    difference() {
-        translate([plate_width - r, plate_depth - r, -fudge])
-        cube([r + fudge, r + fudge, plate_height + fudge * 2]);
-        
-        translate([plate_width - r, plate_depth - r, -fudge * 2])
-        cylinder(r = r, h = plate_height + fudge * 4);
-    }
-}
 `;
   }
 
