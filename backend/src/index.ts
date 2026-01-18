@@ -27,12 +27,19 @@ app.get('/api/health', (_req, res) => {
 if (process.env.NODE_ENV === 'production') {
   // In Docker, frontend is copied to /app/backend/public
   const frontendPath = path.join(process.cwd(), 'public');
+  console.log(`Serving frontend from: ${frontendPath}`);
   app.use(express.static(frontendPath));
   app.get('*', (_req, res) => {
-    res.sendFile(path.join(frontendPath, 'index.html'));
+    const indexPath = path.join(frontendPath, 'index.html');
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error('Error serving index.html:', err);
+        res.status(500).send('Frontend not available');
+      }
+    });
   });
 }
 
-app.listen(PORT, () => {
+app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Gridfinity Generator backend running on port ${PORT}`);
 });
