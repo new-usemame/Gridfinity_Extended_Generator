@@ -74,15 +74,27 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
       (loadedGeometry) => {
         loadedGeometry.computeVertexNormals();
         
-        // Rotate from Z-up (OpenSCAD) to Y-up (Three.js)
-        // +90° around X converts Z-up to Y-up correctly
-        loadedGeometry.rotateX(Math.PI / 2);
+        // OpenSCAD uses Z-up, Three.js uses Y-up
+        // Apply rotation matrix to convert coordinate systems:
+        // - OpenSCAD +X → Three.js +X (unchanged)
+        // - OpenSCAD +Y → Three.js -Z (forward becomes back)  
+        // - OpenSCAD +Z → Three.js +Y (up stays up)
+        const matrix = new THREE.Matrix4();
+        matrix.set(
+          1, 0, 0, 0,
+          0, 0, 1, 0,
+          0, -1, 0, 0,
+          0, 0, 0, 1
+        );
+        loadedGeometry.applyMatrix4(matrix);
         
-        // Center horizontally, place bottom on ground
+        // Center horizontally and place on ground
         loadedGeometry.computeBoundingBox();
         const box = loadedGeometry.boundingBox!;
         const center = new THREE.Vector3();
         box.getCenter(center);
+        
+        // Center on X/Z, put bottom (min Y) at ground level
         loadedGeometry.translate(-center.x, -box.min.y, -center.z);
         
         setGeometry(loadedGeometry);

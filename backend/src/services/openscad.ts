@@ -90,10 +90,10 @@ box_height = height_units * 7 + base_height;
 module rounded_rect(w, d, h, r) {
     if (r > 0) {
         hull() {
-            translate([r, r, 0]) cylinder(h=h, r=r, $fn=32);
-            translate([w-r, r, 0]) cylinder(h=h, r=r, $fn=32);
-            translate([r, d-r, 0]) cylinder(h=h, r=r, $fn=32);
-            translate([w-r, d-r, 0]) cylinder(h=h, r=r, $fn=32);
+            translate([r, r, 0]) cylinder(h=h, r=r, $fn=16);
+            translate([w-r, r, 0]) cylinder(h=h, r=r, $fn=16);
+            translate([r, d-r, 0]) cylinder(h=h, r=r, $fn=16);
+            translate([w-r, d-r, 0]) cylinder(h=h, r=r, $fn=16);
         }
     } else {
         cube([w, d, h]);
@@ -122,7 +122,7 @@ module grid_base(r=0) {
             
             // Stacking lip profile
             translate([grid_unit/2, grid_unit/2, 0])
-            rotate_extrude($fn=64)
+            rotate_extrude($fn=24)
             translate([grid_unit/2 - 2.4, 0, 0])
             gridfinity_base_profile();
         }
@@ -132,7 +132,7 @@ module grid_base(r=0) {
             for (x = [4.8, grid_unit - 4.8])
             for (y = [4.8, grid_unit - 4.8])
             translate([x, y, -0.1])
-            cylinder(d=magnet_diameter, h=magnet_depth + 0.1, $fn=32);
+            cylinder(d=magnet_diameter, h=magnet_depth + 0.1, $fn=16);
         }
         
         // Screw holes
@@ -140,7 +140,7 @@ module grid_base(r=0) {
             for (x = [4.8, grid_unit - 4.8])
             for (y = [4.8, grid_unit - 4.8])
             translate([x, y, -0.1])
-            cylinder(d=screw_diameter, h=base_height + 0.2, $fn=32);
+            cylinder(d=screw_diameter, h=base_height + 0.2, $fn=16);
         }
     }
 }
@@ -300,7 +300,7 @@ plate_width = width_units * grid_unit;
 plate_depth = depth_units * grid_unit;
 
 // Rounded rectangle module with configurable segments
-module rounded_rect(w, d, h, r, fn=32) {
+module rounded_rect(w, d, h, r, fn=16) {
     if (r > 0) {
         hull() {
             translate([r, r, 0]) cylinder(h=h, r=r, $fn=fn);
@@ -329,28 +329,28 @@ module socket_profile() {
 // Single grid socket
 module grid_socket() {
     translate([grid_unit/2, grid_unit/2, plate_height - socket_depth])
-    rotate_extrude($fn=64)
+    rotate_extrude($fn=24)
     translate([grid_unit/2 - 2.6, 0, 0])
     socket_profile();
 }
 
 // Magnet hole
 module magnet_hole() {
-    cylinder(d=magnet_diameter, h=magnet_depth + 0.1, $fn=32);
+    cylinder(d=magnet_diameter, h=magnet_depth + 0.1, $fn=16);
 }
 
 // Screw hole
 module screw_hole() {
-    cylinder(d=screw_diameter, h=plate_height + 0.2, $fn=32);
+    cylinder(d=screw_diameter, h=plate_height + 0.2, $fn=16);
 }
 
 // Weighted base cutout
 module weight_cutout() {
     hull() {
-        translate([8, 8, -0.1]) cylinder(d=8, h=plate_height - 1, $fn=32);
-        translate([grid_unit-8, 8, -0.1]) cylinder(d=8, h=plate_height - 1, $fn=32);
-        translate([8, grid_unit-8, -0.1]) cylinder(d=8, h=plate_height - 1, $fn=32);
-        translate([grid_unit-8, grid_unit-8, -0.1]) cylinder(d=8, h=plate_height - 1, $fn=32);
+        translate([8, 8, -0.1]) cylinder(d=8, h=plate_height - 1, $fn=16);
+        translate([grid_unit-8, 8, -0.1]) cylinder(d=8, h=plate_height - 1, $fn=16);
+        translate([8, grid_unit-8, -0.1]) cylinder(d=8, h=plate_height - 1, $fn=16);
+        translate([grid_unit-8, grid_unit-8, -0.1]) cylinder(d=8, h=plate_height - 1, $fn=16);
     }
 }
 
@@ -394,7 +394,7 @@ module corner_round_cut(r, h) {
         difference() {
             cube([r + 0.1, r + 0.1, h + 0.2]);
             translate([r, r, -0.1])
-            cylinder(r=r, h=h + 0.4, $fn=corner_segments);
+            cylinder(r=r, h=h + 0.4, $fn=16);
         }
     }
 }
@@ -447,13 +447,13 @@ module gridfinity_baseplate() {
     if (lid_option == "halfPitch") {
         translate([0, 0, plate_height])
         difference() {
-            rounded_rect(plate_width, plate_depth, 2.5, corner_radius, corner_segments);
+            rounded_rect(plate_width, plate_depth, 2.5, corner_radius, 16);
             
             // Half-pitch grid pattern
             for (x = [0:width_units*2-1])
             for (y = [0:depth_units*2-1])
             translate([x * grid_unit/2 + grid_unit/4, y * grid_unit/2 + grid_unit/4, 1.2])
-            cylinder(d=grid_unit/2 - 2, h=2, $fn=32);
+            cylinder(d=grid_unit/2 - 2, h=2, $fn=16);
         }
     }
 }
