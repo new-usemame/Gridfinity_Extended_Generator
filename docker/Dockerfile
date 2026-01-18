@@ -22,7 +22,7 @@ COPY frontend/package.json ./frontend/
 # Install dependencies
 RUN npm install --workspaces
 
-# Copy application code
+# Copy application code (cache bust: 2026-01-18)
 COPY . .
 
 # Build frontend
