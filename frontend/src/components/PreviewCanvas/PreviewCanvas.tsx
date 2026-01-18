@@ -1,5 +1,5 @@
-import { Suspense, useEffect, useState, useRef } from 'react';
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { Suspense, useEffect, useState } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, Grid } from '@react-three/drei';
 import { STLLoader } from 'three-stdlib';
 import * as THREE from 'three';
@@ -75,7 +75,10 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
         loadedGeometry.computeVertexNormals();
         
         // Rotate from Z-up (OpenSCAD) to Y-up (Three.js)
+        // Use +90° to keep the opening facing up
         loadedGeometry.rotateX(-Math.PI / 2);
+        // Flip 180° so base is down and opening is up
+        loadedGeometry.rotateY(Math.PI);
         
         // Center horizontally, place bottom on ground
         loadedGeometry.computeBoundingBox();
@@ -139,17 +142,8 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
 }
 
 function ModelMesh({ geometry }: { geometry: THREE.BufferGeometry }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-
-  // Gentle rotation animation
-  useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.2) * 0.1;
-    }
-  });
-
   return (
-    <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
+    <mesh geometry={geometry} castShadow receiveShadow>
       <meshStandardMaterial
         color="#22c55e"
         metalness={0.1}
