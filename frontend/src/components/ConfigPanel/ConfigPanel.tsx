@@ -138,6 +138,58 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
         </p>
       </CollapsibleSection>
 
+      {/* Foot Chamfer/Taper Section */}
+      <CollapsibleSection title="Foot Chamfers & Tapers" icon="📐">
+        <SliderInput
+          label="Bottom Taper Height"
+          value={config.footLowerTaperHeight}
+          min={0}
+          max={2}
+          step={0.1}
+          unit="mm"
+          onChange={(v) => update('footLowerTaperHeight', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Height of bottom chamfer. Set to 0 for vertical (no taper) - better for printing. Standard: 0.8mm.
+        </p>
+        <NumberInput
+          label="Bottom Diameter"
+          value={config.footBottomDiameter}
+          min={1.6}
+          max={20}
+          step={0.1}
+          unit="mm"
+          onChange={(v) => update('footBottomDiameter', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Starting diameter at bottom. Larger = less steep angle. Standard: 1.6mm.
+        </p>
+        <SliderInput
+          label="Riser Height"
+          value={config.footRiserHeight}
+          min={0.5}
+          max={3}
+          step={0.1}
+          unit="mm"
+          onChange={(v) => update('footRiserHeight', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Height of vertical section. Standard: 1.8mm.
+        </p>
+        <SliderInput
+          label="Upper Taper Height"
+          value={config.footUpperTaperHeight}
+          min={1}
+          max={4}
+          step={0.1}
+          unit="mm"
+          onChange={(v) => update('footUpperTaperHeight', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Height of upper chamfer. Standard: 2.15mm.
+        </p>
+      </CollapsibleSection>
+
       {/* Floor Section */}
       <CollapsibleSection title="Floor" icon="🏠">
         <SelectInput
@@ -563,6 +615,49 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
         />
         <p className="text-xs text-slate-500">
           Higher segments = smoother curves but larger file size.
+        </p>
+      </CollapsibleSection>
+
+      {/* Socket Chamfer/Taper Section */}
+      <CollapsibleSection title="Socket Chamfers & Tapers" icon="📐">
+        <SliderInput
+          label="Bottom Taper Height"
+          value={config.socketLowerTaperHeight}
+          min={0}
+          max={2}
+          step={0.1}
+          unit="mm"
+          onChange={(v) => update('socketLowerTaperHeight', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Height of bottom chamfer in socket. Set to 0 for vertical. Standard: 0.7mm.
+        </p>
+        <SliderInput
+          label="Riser Height"
+          value={config.socketRiserHeight}
+          min={0.5}
+          max={3}
+          step={0.1}
+          unit="mm"
+          onChange={(v) => update('socketRiserHeight', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Height of vertical section. Standard: 1.8mm.
+        </p>
+        <SliderInput
+          label="Upper Taper Height"
+          value={config.socketUpperTaperHeight}
+          min={1}
+          max={4}
+          step={0.1}
+          unit="mm"
+          onChange={(v) => update('socketUpperTaperHeight', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Height of upper chamfer. Standard: 2.15mm.
+        </p>
+        <p className="text-xs text-slate-500 mt-2">
+          ⚠️ Socket dimensions should match foot dimensions for proper fit!
         </p>
       </CollapsibleSection>
     </div>

@@ -55,6 +55,12 @@ export interface BoxConfig {
   // Feet options
   feetCornerRadius: number;
   gridSize: number;  // Grid unit size in mm (standard is 42mm)
+  
+  // Foot chamfer/taper options
+  footLowerTaperHeight: number;  // Height of bottom taper (0 = vertical/no taper)
+  footRiserHeight: number;       // Height of vertical riser section
+  footUpperTaperHeight: number;  // Height of upper taper
+  footBottomDiameter: number;    // Starting diameter at bottom (larger = less steep)
 }
 
 // Baseplate Configuration
@@ -89,6 +95,11 @@ export interface BaseplateConfig {
   
   // Grid size
   gridSize: number;
+  
+  // Socket chamfer/taper options (inverse of foot profile)
+  socketLowerTaperHeight: number;  // Height of bottom taper (0 = vertical/no taper)
+  socketRiserHeight: number;       // Height of vertical riser section
+  socketUpperTaperHeight: number;  // Height of upper taper
 }
 
 // Default configurations
@@ -122,7 +133,11 @@ export const defaultBoxConfig: BoxConfig = {
   wallPatternSpacing: 2,
   cornerRadius: 3.75,
   feetCornerRadius: 3.75,
-  gridSize: 42
+  gridSize: 42,
+  footLowerTaperHeight: 0.8,  // Standard: 0.8mm (set to 0 for vertical)
+  footRiserHeight: 1.8,        // Standard: 1.8mm
+  footUpperTaperHeight: 2.15,  // Standard: 2.15mm
+  footBottomDiameter: 1.6      // Standard: 1.6mm (larger = less steep angle)
 };
 
 export const defaultBaseplateConfig: BaseplateConfig = {
@@ -140,5 +155,8 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   removeBottomTaper: false,
   cornerRadius: 3.75,
   cornerSegments: 32,
-  gridSize: 42
+  gridSize: 42,
+  socketLowerTaperHeight: 0.7,  // Standard: 0.7mm (set to 0 for vertical)
+  socketRiserHeight: 1.8,        // Standard: 1.8mm
+  socketUpperTaperHeight: 2.15   // Standard: 2.15mm
 };
