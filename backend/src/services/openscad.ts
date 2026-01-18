@@ -56,6 +56,9 @@ finger_slide_style = "${config.fingerSlideStyle}";
 finger_slide_radius = ${config.fingerSlideRadius};
 label_enabled = ${config.labelEnabled};
 corner_radius = ${config.cornerRadius};
+bottom_edge_radius = ${config.bottomEdgeRadius};
+top_edge_radius = ${config.topEdgeRadius};
+inner_bottom_radius = ${config.innerBottomRadius};
 feet_corner_radius = ${config.feetCornerRadius};
 grid_unit = ${config.gridSize};
 foot_lower_taper_height = ${config.footLowerTaperHeight};
@@ -71,11 +74,11 @@ wall_pattern_spacing = ${config.wallPatternSpacing};
 
 /* [Constants] */
 // SIMPLE TAPER foot - ONE taper from small bottom to larger top
+// foot_lower_taper_height + foot_riser_height = total foot taper height
+// foot_upper_taper_height = chamfer from foot top to box walls
 foot_taper_height = foot_lower_taper_height + foot_riser_height + foot_upper_taper_height;
-// Base plate thickness - solid plate on top of feet connecting to walls
-base_plate_thickness = 1.0;
-// Total base height = foot taper + base plate
-base_height = foot_taper_height + base_plate_thickness;
+// Total base height (foot taper only, no extra lip)
+base_height = foot_taper_height;
 stacking_lip_height = 4.4;
 gf_corner_radius = 3.75;  // Standard Gridfinity corner radius
 clearance = 0.25;  // Gap from grid edge
@@ -93,22 +96,12 @@ module gridfinity_box() {
     // Base with stacking feet - ONE simple taper each
     gridfinity_base();
     
-    // Solid base plate on top of feet - connects feet to walls
-    translate([0, 0, foot_taper_height])
-    gridfinity_base_plate();
-    
-    // Box walls - start on top of the base plate
+    // Box walls - start directly after the foot taper
     translate([0, 0, base_height])
     gridfinity_walls();
 }
 
-// Solid plate connecting feet tops to box walls
-module gridfinity_base_plate() {
-    outer_radius = corner_radius > 0 ? corner_radius : gf_corner_radius;
-    rounded_rect(box_width, box_depth, base_plate_thickness, outer_radius);
-}
-
-// Rounded rectangle module for corner rounding
+// Rounded rectangle module for corner rounding (vertical edges only)
 module rounded_rect(width, depth, height, radius) {
     if (radius <= 0) {
         cube([width, depth, height]);
@@ -123,6 +116,103 @@ module rounded_rect(width, depth, height, radius) {
             cylinder(r = r, h = height);
             translate([width - r, depth - r, 0])
             cylinder(r = r, h = height);
+        }
+    }
+}
+
+// Fully rounded box with all edges rounded (vertical + horizontal)
+module rounded_box_3d(width, depth, height, corner_r, bottom_r, top_r) {
+    // corner_r = vertical corner radius (XY plane)
+    // bottom_r = bottom horizontal edge radius
+    // top_r = top horizontal edge radius
+    
+    cr = max(0.01, min(corner_r, min(width, depth) / 2 - 0.1));
+    br = max(0, min(bottom_r, min(cr, height / 2 - 0.1)));
+    tr = max(0, min(top_r, min(cr, height / 2 - 0.1)));
+    
+    if (br <= 0 && tr <= 0) {
+        // No horizontal rounding, use simple rounded rect
+        rounded_rect(width, depth, height, cr);
+    } else {
+        hull() {
+            // Bottom corners (4 corners with bottom edge rounding)
+            if (br > 0) {
+                // Spheres at bottom corners for edge rounding
+                translate([cr, cr, br])
+                sphere(r = br, $fn = $fn);
+                translate([width - cr, cr, br])
+                sphere(r = br, $fn = $fn);
+                translate([cr, depth - cr, br])
+                sphere(r = br, $fn = $fn);
+                translate([width - cr, depth - cr, br])
+                sphere(r = br, $fn = $fn);
+            } else {
+                // No bottom rounding - use cylinders starting at z=0
+                translate([cr, cr, 0])
+                cylinder(r = cr, h = 0.01, $fn = $fn);
+                translate([width - cr, cr, 0])
+                cylinder(r = cr, h = 0.01, $fn = $fn);
+                translate([cr, depth - cr, 0])
+                cylinder(r = cr, h = 0.01, $fn = $fn);
+                translate([width - cr, depth - cr, 0])
+                cylinder(r = cr, h = 0.01, $fn = $fn);
+            }
+            
+            // Top corners (4 corners with top edge rounding)
+            if (tr > 0) {
+                // Spheres at top corners for edge rounding
+                translate([cr, cr, height - tr])
+                sphere(r = tr, $fn = $fn);
+                translate([width - cr, cr, height - tr])
+                sphere(r = tr, $fn = $fn);
+                translate([cr, depth - cr, height - tr])
+                sphere(r = tr, $fn = $fn);
+                translate([width - cr, depth - cr, height - tr])
+                sphere(r = tr, $fn = $fn);
+            } else {
+                // No top rounding - use cylinders at top
+                translate([cr, cr, height - 0.01])
+                cylinder(r = cr, h = 0.01, $fn = $fn);
+                translate([width - cr, cr, height - 0.01])
+                cylinder(r = cr, h = 0.01, $fn = $fn);
+                translate([cr, depth - cr, height - 0.01])
+                cylinder(r = cr, h = 0.01, $fn = $fn);
+                translate([width - cr, depth - cr, height - 0.01])
+                cylinder(r = cr, h = 0.01, $fn = $fn);
+            }
+        }
+    }
+}
+
+// Inner cavity with rounded floor-to-wall transition (fillet)
+module inner_cavity(width, depth, height, corner_r, fillet_r) {
+    cr = max(0, corner_r);
+    fr = max(0, min(fillet_r, min(cr, height / 2 - 0.1)));
+    
+    if (fr <= 0) {
+        // No fillet, use simple rounded rect
+        rounded_rect(width, depth, height, cr);
+    } else {
+        hull() {
+            // Bottom with fillet (spheres at corners)
+            translate([cr, cr, fr])
+            sphere(r = fr, $fn = $fn);
+            translate([width - cr, cr, fr])
+            sphere(r = fr, $fn = $fn);
+            translate([cr, depth - cr, fr])
+            sphere(r = fr, $fn = $fn);
+            translate([width - cr, depth - cr, fr])
+            sphere(r = fr, $fn = $fn);
+            
+            // Top (cylinders, no rounding needed for cavity)
+            translate([cr, cr, height - 0.01])
+            cylinder(r = cr, h = 0.02, $fn = $fn);
+            translate([width - cr, cr, height - 0.01])
+            cylinder(r = cr, h = 0.02, $fn = $fn);
+            translate([cr, depth - cr, height - 0.01])
+            cylinder(r = cr, h = 0.02, $fn = $fn);
+            translate([width - cr, depth - cr, height - 0.01])
+            cylinder(r = cr, h = 0.02, $fn = $fn);
         }
     }
 }
@@ -236,17 +326,23 @@ module gridfinity_walls() {
     outer_radius = corner_radius > 0 ? corner_radius : gf_corner_radius;
     inner_radius = max(0, outer_radius - wall_thickness);
     
+    // Edge rounding values
+    outer_bottom_r = bottom_edge_radius;
+    outer_top_r = top_edge_radius;
+    inner_fillet_r = inner_bottom_radius;
+    
     difference() {
-        // Outer walls with rounded corners
-        rounded_rect(box_width, box_depth, wall_height, outer_radius);
+        // Outer walls with rounded corners AND rounded edges
+        rounded_box_3d(box_width, box_depth, wall_height, outer_radius, outer_bottom_r, outer_top_r);
         
-        // Inner cavity with rounded corners
+        // Inner cavity with rounded corners AND floor fillet
         translate([wall_thickness, wall_thickness, floor_thickness])
-        rounded_rect(
+        inner_cavity(
             box_width - wall_thickness * 2,
             box_depth - wall_thickness * 2,
             wall_height,
-            inner_radius
+            inner_radius,
+            inner_fillet_r
         );
         
         // Stacking lip cutout at top

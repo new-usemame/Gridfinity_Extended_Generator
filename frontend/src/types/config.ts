@@ -49,8 +49,13 @@ export interface BoxConfig {
   wallPattern: 'none' | 'hexgrid' | 'grid' | 'voronoi' | 'brick';
   wallPatternSpacing: number;
   
-  // Corner radius (for the outer box)
+  // Corner radius (for the outer box vertical corners)
   cornerRadius: number;
+  
+  // Edge rounding (horizontal edges)
+  bottomEdgeRadius: number;   // Rounds the bottom outside edges
+  topEdgeRadius: number;      // Rounds the top outside edges (below lip)
+  innerBottomRadius: number;  // Rounds inside floor-to-wall corners
   
   // Feet options
   feetCornerRadius: number;
@@ -133,6 +138,9 @@ export const defaultBoxConfig: BoxConfig = {
   wallPattern: 'none',
   wallPatternSpacing: 2,
   cornerRadius: 3.75,
+  bottomEdgeRadius: 0.8,     // Slight rounding on bottom edges
+  topEdgeRadius: 0,          // Usually handled by stacking lip
+  innerBottomRadius: 0.8,    // Slight fillet on inside corners
   feetCornerRadius: 3.75,
   gridSize: 42,
   footLowerTaperHeight: 0.8,  // Standard: 0.8mm (set to 0 for vertical)

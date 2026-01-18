@@ -110,6 +110,49 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           unit="mm"
           onChange={(v) => update('cornerRadius', v)}
         />
+        <p className="text-xs text-slate-500">
+          Rounds the vertical edges (corners viewed from above). Standard: 3.75mm.
+        </p>
+      </CollapsibleSection>
+
+      {/* Edge Rounding Section */}
+      <CollapsibleSection title="Edge Rounding" icon="⭕">
+        <SliderInput
+          label="Bottom Edge Radius"
+          value={config.bottomEdgeRadius}
+          min={0}
+          max={3}
+          step={0.1}
+          unit="mm"
+          onChange={(v) => update('bottomEdgeRadius', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Rounds the bottom outside edges (where floor meets walls externally).
+        </p>
+        <SliderInput
+          label="Top Edge Radius"
+          value={config.topEdgeRadius}
+          min={0}
+          max={3}
+          step={0.1}
+          unit="mm"
+          onChange={(v) => update('topEdgeRadius', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Rounds the top outside edges (below the stacking lip).
+        </p>
+        <SliderInput
+          label="Inner Floor Fillet"
+          value={config.innerBottomRadius}
+          min={0}
+          max={3}
+          step={0.1}
+          unit="mm"
+          onChange={(v) => update('innerBottomRadius', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Rounds the inside corners where the floor meets the walls. Helps with cleaning and printing.
+        </p>
       </CollapsibleSection>
 
       {/* Feet Options Section */}
