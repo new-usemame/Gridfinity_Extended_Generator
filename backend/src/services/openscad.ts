@@ -247,8 +247,8 @@ module gridfinity_walls() {
     outer_radius = corner_radius > 0 ? corner_radius : gf_corner_radius;
     inner_radius = max(0, outer_radius - wall_thickness);
     
-    // Chamfer size for overhang prevention (45-degree, 0.25mm for subtle transition)
-    overhang_chamfer = 0.25;
+    // Chamfer size for overhang prevention (45-degree, 0.33mm)
+    overhang_chamfer = 0.33;
     
     difference() {
         // Outer walls with rounded corners
