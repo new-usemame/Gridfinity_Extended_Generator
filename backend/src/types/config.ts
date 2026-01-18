@@ -157,7 +157,7 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   cornerRadius: 3.75,
   cornerSegments: 32,
   gridSize: 42,
-  socketLowerTaperHeight: 0.7,  // Standard: 0.7mm (set to 0 for vertical)
+  socketLowerTaperHeight: 0.8,  // Matches foot lower taper for proper fit
   socketRiserHeight: 1.8,        // Standard: 1.8mm
   socketUpperTaperHeight: 2.15,  // Standard: 2.15mm
   syncSocketWithFoot: true        // Auto-sync with foot by default

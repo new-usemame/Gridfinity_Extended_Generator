@@ -70,10 +70,15 @@ wall_pattern = "${config.wallPattern}";
 wall_pattern_spacing = ${config.wallPatternSpacing};
 
 /* [Constants] */
-// Base height is calculated from taper heights
-base_height = foot_lower_taper_height + foot_riser_height + foot_upper_taper_height + 0.25;
+// Foot profile height (from the chamfered profile)
+foot_profile_height = foot_lower_taper_height + foot_riser_height + foot_upper_taper_height;
+// Lip height - the smooth transition from foot to walls
+lip_transition_height = 1.8;  // Standard Gridfinity lip transition
+// Total base height including lip
+base_height = foot_profile_height + lip_transition_height;
 stacking_lip_height = 4.4;
 gf_corner_radius = 3.75;  // Standard Gridfinity corner radius
+clearance = 0.25;  // Gap from grid edge
 $fn = 32;
 
 /* [Calculated] */
@@ -85,10 +90,14 @@ box_height = height_units * 7 + base_height;
 gridfinity_box();
 
 module gridfinity_box() {
-    // Base with stacking profile
+    // Base with stacking feet
     gridfinity_base();
     
-    // Box walls
+    // Lip transition - smooth blend from individual feet to box walls
+    translate([0, 0, foot_profile_height])
+    gridfinity_lip_transition();
+    
+    // Box walls - start after the lip transition
     translate([0, 0, base_height])
     gridfinity_walls();
 }
@@ -118,6 +127,43 @@ module gridfinity_base() {
             translate([gx * grid_unit, gy * grid_unit, 0])
             single_base_unit();
         }
+    }
+}
+
+// Lip transition - creates smooth blend from individual feet to box perimeter
+module gridfinity_lip_transition() {
+    // Use the standard Gridfinity corner radius or user override
+    outer_radius = corner_radius > 0 ? corner_radius : gf_corner_radius;
+    
+    // The lip fills from individual feet (with clearance) to the full box width
+    // with a smooth chamfered transition at the top
+    
+    // Chamfer amount for smooth transition (matches original GF Extended)
+    lip_chamfer = 0.8;
+    
+    hull() {
+        // Bottom of lip - matches the top of the feet (with clearance inset)
+        // Individual feet are 41.5mm each, but we need to fill the full box area
+        translate([clearance, clearance, 0])
+        rounded_rect_profile(
+            box_width - clearance * 2, 
+            box_depth - clearance * 2, 
+            0.01, 
+            outer_radius
+        );
+        
+        // Top of lip (bottom chamfer point) - still inset by chamfer amount
+        translate([clearance + lip_chamfer, clearance + lip_chamfer, lip_transition_height - lip_chamfer])
+        rounded_rect_profile(
+            box_width - clearance * 2 - lip_chamfer * 2, 
+            box_depth - clearance * 2 - lip_chamfer * 2, 
+            0.01, 
+            max(0.5, outer_radius - lip_chamfer)
+        );
+        
+        // Top of lip - full size (flush with box walls)
+        translate([0, 0, lip_transition_height - 0.01])
+        rounded_rect_profile(box_width, box_depth, 0.02, outer_radius);
     }
 }
 
@@ -163,13 +209,10 @@ module rounded_rect_profile(width, depth, height, radius) {
 module gridfinity_foot() {
     // User-configurable foot profile dimensions
     // If lower_taper_height = 0, bottom is vertical (no taper)
-    // Based on official Gridfinity Extended pad_oversize module
     
     lower_taper = foot_lower_taper_height;
     riser = foot_riser_height;
     upper_taper = foot_upper_taper_height;
-    clearance = 0.25;  // Gap from grid edge
-    bonus_ht = 0.2;     // Extra height and radius on top bevel for smooth transition (official spec)
     
     // Use user-specified feet corner radius, default to standard 3.75mm
     foot_radius = feet_corner_radius > 0 ? feet_corner_radius : gf_corner_radius;
@@ -183,14 +226,8 @@ module gridfinity_foot() {
     
     // Calculate the size at the end of lower taper (or start of riser)
     // This is where the riser section begins
-    // Size at riser start = full_size - upper_taper * 2 (inset by upper_taper on each side)
     riser_start_size = foot_full_size - upper_taper * 2;
-    
-    // Top bevel extends above base_height with bonus_ht and increased radius
-    // Top radius = foot_radius + 0.25 + bonus_ht (for smooth transition to floor)
-    top_radius_increase = 0.25 + bonus_ht;  // 0.45mm total increase
-    top_size = foot_full_size + top_radius_increase * 2;  // Larger at top for smooth transition
-    top_radius = foot_radius + top_radius_increase;
+    mid_radius = max(0.5, foot_radius - upper_taper);
     
     translate([clearance, clearance, 0])
     hull() {
@@ -201,31 +238,22 @@ module gridfinity_foot() {
             translate([bottom_inset, bottom_inset, 0])
             rounded_rect_profile(bottom_size, bottom_size, 0.01, bottom_radius);
             
-            // End of lower taper (start of riser) at z = lower_taper
-            riser_inset = upper_taper;
-            mid_radius = max(0.5, foot_radius - upper_taper);
-            translate([riser_inset, riser_inset, lower_taper])
+            // End of lower taper (start of riser)
+            translate([upper_taper, upper_taper, lower_taper])
             rounded_rect_profile(riser_start_size, riser_start_size, 0.01, mid_radius);
         } else {
             // Vertical bottom - no taper, straight up from bottom
-            riser_inset = upper_taper;
-            mid_radius = max(0.5, foot_radius - upper_taper);
-            translate([riser_inset, riser_inset, 0])
+            translate([upper_taper, upper_taper, 0])
             rounded_rect_profile(riser_start_size, riser_start_size, 0.01, mid_radius);
         }
         
-        // End of riser, start of upper taper at z = lower_taper + riser
-        // This is bevel2_bottom = 2.6mm in official code
+        // End of riser, start of upper taper
         translate([upper_taper, upper_taper, lower_taper + riser])
         rounded_rect_profile(riser_start_size, riser_start_size, 0.01, mid_radius);
         
-        // Continuous taper from riser end (bevel2_bottom) to base_height + bonus_ht (bevel2_top + bonus_ht)
-        // Official: d1=(env_corner_radius()-2.15+radialgap)*2, d2=(env_corner_radius()+0.25+radialgap+bonus_ht)*2
-        // This creates a smooth continuous taper, not separate layers, eliminating the lip
-        // The hull operation creates a smooth transition from riser_start_size to top_size
-        top_inset = -top_radius_increase;  // Negative inset = extends outward
-        translate([top_inset, top_inset, base_height + bonus_ht])
-        rounded_rect_profile(top_size, top_size, 0.01, top_radius);
+        // End of upper taper - full size (top of foot profile, where lip starts)
+        translate([0, 0, foot_profile_height - 0.01])
+        rounded_rect_profile(foot_full_size, foot_full_size, 0.02, foot_radius);
     }
 }
 
@@ -510,11 +538,9 @@ lower_taper = socket_lower_taper_height;
 riser_height = socket_riser_height;
 upper_taper = socket_upper_taper_height;
 socket_depth = lower_taper + riser_height + upper_taper;
-bonus_ht = 0.2;  // Match foot bonus height for smooth transition
 
 // The baseplate is just the socket frame - no solid floor underneath
 // Sockets are OPEN (go all the way through)
-// Baseplate height matches socket depth (foot base_height without the 0.25 clearance)
 plate_height = socket_depth;
 
 $fn = 32;
@@ -581,62 +607,51 @@ module socket_rounded_rect(width, depth, height, radius) {
 
 module grid_socket() {
     // Socket that receives Gridfinity bin foot
-    // Profile is inverse of bin foot - matches foot profile exactly with clearance
-    // Based on official pad_oversize with margins=1 for socket cutout
+    // Profile is inverse of bin foot - full size at top, tapers down
     // OPEN SOCKET - goes all the way through!
+    // 
+    // This matches the foot profile:
+    // - Foot has: lower_taper -> riser -> upper_taper -> full_size (top)
+    // - Socket has: full_size (top) -> upper_taper -> riser -> lower_taper (bottom)
     
-    socket_full_size = grid_unit - clearance * 2;  // 41.5mm
+    socket_full_size = grid_unit - clearance * 2;  // 41.5mm at top
     socket_corner_radius = 3.75;  // Standard Gridfinity corner radius for sockets
-    bonus_ht = 0.2;  // Match foot bonus height for smooth transition
-    radialgap = 0.25;  // Clearance gap for socket (margins=1 in official code)
     
-    // Calculate sizes at different heights (matching foot profile)
-    riser_start_size = socket_full_size - upper_taper * 2;
+    // Size at riser section (after upper taper)
+    riser_size = socket_full_size - upper_taper * 2;
+    mid_radius = max(0.5, socket_corner_radius - upper_taper);
     
-    // Top bevel extends above plate_height with bonus_ht and increased radius (matching foot)
-    // Official: d2=(env_corner_radius()+0.25+radialgap+bonus_ht)*2
-    top_radius_increase = 0.25 + radialgap + bonus_ht;  // 0.7mm total increase (0.25 + 0.25 + 0.2)
-    top_size = socket_full_size + top_radius_increase * 2;  // Larger at top with clearance
-    top_radius = socket_corner_radius + top_radius_increase;
-    
-    // The socket is an open hole with chamfered profile and rounded corners
-    // Cut from top all the way through to bottom
-    // Profile matches foot exactly (inverse) with radialgap for clearance
-    
+    // The socket is an open hole with chamfered profile
     translate([clearance, clearance, -0.1]) {
         hull() {
-            // End of riser, start of upper taper at z = lower_taper + riser_height
-            // This is bevel2_bottom = 2.6mm in official code
-            // Size = riser_start_size (socket_full_size - upper_taper * 2)
-            mid_radius = max(0.5, socket_corner_radius - upper_taper);
-            translate([upper_taper, upper_taper, lower_taper + riser_height])
-            socket_rounded_rect(riser_start_size, riser_start_size, 0.01, mid_radius);
+            // Top of socket - full size (41.5mm) with rounded corners
+            translate([0, 0, plate_height])
+            socket_rounded_rect(socket_full_size, socket_full_size, 0.2, socket_corner_radius);
             
-            // Continuous taper from riser end to plate_height + bonus_ht (matching foot)
-            // Official: d1=(env_corner_radius()-2.15+radialgap)*2, d2=(env_corner_radius()+0.25+radialgap+bonus_ht)*2
-            // This creates a smooth continuous taper, not separate layers, eliminating the lip
-            // The hull operation creates a smooth transition from riser_start_size to top_size
-            top_inset = -top_radius_increase;  // Negative inset = extends outward
-            translate([top_inset, top_inset, plate_height + bonus_ht])
-            socket_rounded_rect(top_size, top_size, 0.2, top_radius);
+            // Start of upper taper (at plate_height - 0 since taper goes down)
+            // The upper taper goes from full_size down to riser_size over upper_taper height
             
-            // Start of riser (or end of lower taper if lower_taper > 0) at z = lower_taper
+            // End of upper taper / start of riser
+            translate([upper_taper, upper_taper, riser_height + lower_taper])
+            socket_rounded_rect(riser_size, riser_size, 0.01, mid_radius);
+            
+            // End of riser / start of lower taper
             translate([upper_taper, upper_taper, lower_taper])
-            socket_rounded_rect(riser_start_size, riser_start_size, 0.01, mid_radius);
+            socket_rounded_rect(riser_size, riser_size, 0.01, mid_radius);
             
-            // Bottom - goes all the way through
+            // Bottom of socket
             if (lower_taper > 0 && !remove_bottom_taper) {
-                // Has lower taper - calculate bottom size
-                // Official: d = 1.6+2*radialgap at bottom
-                total_inset = upper_taper + lower_taper;
-                bottom_size = socket_full_size - total_inset * 2;
-                bottom_radius = max(0.5, socket_corner_radius - total_inset);
-                translate([total_inset, total_inset, 0])
+                // Has lower taper - narrow at bottom
+                // The bottom size matches the foot's bottom
+                bottom_inset = upper_taper + lower_taper;
+                bottom_size = socket_full_size - bottom_inset * 2;
+                bottom_radius = max(0.5, socket_corner_radius - bottom_inset);
+                translate([bottom_inset, bottom_inset, 0])
                 socket_rounded_rect(bottom_size, bottom_size, 0.2, bottom_radius);
             } else {
-                // Vertical bottom - no taper, straight down
+                // No lower taper - vertical walls at riser width
                 translate([upper_taper, upper_taper, 0])
-                socket_rounded_rect(riser_start_size, riser_start_size, 0.2, mid_radius);
+                socket_rounded_rect(riser_size, riser_size, 0.2, mid_radius);
             }
         }
     }
