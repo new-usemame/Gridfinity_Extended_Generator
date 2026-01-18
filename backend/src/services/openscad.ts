@@ -215,15 +215,14 @@ module gridfinity_foot() {
         }
         
         // End of riser, start of upper taper at z = lower_taper + riser
+        // This is bevel2_bottom = 2.6mm in official code
         translate([upper_taper, upper_taper, lower_taper + riser])
         rounded_rect_profile(riser_start_size, riser_start_size, 0.01, mid_radius);
         
-        // End of upper taper - full size at z = lower_taper + riser + upper_taper (base_height)
-        translate([0, 0, lower_taper + riser + upper_taper])
-        rounded_rect_profile(foot_full_size, foot_full_size, 0.01, foot_radius);
-        
-        // Top with bonus height and increased radius for smooth transition to floor
-        // This extends above base_height by bonus_ht (0.2mm) with larger radius
+        // Continuous taper from riser end (bevel2_bottom) to base_height + bonus_ht (bevel2_top + bonus_ht)
+        // Official: d1=(env_corner_radius()-2.15+radialgap)*2, d2=(env_corner_radius()+0.25+radialgap+bonus_ht)*2
+        // This creates a smooth continuous taper, not separate layers, eliminating the lip
+        // The hull operation creates a smooth transition from riser_start_size to top_size
         top_inset = -top_radius_increase;  // Negative inset = extends outward
         translate([top_inset, top_inset, base_height + bonus_ht])
         rounded_rect_profile(top_size, top_size, 0.01, top_radius);
@@ -606,27 +605,20 @@ module grid_socket() {
     
     translate([clearance, clearance, -0.1]) {
         hull() {
-            // Top with bonus height and increased radius (matching foot smooth transition)
-            // This extends above plate_height by bonus_ht (0.2mm) with larger radius + clearance
-            // Official: extends to bevel2_top + bonus_ht = 5 + 0.2 = 5.2mm
-            // But socket plate_height = 4.65mm, so we extend to 4.65 + 0.2 = 4.85mm
-            // However, foot extends to 5.2mm, so socket should extend to match
-            // Actually, socket should accommodate foot's full height including bonus_ht
-            top_inset = -top_radius_increase;  // Negative inset = extends outward
-            translate([top_inset, top_inset, plate_height + bonus_ht])
-            socket_rounded_rect(top_size, top_size, 0.2, top_radius);
-            
-            // End of upper taper - full size at z = plate_height (matching foot base_height - 0.25)
-            // With radialgap for clearance: d = (env_corner_radius()-2.15+radialgap)*2
-            // But at full size, we use socket_full_size which already accounts for clearance
-            translate([0, 0, plate_height])
-            socket_rounded_rect(socket_full_size, socket_full_size, 0.01, socket_corner_radius);
-            
             // End of riser, start of upper taper at z = lower_taper + riser_height
+            // This is bevel2_bottom = 2.6mm in official code
             // Size = riser_start_size (socket_full_size - upper_taper * 2)
             mid_radius = max(0.5, socket_corner_radius - upper_taper);
             translate([upper_taper, upper_taper, lower_taper + riser_height])
             socket_rounded_rect(riser_start_size, riser_start_size, 0.01, mid_radius);
+            
+            // Continuous taper from riser end to plate_height + bonus_ht (matching foot)
+            // Official: d1=(env_corner_radius()-2.15+radialgap)*2, d2=(env_corner_radius()+0.25+radialgap+bonus_ht)*2
+            // This creates a smooth continuous taper, not separate layers, eliminating the lip
+            // The hull operation creates a smooth transition from riser_start_size to top_size
+            top_inset = -top_radius_increase;  // Negative inset = extends outward
+            translate([top_inset, top_inset, plate_height + bonus_ht])
+            socket_rounded_rect(top_size, top_size, 0.2, top_radius);
             
             // Start of riser (or end of lower taper if lower_taper > 0) at z = lower_taper
             translate([upper_taper, upper_taper, lower_taper])
