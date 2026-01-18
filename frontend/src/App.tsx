@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { ConfigPanel } from './components/ConfigPanel/ConfigPanel';
 import { PreviewCanvas } from './components/PreviewCanvas/PreviewCanvas';
 import { ExportButtons } from './components/ExportButtons/ExportButtons';
@@ -7,7 +7,8 @@ import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, G
 type GeneratorType = 'box' | 'baseplate' | 'combined';
 
 function App() {
-  const [generatorType, setGeneratorType] = useState<GeneratorType>('box');
+  const [generatorType, setGeneratorType] = useState<GeneratorType>('combined');
+  const hasInitiallyGenerated = useRef(false);
   const [boxConfig, setBoxConfig] = useState<BoxConfig>(defaultBoxConfig);
   const [baseplateConfig, setBaseplateConfig] = useState<BaseplateConfig>(defaultBaseplateConfig);
 
@@ -98,6 +99,14 @@ function App() {
       setIsGenerating(false);
     }
   }, [generatorType, boxConfig, baseplateConfig]);
+
+  // Auto-generate on initial load
+  useEffect(() => {
+    if (!hasInitiallyGenerated.current) {
+      hasInitiallyGenerated.current = true;
+      handleGenerate();
+    }
+  }, [handleGenerate]);
 
   return (
     <div className="h-screen flex flex-col bg-slate-950 grid-pattern">
