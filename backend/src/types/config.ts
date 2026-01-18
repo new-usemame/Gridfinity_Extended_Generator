@@ -51,6 +51,9 @@ export interface BoxConfig {
   
   // Corner radius (for the outer box)
   cornerRadius: number;
+  
+  // Feet options
+  feetCornerRadius: number;
 }
 
 // Baseplate Configuration
@@ -113,7 +116,8 @@ export const defaultBoxConfig: BoxConfig = {
   taperedCornerSize: 10,
   wallPattern: 'none',
   wallPatternSpacing: 2,
-  cornerRadius: 3.75
+  cornerRadius: 3.75,
+  feetCornerRadius: 3.75
 };
 
 export const defaultBaseplateConfig: BaseplateConfig = {

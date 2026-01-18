@@ -100,8 +100,8 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
         />
       </CollapsibleSection>
 
-      {/* Base Options Section */}
-      <CollapsibleSection title="Base Options" icon="🏠">
+      {/* Feet Options Section */}
+      <CollapsibleSection title="Feet (Base)" icon="🦶">
         <SelectInput
           label="Base Style"
           value={config.flatBase}
@@ -112,6 +112,22 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           ]}
           onChange={(v) => update('flatBase', v as BoxConfig['flatBase'])}
         />
+        <SliderInput
+          label="Feet Corner Radius"
+          value={config.feetCornerRadius}
+          min={0}
+          max={5}
+          step={0.25}
+          unit="mm"
+          onChange={(v) => update('feetCornerRadius', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Rounds the corners of the feet so they don't protrude beyond the box corners. Standard is 3.75mm.
+        </p>
+      </CollapsibleSection>
+
+      {/* Floor Section */}
+      <CollapsibleSection title="Floor" icon="🏠">
         <SelectInput
           label="Floor Type"
           value={config.efficientFloor}
@@ -123,6 +139,13 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           ]}
           onChange={(v) => update('efficientFloor', v as BoxConfig['efficientFloor'])}
         />
+        <p className="text-xs text-slate-500">
+          Efficient floor reduces material by only printing under the walls.
+        </p>
+      </CollapsibleSection>
+
+      {/* Magnets & Screws Section */}
+      <CollapsibleSection title="Magnets & Screws" icon="🧲">
         <ToggleInput
           label="Enable Magnets"
           value={config.magnetEnabled}

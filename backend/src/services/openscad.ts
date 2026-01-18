@@ -56,6 +56,7 @@ finger_slide_style = "${config.fingerSlideStyle}";
 finger_slide_radius = ${config.fingerSlideRadius};
 label_enabled = ${config.labelEnabled};
 corner_radius = ${config.cornerRadius};
+feet_corner_radius = ${config.feetCornerRadius};
 flat_base = "${config.flatBase}";
 efficient_floor = "${config.efficientFloor}";
 tapered_corner = "${config.taperedCorner}";
@@ -135,6 +136,25 @@ module single_base_unit() {
     }
 }
 
+// Rounded rectangle profile for feet - used in hull operations
+module rounded_rect_profile(width, depth, height, radius) {
+    if (radius <= 0) {
+        cube([width, depth, height]);
+    } else {
+        r = min(radius, min(width, depth) / 2 - 0.01);
+        hull() {
+            translate([r, r, 0])
+            cylinder(r = r, h = height, $fn = $fn);
+            translate([width - r, r, 0])
+            cylinder(r = r, h = height, $fn = $fn);
+            translate([r, depth - r, 0])
+            cylinder(r = r, h = height, $fn = $fn);
+            translate([width - r, depth - r, 0])
+            cylinder(r = r, h = height, $fn = $fn);
+        }
+    }
+}
+
 module gridfinity_foot() {
     // Official Gridfinity base profile dimensions:
     // gf_cupbase_lower_taper_height = 0.8 (bottom 45° chamfer)
@@ -147,43 +167,41 @@ module gridfinity_foot() {
     upper_taper = 2.15;
     clearance = 0.25;  // Gap from grid edge
     
-    // Corner radius for the foot (standard is 3.75mm but we use 4mm for simplicity with cube approximation)
+    // Use user-specified feet corner radius, default to standard 3.75mm
+    foot_radius = feet_corner_radius > 0 ? feet_corner_radius : gf_corner_radius;
     foot_full_size = grid_unit - clearance * 2;  // 41.5mm
     
     // The foot profile tapers from a small point at bottom to full size at top
-    // At z=0: inset by lower_taper (0.8mm) on each side = starts small
-    // At z=0.8: same size (end of lower taper)
-    // At z=0.8 to z=2.6: vertical riser section
-    // At z=2.6: starts upper taper
-    // At z=4.75 (2.6 + 2.15): full size
+    // Now using rounded corners instead of square cubes
     
     translate([clearance, clearance, 0])
     hull() {
-        // Bottom point - inset by lower_taper + upper_taper = 2.95mm on each side
-        // Actually per spec: bottom starts at 1.6mm diameter corners
-        // For a square approximation, inset = (full_size - 1.6) / 2 ≈ 20mm inset
-        // But that's for rounded corners. For our cube approximation:
+        // Bottom inset (for the chamfer profile)
         bottom_inset = lower_taper + upper_taper;  // 2.95mm total inset at bottom
         
-        // z=0: smallest point
+        // z=0: smallest point (with proportionally smaller radius)
+        bottom_size = foot_full_size - bottom_inset * 2;
+        bottom_radius = max(0.5, foot_radius - bottom_inset);
         translate([bottom_inset, bottom_inset, 0])
-        cube([foot_full_size - bottom_inset * 2, foot_full_size - bottom_inset * 2, 0.01]);
+        rounded_rect_profile(bottom_size, bottom_size, 0.01, bottom_radius);
         
         // z=0.8: after lower taper (45°), expanded by 0.8mm
+        mid_size = foot_full_size - upper_taper * 2;
+        mid_radius = max(0.5, foot_radius - upper_taper);
         translate([upper_taper, upper_taper, lower_taper])
-        cube([foot_full_size - upper_taper * 2, foot_full_size - upper_taper * 2, 0.01]);
+        rounded_rect_profile(mid_size, mid_size, 0.01, mid_radius);
         
         // z=2.6: end of riser, start of upper taper
         translate([upper_taper, upper_taper, lower_taper + riser])
-        cube([foot_full_size - upper_taper * 2, foot_full_size - upper_taper * 2, 0.01]);
+        rounded_rect_profile(mid_size, mid_size, 0.01, mid_radius);
         
         // z=4.75: full size (end of upper taper)
         translate([0, 0, lower_taper + riser + upper_taper])
-        cube([foot_full_size, foot_full_size, 0.01]);
+        rounded_rect_profile(foot_full_size, foot_full_size, 0.01, foot_radius);
         
         // z=5: top of base (with 0.25 clearance height)
         translate([0, 0, base_height - 0.01])
-        cube([foot_full_size, foot_full_size, 0.01]);
+        rounded_rect_profile(foot_full_size, foot_full_size, 0.01, foot_radius);
     }
 }
 
