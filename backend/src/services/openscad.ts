@@ -57,6 +57,7 @@ finger_slide_radius = ${config.fingerSlideRadius};
 label_enabled = ${config.labelEnabled};
 corner_radius = ${config.cornerRadius};
 feet_corner_radius = ${config.feetCornerRadius};
+grid_unit = ${config.gridSize};
 flat_base = "${config.flatBase}";
 efficient_floor = "${config.efficientFloor}";
 tapered_corner = "${config.taperedCorner}";
@@ -65,7 +66,6 @@ wall_pattern = "${config.wallPattern}";
 wall_pattern_spacing = ${config.wallPatternSpacing};
 
 /* [Constants] */
-grid_unit = 42;
 base_height = 5;
 stacking_lip_height = 4.4;
 gf_corner_radius = 3.75;  // Standard Gridfinity corner radius
@@ -473,9 +473,9 @@ center_screw = ${config.centerScrew};
 weight_cavity = ${config.weightCavity};
 remove_bottom_taper = ${config.removeBottomTaper};
 corner_radius = ${config.cornerRadius};
+grid_unit = ${config.gridSize};
 
 /* [Constants - Official Gridfinity Spec] */
-grid_unit = 42;
 clearance = 0.25;  // Gap between bin and socket walls
 
 // Socket profile (inverse of bin foot) - from gridfinity_constants.scad

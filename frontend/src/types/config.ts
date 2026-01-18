@@ -54,6 +54,7 @@ export interface BoxConfig {
   
   // Feet options
   feetCornerRadius: number;
+  gridSize: number;  // Grid unit size in mm (standard is 42mm)
 }
 
 // Baseplate Configuration
@@ -85,6 +86,9 @@ export interface BaseplateConfig {
   // Corner radius
   cornerRadius: number;
   cornerSegments: number;
+  
+  // Grid size
+  gridSize: number;
 }
 
 // Default configurations
@@ -117,7 +121,8 @@ export const defaultBoxConfig: BoxConfig = {
   wallPattern: 'none',
   wallPatternSpacing: 2,
   cornerRadius: 3.75,
-  feetCornerRadius: 3.75
+  feetCornerRadius: 3.75,
+  gridSize: 42
 };
 
 export const defaultBaseplateConfig: BaseplateConfig = {
@@ -134,7 +139,8 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   weightCavity: false,
   removeBottomTaper: false,
   cornerRadius: 3.75,
-  cornerSegments: 32
+  cornerSegments: 32,
+  gridSize: 42
 };
 
 // Generation result type

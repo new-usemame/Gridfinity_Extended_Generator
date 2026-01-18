@@ -112,6 +112,18 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           ]}
           onChange={(v) => update('flatBase', v as BoxConfig['flatBase'])}
         />
+        <NumberInput
+          label="Grid Unit Size"
+          value={config.gridSize}
+          min={30}
+          max={60}
+          step={1}
+          unit="mm"
+          onChange={(v) => update('gridSize', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Standard Gridfinity is 42mm. Adjust for custom grid sizes.
+        </p>
         <SliderInput
           label="Feet Corner Radius"
           value={config.feetCornerRadius}
@@ -122,7 +134,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           onChange={(v) => update('feetCornerRadius', v)}
         />
         <p className="text-xs text-slate-500">
-          Rounds the corners of the feet so they don't protrude beyond the box corners. Standard is 3.75mm.
+          Rounds the corners of the feet. Standard is 3.75mm.
         </p>
       </CollapsibleSection>
 
@@ -404,6 +416,18 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
           unit="units"
           onChange={(v) => update('depth', v)}
         />
+        <NumberInput
+          label="Grid Unit Size"
+          value={config.gridSize}
+          min={30}
+          max={60}
+          step={1}
+          unit="mm"
+          onChange={(v) => update('gridSize', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Standard Gridfinity is 42mm. Must match your bins.
+        </p>
       </CollapsibleSection>
 
       {/* Style Section */}
