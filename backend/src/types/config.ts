@@ -37,8 +37,11 @@ export interface BoxConfig {
   // Base style
   baseStyle: 'standard' | 'efficient' | 'filled';
   
-  // Corner radius (NEW feature)
+  // Corner radius
   cornerRadius: number;     // 0 - 5mm, 0 = sharp corners
+  
+  // Base chamfer (taper on bottom of feet)
+  baseChamfer: number;      // 0 - 2mm, tapers bottom of feet for easier baseplate fit
 }
 
 // Baseplate Configuration
@@ -84,7 +87,8 @@ export const defaultBoxConfig: BoxConfig = {
   dividersY: 0,
   lipStyle: 'standard',
   baseStyle: 'standard',
-  cornerRadius: 0
+  cornerRadius: 0,
+  baseChamfer: 0.8
 };
 
 export const defaultBaseplateConfig: BaseplateConfig = {

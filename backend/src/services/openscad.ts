@@ -74,6 +74,7 @@ dividers_y = ${config.dividersY};
 lip_style = "${config.lipStyle}";
 base_style = "${config.baseStyle}";
 corner_radius = ${config.cornerRadius};
+base_chamfer = ${config.baseChamfer};
 
 // Constants
 grid_unit = ${gridUnit};
@@ -102,16 +103,19 @@ module rounded_rect(w, d, h, r) {
 
 // Gridfinity base foot profile (creates the stacking interface)
 // This profile is revolved to create the circular foot on each grid unit
+// base_chamfer tapers the bottom edge inward for easier baseplate insertion
 module gridfinity_foot_profile() {
     // Standard Gridfinity foot profile dimensions
     foot_outer = 17.5;  // Outer radius of foot
     foot_inner = 15.5;  // Inner radius after step
     step_height = 0.8;  // Height of bottom step
     slope_height = 1.8; // Height of sloped section
+    chamfer = base_chamfer; // Taper on bottom edge
     
     polygon(points=[
         [foot_inner, 0],
-        [foot_outer, 0],
+        [foot_outer - chamfer, 0],           // Bottom edge pulled in by chamfer
+        [foot_outer, chamfer],               // Chamfer rises to full width
         [foot_outer, step_height],
         [foot_outer - 0.7, step_height],
         [foot_inner, step_height + slope_height],
