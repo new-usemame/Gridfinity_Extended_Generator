@@ -75,10 +75,8 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
         loadedGeometry.computeVertexNormals();
         
         // Rotate from Z-up (OpenSCAD) to Y-up (Three.js)
-        // Use +90° to keep the opening facing up
-        loadedGeometry.rotateX(-Math.PI / 2);
-        // Flip 180° so base is down and opening is up
-        loadedGeometry.rotateY(Math.PI);
+        // +90° around X converts Z-up to Y-up correctly
+        loadedGeometry.rotateX(Math.PI / 2);
         
         // Center horizontally, place bottom on ground
         loadedGeometry.computeBoundingBox();
@@ -132,7 +130,6 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
         dampingFactor={0.05}
         minDistance={20}
         maxDistance={500}
-        maxPolarAngle={Math.PI / 2}
       />
 
       {/* Fit camera on load */}
