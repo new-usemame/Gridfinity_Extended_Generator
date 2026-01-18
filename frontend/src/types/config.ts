@@ -52,11 +52,6 @@ export interface BoxConfig {
   // Corner radius (for the outer box vertical corners)
   cornerRadius: number;
   
-  // Edge rounding (horizontal edges)
-  bottomEdgeRadius: number;   // Rounds the bottom outside edges
-  topEdgeRadius: number;      // Rounds the top outside edges (below lip)
-  innerBottomRadius: number;  // Rounds inside floor-to-wall corners
-  
   // Feet options
   feetCornerRadius: number;
   gridSize: number;  // Grid unit size in mm (standard is 42mm)
@@ -135,9 +130,6 @@ export const defaultBoxConfig: BoxConfig = {
   wallPattern: 'none',
   wallPatternSpacing: 2,
   cornerRadius: 3.75,
-  bottomEdgeRadius: 0.8,     // Slight rounding on bottom edges
-  topEdgeRadius: 0,          // Usually handled by stacking lip
-  innerBottomRadius: 0.8,    // Slight fillet on inside corners
   feetCornerRadius: 3.75,
   gridSize: 42,
   footChamferAngle: 45,      // 45 degrees = standard Gridfinity
