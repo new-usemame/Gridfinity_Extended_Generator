@@ -10,6 +10,32 @@ function App() {
   const [generatorType, setGeneratorType] = useState<GeneratorType>('box');
   const [boxConfig, setBoxConfig] = useState<BoxConfig>(defaultBoxConfig);
   const [baseplateConfig, setBaseplateConfig] = useState<BaseplateConfig>(defaultBaseplateConfig);
+
+  // Sync socket dimensions with foot dimensions when enabled
+  const handleBoxConfigChange = useCallback((config: BoxConfig) => {
+    setBoxConfig(config);
+    if (baseplateConfig.syncSocketWithFoot) {
+      setBaseplateConfig({
+        ...baseplateConfig,
+        socketLowerTaperHeight: config.footLowerTaperHeight,
+        socketRiserHeight: config.footRiserHeight,
+        socketUpperTaperHeight: config.footUpperTaperHeight,
+      });
+    }
+  }, [baseplateConfig]);
+
+  const handleBaseplateConfigChange = useCallback((config: BaseplateConfig) => {
+    setBaseplateConfig(config);
+    // If sync is enabled, also update box config to match (for consistency)
+    if (config.syncSocketWithFoot) {
+      setBoxConfig({
+        ...boxConfig,
+        footLowerTaperHeight: config.socketLowerTaperHeight,
+        footRiserHeight: config.socketRiserHeight,
+        footUpperTaperHeight: config.socketUpperTaperHeight,
+      });
+    }
+  }, [boxConfig]);
   const [boxResult, setBoxResult] = useState<GenerationResult | null>(null);
   const [baseplateResult, setBaseplateResult] = useState<GenerationResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -193,8 +219,8 @@ function App() {
                   type={activeEditor}
                   boxConfig={boxConfig}
                   baseplateConfig={baseplateConfig}
-                  onBoxConfigChange={setBoxConfig}
-                  onBaseplateConfigChange={setBaseplateConfig}
+                  onBoxConfigChange={handleBoxConfigChange}
+                  onBaseplateConfigChange={handleBaseplateConfigChange}
                 />
               </div>
             </div>
@@ -203,8 +229,8 @@ function App() {
               type={generatorType}
               boxConfig={boxConfig}
               baseplateConfig={baseplateConfig}
-              onBoxConfigChange={setBoxConfig}
-              onBaseplateConfigChange={setBaseplateConfig}
+              onBoxConfigChange={handleBoxConfigChange}
+              onBaseplateConfigChange={handleBaseplateConfigChange}
             />
           )}
         </aside>

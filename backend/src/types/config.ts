@@ -100,6 +100,7 @@ export interface BaseplateConfig {
   socketLowerTaperHeight: number;  // Height of bottom taper (0 = vertical/no taper)
   socketRiserHeight: number;       // Height of vertical riser section
   socketUpperTaperHeight: number;  // Height of upper taper
+  syncSocketWithFoot: boolean;     // Auto-sync socket dimensions with foot dimensions
 }
 
 // Default configurations
@@ -158,5 +159,6 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   gridSize: 42,
   socketLowerTaperHeight: 0.7,  // Standard: 0.7mm (set to 0 for vertical)
   socketRiserHeight: 1.8,        // Standard: 1.8mm
-  socketUpperTaperHeight: 2.15   // Standard: 2.15mm
+  socketUpperTaperHeight: 2.15,  // Standard: 2.15mm
+  syncSocketWithFoot: true        // Auto-sync with foot by default
 };
