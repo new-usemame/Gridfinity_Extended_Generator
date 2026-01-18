@@ -52,6 +52,9 @@ export interface BoxConfig {
   // Corner radius (for the outer box vertical corners)
   cornerRadius: number;
   
+  // Bottom overhang prevention
+  preventBottomOverhangs: boolean;  // Adds small chamfer where feet meet box walls
+  
   // Feet options
   feetCornerRadius: number;
   gridSize: number;  // Grid unit size in mm (standard is 42mm)
@@ -130,6 +133,7 @@ export const defaultBoxConfig: BoxConfig = {
   wallPattern: 'none',
   wallPatternSpacing: 2,
   cornerRadius: 3.75,
+  preventBottomOverhangs: true,  // Enabled by default for better printing
   feetCornerRadius: 3.75,
   gridSize: 42,
   footChamferAngle: 45,      // 45 degrees = standard Gridfinity

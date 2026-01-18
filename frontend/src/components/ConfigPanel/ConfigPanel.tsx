@@ -113,6 +113,14 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
         <p className="text-xs text-slate-500">
           Rounds the vertical edges (corners viewed from above). Standard: 3.75mm.
         </p>
+        <ToggleInput
+          label="Prevent Bottom Overhangs"
+          value={config.preventBottomOverhangs}
+          onChange={(v) => update('preventBottomOverhangs', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Adds small chamfer where feet meet box walls to prevent printing overhangs.
+        </p>
       </CollapsibleSection>
 
       {/* Feet Options Section */}

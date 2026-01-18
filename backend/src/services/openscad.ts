@@ -56,6 +56,7 @@ finger_slide_style = "${config.fingerSlideStyle}";
 finger_slide_radius = ${config.fingerSlideRadius};
 label_enabled = ${config.labelEnabled};
 corner_radius = ${config.cornerRadius};
+prevent_bottom_overhangs = ${config.preventBottomOverhangs};
 feet_corner_radius = ${config.feetCornerRadius};
 grid_unit = ${config.gridSize};
 foot_chamfer_angle = ${config.footChamferAngle};
@@ -221,15 +222,43 @@ module screw_holes() {
     }
 }
 
+// Walls with small chamfer at bottom edge to prevent overhangs where feet meet walls
+module walls_with_bottom_chamfer(width, depth, height, radius, chamfer) {
+    // Create walls with a small 45-degree chamfer at the bottom edge
+    // This prevents the overhang where the foot top meets the wall bottom
+    hull() {
+        // Bottom - slightly inset by chamfer amount
+        translate([chamfer, chamfer, 0])
+        rounded_rect_profile(width - chamfer * 2, depth - chamfer * 2, 0.01, max(0.5, radius - chamfer));
+        
+        // Just above chamfer - full size
+        translate([0, 0, chamfer])
+        rounded_rect_profile(width, depth, 0.01, radius);
+        
+        // Top - full size
+        translate([0, 0, height - 0.01])
+        rounded_rect_profile(width, depth, 0.02, radius);
+    }
+}
+
 module gridfinity_walls() {
     wall_height = box_height - base_height;
     // Use the standard Gridfinity corner radius or user override
     outer_radius = corner_radius > 0 ? corner_radius : gf_corner_radius;
     inner_radius = max(0, outer_radius - wall_thickness);
     
+    // Small chamfer size for overhang prevention (45-degree, 0.5mm)
+    overhang_chamfer = 0.5;
+    
     difference() {
         // Outer walls with rounded corners
-        rounded_rect(box_width, box_depth, wall_height, outer_radius);
+        if (prevent_bottom_overhangs) {
+            // Walls with small chamfer at bottom to prevent overhangs
+            walls_with_bottom_chamfer(box_width, box_depth, wall_height, outer_radius, overhang_chamfer);
+        } else {
+            // Standard walls
+            rounded_rect(box_width, box_depth, wall_height, outer_radius);
+        }
         
         // Inner cavity with rounded corners
         translate([wall_thickness, wall_thickness, floor_thickness])
