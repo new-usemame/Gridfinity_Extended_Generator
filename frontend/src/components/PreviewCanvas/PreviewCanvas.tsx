@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useState, useRef } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment, Grid, Center } from '@react-three/drei';
+import { OrbitControls, Environment, Grid } from '@react-three/drei';
 import { STLLoader } from 'three-stdlib';
 import * as THREE from 'three';
 
@@ -73,7 +73,17 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
       stlUrl,
       (loadedGeometry) => {
         loadedGeometry.computeVertexNormals();
-        loadedGeometry.center();
+        
+        // Rotate from Z-up (OpenSCAD) to Y-up (Three.js)
+        loadedGeometry.rotateX(-Math.PI / 2);
+        
+        // Center horizontally, place bottom on ground
+        loadedGeometry.computeBoundingBox();
+        const box = loadedGeometry.boundingBox!;
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        loadedGeometry.translate(-center.x, -box.min.y, -center.z);
+        
         setGeometry(loadedGeometry);
       },
       undefined,
@@ -111,11 +121,7 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
       />
 
       {/* Model */}
-      {geometry && (
-        <Center>
-          <ModelMesh geometry={geometry} />
-        </Center>
-      )}
+      {geometry && <ModelMesh geometry={geometry} />}
 
       {/* Camera Controls */}
       <OrbitControls
