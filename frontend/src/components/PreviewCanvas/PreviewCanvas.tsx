@@ -151,8 +151,8 @@ function CombinedSceneContent({
   boxZOffset,
   onOverlapDetected,
   onOverlapMessage,
-  boxConfig,
-  baseplateConfig
+  boxConfig: _boxConfig,
+  baseplateConfig: _baseplateConfig
 }: { 
   boxStlUrl: string | null; 
   baseplateStlUrl: string | null;
