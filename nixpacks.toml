@@ -1,0 +1,9 @@
+# Disable Nixpacks/Railpack - use Dockerfile instead
+[phases.setup]
+onlyIncludeFiles = []
+
+[phases.build]
+cmds = []
+
+[start]
+cmd = "echo 'Use Dockerfile instead'"
