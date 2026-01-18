@@ -174,14 +174,15 @@ module gridfinity_foot() {
     foot_radius = feet_corner_radius > 0 ? feet_corner_radius : gf_corner_radius;
     foot_full_size = grid_unit - clearance * 2;  // 41.5mm at top
     
-    // Bottom size - user specified (smaller = more tapered)
-    bottom_size = foot_bottom_diameter;
-    bottom_inset = (foot_full_size - bottom_size) / 2;
-    bottom_radius = max(0.5, foot_radius * (bottom_size / foot_full_size));
+    // Bottom size - calculated to match socket taper angle (45 degrees)
+    // The inset equals the taper height for a 45-degree angle
+    bottom_inset = foot_taper_height;
+    bottom_size = foot_full_size - bottom_inset * 2;
+    bottom_radius = max(0.5, foot_radius - bottom_inset);
     
     translate([clearance, clearance, 0])
     hull() {
-        // Bottom - small size
+        // Bottom - smaller size (inset by taper height on each side)
         translate([bottom_inset, bottom_inset, 0])
         rounded_rect_profile(bottom_size, bottom_size, 0.01, bottom_radius);
         
