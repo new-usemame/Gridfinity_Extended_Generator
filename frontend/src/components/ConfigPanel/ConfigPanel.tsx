@@ -237,8 +237,8 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
         />
       </Section>
 
-      {/* Corner & Base Section */}
-      <Section title="Corner & Base" icon="⭕" highlight>
+      {/* Corner Rounding Section */}
+      <Section title="Corner Rounding" icon="⭕">
         <SliderInput
           label="Corner Radius"
           value={config.cornerRadius}
@@ -250,18 +250,6 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
         />
         <p className="text-xs text-slate-500 mt-2">
           Rounded corners make printing easier and reduce sharp edges.
-        </p>
-        <SliderInput
-          label="Base Chamfer"
-          value={config.baseChamfer}
-          min={0}
-          max={2}
-          step={0.1}
-          unit="mm"
-          onChange={(v) => update('baseChamfer', v)}
-        />
-        <p className="text-xs text-slate-500 mt-2">
-          Tapers the bottom of the feet inward for easier insertion into baseplates.
         </p>
       </Section>
     </div>

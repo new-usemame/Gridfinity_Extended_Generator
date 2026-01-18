@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     xvfb \
     libgl1-mesa-glx \
     libgl1-mesa-dri \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app directory
