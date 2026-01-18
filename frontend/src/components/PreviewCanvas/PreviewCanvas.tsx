@@ -95,7 +95,16 @@ export function PreviewCanvas({
       {/* Combined View Controls */}
       {isCombinedView && hasModel && (
         <div className="absolute right-4 top-4 w-64 bg-slate-900/90 backdrop-blur-sm rounded-xl border border-slate-700 p-4 z-10">
-          <h3 className="text-sm font-semibold text-slate-300 mb-3">Position Control</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-slate-300">Position Control</h3>
+            <button
+              onClick={() => setBoxZOffset(0)}
+              className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors"
+              title="Reset to 0"
+            >
+              Reset
+            </button>
+          </div>
           <div className="space-y-3">
             <div>
               <label className="block text-xs text-slate-400 mb-2">
@@ -257,7 +266,7 @@ function CombinedSceneContent({
     );
   }, [baseplateStlUrl]);
 
-  // Overlap detection
+  // Collision detection - accounts for chamfered feet and sockets
   useEffect(() => {
     if (!boxBoundingBox || !baseplateBoundingBox) {
       onOverlapDetected(false);
@@ -265,50 +274,77 @@ function CombinedSceneContent({
       return;
     }
 
+    // Gridfinity geometry constants
+    // Box feet extend 5mm downward from box bottom (base_height = 0.8 + 1.8 + 2.15 + 0.25)
+    const BOX_FEET_HEIGHT = 5.0;
+    // Baseplate sockets are 4.65mm deep from top (0.7 + 1.8 + 2.15)
+    const SOCKET_DEPTH = 4.65;
+    
     // Create a copy of box bounding box with Z offset applied
     const offsetBox = boxBoundingBox.clone();
     offsetBox.translate(new THREE.Vector3(0, boxZOffset, 0));
-
-    // Check if boxes intersect in 3D space
-    const intersects = offsetBox.intersectsBox(baseplateBoundingBox);
     
-    if (intersects) {
-      // Calculate overlap box
-      const overlapBox = offsetBox.intersect(baseplateBoundingBox);
-      if (overlapBox) {
-        const overlapSize = new THREE.Vector3();
-        overlapBox.getSize(overlapSize);
-        const overlapVolume = overlapSize.x * overlapSize.y * overlapSize.z;
+    // Extend box bounding box downward to include feet region
+    // Feet extend from box bottom (min.y) downward by BOX_FEET_HEIGHT
+    const boxFeetRegion = new THREE.Box3(
+      new THREE.Vector3(offsetBox.min.x, offsetBox.min.y - BOX_FEET_HEIGHT, offsetBox.min.z),
+      new THREE.Vector3(offsetBox.max.x, offsetBox.min.y, offsetBox.max.z)
+    );
+    
+    // Baseplate socket region extends from top downward by SOCKET_DEPTH
+    const baseplateSocketRegion = new THREE.Box3(
+      new THREE.Vector3(baseplateBoundingBox.min.x, baseplateBoundingBox.max.y - SOCKET_DEPTH, baseplateBoundingBox.min.z),
+      new THREE.Vector3(baseplateBoundingBox.max.x, baseplateBoundingBox.max.y, baseplateBoundingBox.max.z)
+    );
+    
+    // Check if box feet region intersects with baseplate socket region
+    const feetIntersectSockets = boxFeetRegion.intersectsBox(baseplateSocketRegion);
+    
+    if (feetIntersectSockets) {
+      // Calculate the intersection to get collision details
+      const collisionBox = boxFeetRegion.intersect(baseplateSocketRegion);
+      
+      if (collisionBox) {
+        // Check if there's actual volume collision (not just touching)
+        const collisionSize = new THREE.Vector3();
+        collisionBox.getSize(collisionSize);
+        const collisionVolume = collisionSize.x * collisionSize.y * collisionSize.z;
         
-        // Also check if box bottom is penetrating baseplate top
-        const boxBottom = offsetBox.min.y;
-        const baseplateTop = baseplateBoundingBox.max.y;
-        const penetration = baseplateTop - boxBottom;
+        // Also check penetration depth
+        const boxFeetBottom = boxFeetRegion.min.y;
+        const socketTop = baseplateSocketRegion.max.y;
+        const penetration = socketTop - boxFeetBottom;
         
-        if (overlapVolume > 0.1 || penetration > 0.1) {
+        if (collisionVolume > 0.01 || penetration > 0.01) {
           onOverlapDetected(true);
-          if (penetration > 0.1) {
-            onOverlapMessage(`Penetration: ${penetration.toFixed(2)}mm`);
+          if (penetration > 0.01) {
+            onOverlapMessage(`Collision: ${penetration.toFixed(2)}mm penetration`);
           } else {
-            onOverlapMessage(`Overlap: ${overlapVolume.toFixed(1)} mm³`);
+            onOverlapMessage(`Collision: ${collisionVolume.toFixed(1)} mm³ overlap`);
           }
         } else {
+          // Just touching, not colliding
           onOverlapDetected(false);
-          onOverlapMessage(null);
+          onOverlapMessage('Touching');
         }
       } else {
+        // Intersects but no collision box (edge case)
         onOverlapDetected(true);
-        onOverlapMessage('Overlap detected');
+        onOverlapMessage('Collision detected');
       }
     } else {
-      // Check if box is too far above (not useful info, but good to know)
-      const boxBottom = offsetBox.min.y;
-      const baseplateTop = baseplateBoundingBox.max.y;
-      const gap = boxBottom - baseplateTop;
+      // No collision - check gap
+      const boxFeetBottom = boxFeetRegion.min.y;
+      const socketTop = baseplateSocketRegion.max.y;
+      const gap = boxFeetBottom - socketTop;
       
       if (gap > 0.1) {
         onOverlapDetected(false);
         onOverlapMessage(`Gap: ${gap.toFixed(2)}mm`);
+      } else if (gap < -0.1) {
+        // Box is above baseplate
+        onOverlapDetected(false);
+        onOverlapMessage(`Above: ${Math.abs(gap).toFixed(2)}mm`);
       } else {
         onOverlapDetected(false);
         onOverlapMessage(null);
