@@ -380,12 +380,23 @@ module wall_pattern_grid(width, height, depth, cell_size, spacing) {
 }
 
 module stacking_lip_cutout(lip_h, radius) {
-    inset = 1.9;
+    // Official Gridfinity lip dimensions
+    inset = 1.9;  // Standard lip inset (creates the overhang)
     inner_r = max(0, radius - inset);
-    difference() {
-        rounded_rect(box_width, box_depth, lip_h + 1, radius);
-        translate([inset, inset, 0])
-        rounded_rect(box_width - inset * 2, box_depth - inset * 2, lip_h + 1, inner_r);
+    chamfer_z = 0.7;  // Height of smooth transition (lower taper from official spec)
+    
+    // Create smooth chamfered transition using hull
+    // The transition should be smooth from wall edge to inset edge
+    // This replaces the sharp 90-degree edge with a smooth taper
+    hull() {
+        // Top of lip cutout (inset, smaller) - at the top of the lip
+        translate([inset, inset, lip_h])
+        rounded_rect(box_width - inset * 2, box_depth - inset * 2, 0.1, inner_r);
+        
+        // Bottom of lip cutout (at wall edge, larger) - smooth chamfer transition
+        // Start the chamfer slightly below to create smooth transition
+        translate([0, 0, -chamfer_z])
+        rounded_rect(box_width, box_depth, 0.1, radius);
     }
 }
 
@@ -571,41 +582,48 @@ module grid_socket() {
     // Socket that receives Gridfinity bin foot
     // Profile is inverse of bin foot - full size at top, tapers down
     // OPEN SOCKET - goes all the way through!
+    // Simplified to match foot profile exactly (no double chamfers)
     
     socket_full_size = grid_unit - clearance * 2;  // 41.5mm at top
     socket_corner_radius = 3.75;  // Standard Gridfinity corner radius for sockets
     
-    // Calculate sizes at different heights
+    // Calculate sizes at different heights (matching foot profile)
     riser_start_size = socket_full_size - upper_taper * 2;
+    mid_radius = max(0.5, socket_corner_radius - upper_taper);
     
     // The socket is an open hole with chamfered profile and rounded corners
     // Cut from top all the way through to bottom
+    // Use minimal hull points to avoid double chamfer artifacts
     
     translate([clearance, clearance, -0.1]) {
         hull() {
-            // Top of socket - full size (41.5mm) with rounded corners
+            // 1. Top of socket - full size (41.5mm) with rounded corners
+            // Matches foot top (inverse)
             translate([0, 0, plate_height])
             socket_rounded_rect(socket_full_size, socket_full_size, 0.2, socket_corner_radius);
             
-            // End of upper taper, start of riser
-            mid_radius = max(0.5, socket_corner_radius - upper_taper);
+            // 2. End of upper taper, start of riser section
+            // Matches foot: end of upper taper (z = lower_taper + riser)
             translate([upper_taper, upper_taper, lower_taper + riser_height])
             socket_rounded_rect(riser_start_size, riser_start_size, 0.01, mid_radius);
             
-            // Start of riser (or end of lower taper if lower_taper > 0)
-            translate([upper_taper, upper_taper, lower_taper])
-            socket_rounded_rect(riser_start_size, riser_start_size, 0.01, mid_radius);
-            
-            // Bottom - goes all the way through
+            // 3. Bottom - goes all the way through
+            // Matches foot bottom (inverse)
             if (lower_taper > 0 && !remove_bottom_taper) {
-                // Has lower taper - calculate bottom size
+                // Has lower taper - end of riser transitions to lower taper
+                // End of riser (start of lower taper)
+                translate([upper_taper, upper_taper, lower_taper])
+                socket_rounded_rect(riser_start_size, riser_start_size, 0.01, mid_radius);
+                
+                // Bottom of lower taper (matches foot bottom)
                 total_inset = upper_taper + lower_taper;
                 bottom_size = socket_full_size - total_inset * 2;
                 bottom_radius = max(0.5, socket_corner_radius - total_inset);
                 translate([total_inset, total_inset, 0])
                 socket_rounded_rect(bottom_size, bottom_size, 0.2, bottom_radius);
             } else {
-                // Vertical bottom - no taper, straight down
+                // Vertical bottom - no taper, straight down (matches foot when lower_taper = 0)
+                // When lower_taper = 0, riser starts at z=0, so we only need one point
                 translate([upper_taper, upper_taper, 0])
                 socket_rounded_rect(riser_start_size, riser_start_size, 0.2, mid_radius);
             }
