@@ -4,35 +4,68 @@ import { PreviewCanvas } from './components/PreviewCanvas/PreviewCanvas';
 import { ExportButtons } from './components/ExportButtons/ExportButtons';
 import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, GenerationResult } from './types/config';
 
-type GeneratorType = 'box' | 'baseplate';
+type GeneratorType = 'box' | 'baseplate' | 'combined';
 
 function App() {
   const [generatorType, setGeneratorType] = useState<GeneratorType>('box');
   const [boxConfig, setBoxConfig] = useState<BoxConfig>(defaultBoxConfig);
   const [baseplateConfig, setBaseplateConfig] = useState<BaseplateConfig>(defaultBaseplateConfig);
-  const [generationResult, setGenerationResult] = useState<GenerationResult | null>(null);
+  const [boxResult, setBoxResult] = useState<GenerationResult | null>(null);
+  const [baseplateResult, setBaseplateResult] = useState<GenerationResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeEditor, setActiveEditor] = useState<'box' | 'baseplate'>('box');
 
   const handleGenerate = useCallback(async () => {
     setIsGenerating(true);
     setError(null);
 
     try {
-      const config = generatorType === 'box' ? boxConfig : baseplateConfig;
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: generatorType, config })
-      });
+      if (generatorType === 'combined') {
+        // Generate both box and baseplate
+        const [boxResponse, baseplateResponse] = await Promise.all([
+          fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'box', config: boxConfig })
+          }),
+          fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'baseplate', config: baseplateConfig })
+          })
+        ]);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to generate STL');
+        if (!boxResponse.ok || !baseplateResponse.ok) {
+          const errorData = boxResponse.ok ? await baseplateResponse.json() : await boxResponse.json();
+          throw new Error(errorData.message || 'Failed to generate STL');
+        }
+
+        const boxResult: GenerationResult = await boxResponse.json();
+        const baseplateResult: GenerationResult = await baseplateResponse.json();
+        setBoxResult(boxResult);
+        setBaseplateResult(baseplateResult);
+      } else {
+        // Generate single item
+        const config = generatorType === 'box' ? boxConfig : baseplateConfig;
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: generatorType, config })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to generate STL');
+        }
+
+        const result: GenerationResult = await response.json();
+        if (generatorType === 'box') {
+          setBoxResult(result);
+        } else {
+          setBaseplateResult(result);
+        }
       }
-
-      const result: GenerationResult = await response.json();
-      setGenerationResult(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -63,7 +96,10 @@ function App() {
           {/* Type Selector */}
           <div className="flex items-center gap-2 bg-slate-900 rounded-xl p-1">
             <button
-              onClick={() => setGeneratorType('box')}
+              onClick={() => {
+                setGeneratorType('box');
+                setActiveEditor('box');
+              }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 generatorType === 'box'
                   ? 'bg-green-600 text-white shadow-lg shadow-green-500/25'
@@ -73,7 +109,10 @@ function App() {
               Box / Bin
             </button>
             <button
-              onClick={() => setGeneratorType('baseplate')}
+              onClick={() => {
+                setGeneratorType('baseplate');
+                setActiveEditor('baseplate');
+              }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 generatorType === 'baseplate'
                   ? 'bg-green-600 text-white shadow-lg shadow-green-500/25'
@@ -81,6 +120,16 @@ function App() {
               }`}
             >
               Baseplate
+            </button>
+            <button
+              onClick={() => setGeneratorType('combined')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                generatorType === 'combined'
+                  ? 'bg-green-600 text-white shadow-lg shadow-green-500/25'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              Combined View
             </button>
           </div>
 
@@ -113,13 +162,51 @@ function App() {
       <div className="flex-1 flex overflow-hidden">
         {/* Config Panel */}
         <aside className="w-96 flex-shrink-0 border-r border-slate-800 bg-slate-900/50 overflow-y-auto">
-          <ConfigPanel
-            type={generatorType}
-            boxConfig={boxConfig}
-            baseplateConfig={baseplateConfig}
-            onBoxConfigChange={setBoxConfig}
-            onBaseplateConfigChange={setBaseplateConfig}
-          />
+          {generatorType === 'combined' ? (
+            <div className="h-full flex flex-col">
+              {/* Tab Selector */}
+              <div className="flex border-b border-slate-800">
+                <button
+                  onClick={() => setActiveEditor('box')}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                    activeEditor === 'box'
+                      ? 'bg-slate-800 text-green-400 border-b-2 border-green-500'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                  }`}
+                >
+                  Box Editor
+                </button>
+                <button
+                  onClick={() => setActiveEditor('baseplate')}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                    activeEditor === 'baseplate'
+                      ? 'bg-slate-800 text-green-400 border-b-2 border-green-500'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                  }`}
+                >
+                  Baseplate Editor
+                </button>
+              </div>
+              {/* Active Editor Panel */}
+              <div className="flex-1 overflow-y-auto">
+                <ConfigPanel
+                  type={activeEditor}
+                  boxConfig={boxConfig}
+                  baseplateConfig={baseplateConfig}
+                  onBoxConfigChange={setBoxConfig}
+                  onBaseplateConfigChange={setBaseplateConfig}
+                />
+              </div>
+            </div>
+          ) : (
+            <ConfigPanel
+              type={generatorType}
+              boxConfig={boxConfig}
+              baseplateConfig={baseplateConfig}
+              onBoxConfigChange={setBoxConfig}
+              onBaseplateConfigChange={setBaseplateConfig}
+            />
+          )}
         </aside>
 
         {/* Preview Area */}
@@ -138,18 +225,50 @@ function App() {
 
           {/* 3D Preview */}
           <div className="flex-1 relative">
-            <PreviewCanvas stlUrl={generationResult?.stlUrl || null} isLoading={isGenerating} />
+            {generatorType === 'combined' ? (
+              <PreviewCanvas
+                boxStlUrl={boxResult?.stlUrl || null}
+                baseplateStlUrl={baseplateResult?.stlUrl || null}
+                isLoading={isGenerating}
+                isCombinedView={true}
+              />
+            ) : (
+              <PreviewCanvas
+                stlUrl={(generatorType === 'box' ? boxResult : baseplateResult)?.stlUrl || null}
+                isLoading={isGenerating}
+                isCombinedView={false}
+              />
+            )}
           </div>
 
           {/* Export Buttons */}
-          {generationResult && (
-            <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4">
-              <ExportButtons
-                stlUrl={generationResult.stlUrl}
-                scadContent={generationResult.scadContent}
-                filename={generationResult.filename}
-              />
+          {generatorType === 'combined' ? (
+            <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4 flex gap-2">
+              {boxResult && (
+                <ExportButtons
+                  stlUrl={boxResult.stlUrl}
+                  scadContent={boxResult.scadContent}
+                  filename={boxResult.filename}
+                />
+              )}
+              {baseplateResult && (
+                <ExportButtons
+                  stlUrl={baseplateResult.stlUrl}
+                  scadContent={baseplateResult.scadContent}
+                  filename={baseplateResult.filename}
+                />
+              )}
             </div>
+          ) : (
+            (generatorType === 'box' ? boxResult : baseplateResult) && (
+              <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4">
+                <ExportButtons
+                  stlUrl={(generatorType === 'box' ? boxResult : baseplateResult)!.stlUrl}
+                  scadContent={(generatorType === 'box' ? boxResult : baseplateResult)!.scadContent}
+                  filename={(generatorType === 'box' ? boxResult : baseplateResult)!.filename}
+                />
+              </div>
+            )
           )}
         </main>
       </div>
