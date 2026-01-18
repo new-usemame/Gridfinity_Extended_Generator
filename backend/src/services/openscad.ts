@@ -70,11 +70,13 @@ wall_pattern = "${config.wallPattern}";
 wall_pattern_spacing = ${config.wallPatternSpacing};
 
 /* [Constants] */
-// Simple taper height - ONE continuous taper from bottom to top
-// Total taper height for the foot/base section
-taper_height = 4.75;  // Standard Gridfinity base height
-// Total base height (same as taper - it's all one smooth taper)
-base_height = taper_height;
+// Foot socket profile height (lower taper + riser only - no upper taper)
+// The upper taper is combined with the lip into ONE chamfer
+foot_socket_height = foot_lower_taper_height + foot_riser_height;
+// Combined lip/chamfer height - single smooth chamfer from riser to box walls
+lip_chamfer_height = foot_upper_taper_height + 1.8;  // Combined into one chamfer
+// Total base height
+base_height = foot_socket_height + lip_chamfer_height;
 stacking_lip_height = 4.4;
 gf_corner_radius = 3.75;  // Standard Gridfinity corner radius
 clearance = 0.25;  // Gap from grid edge
@@ -89,10 +91,14 @@ box_height = height_units * 7 + base_height;
 gridfinity_box();
 
 module gridfinity_box() {
-    // Simple tapered base - ONE smooth taper from bottom to box walls
-    gridfinity_tapered_base();
+    // Base with stacking feet (lower taper + riser only)
+    gridfinity_base();
     
-    // Box walls - start after the taper
+    // Single smooth chamfer from riser top to box walls
+    translate([0, 0, foot_socket_height])
+    gridfinity_single_chamfer();
+    
+    // Box walls - start after the chamfer
     translate([0, 0, base_height])
     gridfinity_walls();
 }
@@ -116,49 +122,59 @@ module rounded_rect(width, depth, height, radius) {
     }
 }
 
-// Simple tapered base - ONE smooth taper from bottom point to box walls
-module gridfinity_tapered_base() {
+module gridfinity_base() {
+    for (gx = [0:width_units-1]) {
+        for (gy = [0:depth_units-1]) {
+            translate([gx * grid_unit, gy * grid_unit, 0])
+            single_base_unit();
+        }
+    }
+}
+
+// Single chamfer - ONE smooth transition from foot riser to box walls
+module gridfinity_single_chamfer() {
+    // Use the standard Gridfinity corner radius or user override
     outer_radius = corner_radius > 0 ? corner_radius : gf_corner_radius;
     foot_radius = feet_corner_radius > 0 ? feet_corner_radius : gf_corner_radius;
     
-    // Bottom size - small point at the very bottom
-    bottom_size = foot_bottom_diameter;
-    bottom_radius = max(0.5, foot_radius * 0.3);
+    // The riser size (what the foot ends at)
+    foot_full_size = grid_unit - clearance * 2;  // 41.5mm
+    riser_size = foot_full_size - foot_upper_taper_height * 2;
+    riser_radius = max(0.5, foot_radius - foot_upper_taper_height);
+    
+    // ONE smooth chamfer from riser size at bottom to full box size at top
+    hull() {
+        // Bottom - matches top of foot riser (per unit, inset from grid)
+        for (gx = [0:width_units-1]) {
+            for (gy = [0:depth_units-1]) {
+                translate([gx * grid_unit + clearance + foot_upper_taper_height, 
+                           gy * grid_unit + clearance + foot_upper_taper_height, 0])
+                rounded_rect_profile(riser_size, riser_size, 0.01, riser_radius);
+            }
+        }
+        
+        // Top - full box size (flush with walls)
+        translate([0, 0, lip_chamfer_height - 0.01])
+        rounded_rect_profile(box_width, box_depth, 0.02, outer_radius);
+    }
+}
+
+module single_base_unit() {
+    // Gridfinity base profile - matches baseplate sockets
+    // Uses official dimensions from gridfinity_constants.scad
     
     difference() {
-        hull() {
-            // Bottom - small points for each grid unit
-            for (gx = [0:width_units-1]) {
-                for (gy = [0:depth_units-1]) {
-                    bottom_inset = (grid_unit - bottom_size) / 2;
-                    translate([gx * grid_unit + bottom_inset, gy * grid_unit + bottom_inset, 0])
-                    rounded_rect_profile(bottom_size, bottom_size, 0.01, bottom_radius);
-                }
-            }
-            
-            // Top - full box size (flush with walls)
-            translate([0, 0, taper_height - 0.01])
-            rounded_rect_profile(box_width, box_depth, 0.02, outer_radius);
-        }
+        // The stacking foot with proper chamfer profile
+        gridfinity_foot();
         
-        // Magnet holes for each unit
+        // Magnet holes
         if (magnet_enabled) {
-            for (gx = [0:width_units-1]) {
-                for (gy = [0:depth_units-1]) {
-                    translate([gx * grid_unit, gy * grid_unit, 0])
-                    magnet_holes();
-                }
-            }
+            magnet_holes();
         }
         
-        // Screw holes for each unit
+        // Screw holes
         if (screw_enabled) {
-            for (gx = [0:width_units-1]) {
-                for (gy = [0:depth_units-1]) {
-                    translate([gx * grid_unit, gy * grid_unit, 0])
-                    screw_holes();
-                }
-            }
+            screw_holes();
         }
     }
 }
@@ -179,6 +195,50 @@ module rounded_rect_profile(width, depth, height, radius) {
             translate([width - r, depth - r, 0])
             cylinder(r = r, h = height, $fn = $fn);
         }
+    }
+}
+
+module gridfinity_foot() {
+    // Foot profile: lower taper + riser ONLY
+    // The upper taper/chamfer is handled by gridfinity_single_chamfer() as ONE chamfer
+    
+    lower_taper = foot_lower_taper_height;
+    riser = foot_riser_height;
+    upper_taper = foot_upper_taper_height;
+    
+    // Use user-specified feet corner radius, default to standard 3.75mm
+    foot_radius = feet_corner_radius > 0 ? feet_corner_radius : gf_corner_radius;
+    foot_full_size = grid_unit - clearance * 2;  // 41.5mm
+    
+    // Calculate bottom size based on bottom diameter
+    bottom_diameter = foot_bottom_diameter;
+    bottom_size = (lower_taper > 0) ? bottom_diameter : foot_full_size;
+    
+    // Riser size (smaller than full foot, accounts for upper taper width)
+    riser_size = foot_full_size - upper_taper * 2;
+    riser_radius = max(0.5, foot_radius - upper_taper);
+    
+    translate([clearance, clearance, 0])
+    hull() {
+        if (lower_taper > 0) {
+            // Bottom point - use specified bottom diameter
+            bottom_inset = (foot_full_size - bottom_size) / 2;
+            bottom_radius = max(0.5, foot_radius * (bottom_size / foot_full_size));
+            translate([bottom_inset, bottom_inset, 0])
+            rounded_rect_profile(bottom_size, bottom_size, 0.01, bottom_radius);
+            
+            // End of lower taper (start of riser)
+            translate([upper_taper, upper_taper, lower_taper])
+            rounded_rect_profile(riser_size, riser_size, 0.01, riser_radius);
+        } else {
+            // Vertical bottom - no taper, straight up from bottom
+            translate([upper_taper, upper_taper, 0])
+            rounded_rect_profile(riser_size, riser_size, 0.01, riser_radius);
+        }
+        
+        // Top of riser - stays at riser size (chamfer handles rest)
+        translate([upper_taper, upper_taper, foot_socket_height - 0.01])
+        rounded_rect_profile(riser_size, riser_size, 0.02, riser_radius);
     }
 }
 
@@ -451,18 +511,26 @@ weight_cavity = ${config.weightCavity};
 remove_bottom_taper = ${config.removeBottomTaper};
 corner_radius = ${config.cornerRadius};
 grid_unit = ${config.gridSize};
+socket_lower_taper_height = ${config.socketLowerTaperHeight};
+socket_riser_height = ${config.socketRiserHeight};
+socket_upper_taper_height = ${config.socketUpperTaperHeight};
 
 /* [Constants - Official Gridfinity Spec] */
 clearance = 0.25;  // Gap between bin and socket walls
 
-// Simple tapered socket - ONE continuous taper from bottom to top
-// Matches the simple tapered foot on the box
-taper_depth = 4.75;  // Same as box taper height
-foot_bottom_diameter = 1.6;  // Matches box foot bottom diameter
+// Socket profile - matches bin foot profile
+// Foot receiving portion: lower_taper + riser
+// Single chamfer at top opens from riser_size to socket_full_size
+lower_taper = socket_lower_taper_height;
+riser_height = socket_riser_height;
+upper_taper = socket_upper_taper_height;  // The ONE chamfer at top
+
+// Socket depth: foot receiving (lower_taper + riser) + chamfer opening
+socket_depth = lower_taper + riser_height + upper_taper;
 
 // The baseplate is just the socket frame - no solid floor underneath
 // Sockets are OPEN (go all the way through)
-plate_height = taper_depth;
+plate_height = socket_depth;
 
 $fn = 32;
 
@@ -528,28 +596,48 @@ module socket_rounded_rect(width, depth, height, radius) {
 
 module grid_socket() {
     // Socket that receives Gridfinity bin foot
-    // Simple taper - ONE smooth taper from bottom to top
+    // Profile matches bin foot with ONE chamfer at top
     // OPEN SOCKET - goes all the way through!
+    // 
+    // This matches the foot profile:
+    // - Foot has: lower_taper -> riser -> ONE chamfer to box walls
+    // - Socket has: ONE chamfer (top opening) -> riser -> lower_taper (bottom)
     
     socket_full_size = grid_unit - clearance * 2;  // 41.5mm at top
     socket_corner_radius = 3.75;  // Standard Gridfinity corner radius for sockets
     
-    // Bottom size - small to match the foot bottom point
-    // Use same ratio as foot (foot_bottom_diameter relative to grid_unit)
-    bottom_size = foot_bottom_diameter;  // Same as foot bottom
-    bottom_inset = (socket_full_size - bottom_size) / 2;
-    bottom_radius = max(0.5, socket_corner_radius * 0.3);
+    // Size at riser section (where the foot riser sits)
+    riser_size = socket_full_size - upper_taper * 2;
+    riser_radius = max(0.5, socket_corner_radius - upper_taper);
     
-    // Simple tapered socket - ONE smooth taper
+    // The socket is an open hole with ONE chamfered opening at top
     translate([clearance, clearance, -0.1]) {
         hull() {
-            // Top of socket - full size (41.5mm)
+            // Top of socket - full size (41.5mm) - ONE chamfer opens to here
             translate([0, 0, plate_height])
             socket_rounded_rect(socket_full_size, socket_full_size, 0.2, socket_corner_radius);
             
-            // Bottom of socket - small point (matches foot bottom)
-            translate([bottom_inset, bottom_inset, 0])
-            socket_rounded_rect(bottom_size, bottom_size, 0.2, bottom_radius);
+            // Top of riser / bottom of chamfer - at riser_size
+            translate([upper_taper, upper_taper, lower_taper + riser_height])
+            socket_rounded_rect(riser_size, riser_size, 0.01, riser_radius);
+            
+            // Bottom of riser / top of lower taper - at riser_size
+            translate([upper_taper, upper_taper, lower_taper])
+            socket_rounded_rect(riser_size, riser_size, 0.01, riser_radius);
+            
+            // Bottom of socket
+            if (lower_taper > 0 && !remove_bottom_taper) {
+                // Has lower taper - narrow at bottom to match foot bottom
+                bottom_inset = upper_taper + lower_taper;
+                bottom_size = socket_full_size - bottom_inset * 2;
+                bottom_radius = max(0.5, socket_corner_radius - bottom_inset);
+                translate([bottom_inset, bottom_inset, 0])
+                socket_rounded_rect(bottom_size, bottom_size, 0.2, bottom_radius);
+            } else {
+                // No lower taper - vertical walls at riser width
+                translate([upper_taper, upper_taper, 0])
+                socket_rounded_rect(riser_size, riser_size, 0.2, riser_radius);
+            }
         }
     }
     
