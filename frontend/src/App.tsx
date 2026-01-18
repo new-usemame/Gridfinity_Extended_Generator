@@ -231,6 +231,8 @@ function App() {
                 baseplateStlUrl={baseplateResult?.stlUrl || null}
                 isLoading={isGenerating}
                 isCombinedView={true}
+                boxConfig={boxConfig}
+                baseplateConfig={baseplateConfig}
               />
             ) : (
               <PreviewCanvas

@@ -3,6 +3,7 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, Grid } from '@react-three/drei';
 import { STLLoader } from 'three-stdlib';
 import * as THREE from 'three';
+import { BoxConfig, BaseplateConfig } from '../../types/config';
 
 interface PreviewCanvasProps {
   stlUrl?: string | null;
@@ -10,6 +11,8 @@ interface PreviewCanvasProps {
   baseplateStlUrl?: string | null;
   isLoading: boolean;
   isCombinedView?: boolean;
+  boxConfig?: BoxConfig;
+  baseplateConfig?: BaseplateConfig;
 }
 
 export function PreviewCanvas({ 
@@ -17,7 +20,9 @@ export function PreviewCanvas({
   boxStlUrl, 
   baseplateStlUrl, 
   isLoading, 
-  isCombinedView = false 
+  isCombinedView = false,
+  boxConfig,
+  baseplateConfig
 }: PreviewCanvasProps) {
   const [boxZOffset, setBoxZOffset] = useState(0); // mm offset for box position
   const [overlapDetected, setOverlapDetected] = useState(false);
@@ -78,6 +83,8 @@ export function PreviewCanvas({
               boxZOffset={boxZOffset}
               onOverlapDetected={setOverlapDetected}
               onOverlapMessage={setOverlapMessage}
+              boxConfig={boxConfig}
+              baseplateConfig={baseplateConfig}
             />
           ) : (
             <SceneContent stlUrl={stlUrl || null} />
@@ -143,13 +150,17 @@ function CombinedSceneContent({
   baseplateStlUrl, 
   boxZOffset,
   onOverlapDetected,
-  onOverlapMessage
+  onOverlapMessage,
+  boxConfig,
+  baseplateConfig
 }: { 
   boxStlUrl: string | null; 
   baseplateStlUrl: string | null;
   boxZOffset: number;
   onOverlapDetected: (detected: boolean) => void;
   onOverlapMessage: (message: string | null) => void;
+  boxConfig?: BoxConfig;
+  baseplateConfig?: BaseplateConfig;
 }) {
   const [boxGeometry, setBoxGeometry] = useState<THREE.BufferGeometry | null>(null);
   const [baseplateGeometry, setBaseplateGeometry] = useState<THREE.BufferGeometry | null>(null);
@@ -180,12 +191,15 @@ function CombinedSceneContent({
         );
         loadedGeometry.applyMatrix4(matrix);
         
-        // Center horizontally and place on ground
+        // Position box to align with grid corner (bottom-left)
+        // Gridfinity clearance is 0.25mm on each side
         loadedGeometry.computeBoundingBox();
         const box = loadedGeometry.boundingBox!;
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-        loadedGeometry.translate(-center.x, -box.min.y, -center.z);
+        const clearance = 0.25; // Standard Gridfinity clearance
+        
+        // Move box so its bottom-left corner (in XZ plane) is at (clearance, 0, clearance)
+        // This aligns it with the first grid position on the baseplate
+        loadedGeometry.translate(-box.min.x + clearance, -box.min.y, -box.min.z + clearance);
         
         // Recompute bounding box after translation
         loadedGeometry.computeBoundingBox();
@@ -224,12 +238,11 @@ function CombinedSceneContent({
         );
         loadedGeometry.applyMatrix4(matrix);
         
-        // Center horizontally and place on ground
+        // Position baseplate so its bottom-left corner is at (0, 0, 0)
+        // This aligns it with the grid origin
         loadedGeometry.computeBoundingBox();
         const box = loadedGeometry.boundingBox!;
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-        loadedGeometry.translate(-center.x, -box.min.y, -center.z);
+        loadedGeometry.translate(-box.min.x, -box.min.y, -box.min.z);
         
         // Recompute bounding box after translation
         loadedGeometry.computeBoundingBox();
