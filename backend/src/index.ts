@@ -19,15 +19,16 @@ app.use('/api/generate', generateRouter);
 app.use('/api/files', filesRouter);
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
-  const frontendPath = path.join(process.cwd(), '..', 'frontend', 'dist');
+  // In Docker, frontend is copied to /app/backend/public
+  const frontendPath = path.join(process.cwd(), 'public');
   app.use(express.static(frontendPath));
-  app.get('*', (req, res) => {
+  app.get('*', (_req, res) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
   });
 }

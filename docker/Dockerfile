@@ -34,6 +34,12 @@ RUN npm run build --workspace=backend
 # Create generated files directory
 RUN mkdir -p /app/backend/generated
 
+# Copy frontend dist to backend for serving
+RUN cp -r /app/frontend/dist /app/backend/public
+
+# Set working directory to backend
+WORKDIR /app/backend
+
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=3001
@@ -43,5 +49,4 @@ ENV OPENSCAD_PATH=openscad
 EXPOSE 3001
 
 # Start the application
-WORKDIR /app/backend
 CMD ["node", "dist/index.js"]
