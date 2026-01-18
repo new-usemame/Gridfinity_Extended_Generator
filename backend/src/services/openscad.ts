@@ -285,6 +285,7 @@ module dividers() {
   generateBaseplateScad(config: BaseplateConfig): string {
     return `// Gridfinity Baseplate Generator
 // Compatible with standard OpenSCAD
+// Socket profile matches bin foot for proper fit
 
 /* [Configuration] */
 width_units = ${config.width};
@@ -295,10 +296,23 @@ magnet_depth = ${config.magnetDepth};
 screw_diameter = ${config.screwDiameter};
 corner_radius = ${config.cornerRadius};
 
-/* [Constants] */
+/* [Constants - Official Gridfinity Spec] */
 grid_unit = 42;
-plate_height = 4.65;
-socket_depth = 2.6;
+clearance = 0.25;  // Gap between bin and socket walls
+
+// Socket profile (inverse of bin foot) - from gridfinity_constants.scad
+// gf_baseplate_lower_taper_height = 0.7
+// gf_baseplate_riser_height = 1.8  
+// gf_baseplate_upper_taper_height = 2.15
+lower_taper = 0.7;
+riser_height = 1.8;
+upper_taper = 2.15;
+socket_depth = lower_taper + riser_height + upper_taper;  // 4.65mm total
+
+// Plate thickness below sockets (for magnets/screws)
+base_thickness = max(magnet_depth + 0.5, 1);
+plate_height = socket_depth + base_thickness;
+
 $fn = 32;
 
 /* [Calculated] */
@@ -310,10 +324,10 @@ gridfinity_baseplate();
 
 module gridfinity_baseplate() {
     difference() {
-        // Main plate
+        // Main plate body
         baseplate_body();
         
-        // Sockets for each grid unit
+        // Socket cutouts for each grid unit
         for (gx = [0:width_units-1]) {
             for (gy = [0:depth_units-1]) {
                 translate([gx * grid_unit, gy * grid_unit, 0])
@@ -333,23 +347,42 @@ module baseplate_body() {
 }
 
 module grid_socket() {
-    // Socket that receives Gridfinity bin base
-    socket_size = grid_unit - 0.5;
+    // Socket that receives Gridfinity bin foot
+    // Profile is inverse of bin foot - full size at top, tapers down
     
-    translate([0.25, 0.25, plate_height - socket_depth]) {
-        // Main socket
+    socket_full_size = grid_unit - clearance * 2;  // 41.5mm at top
+    
+    // The socket profile matches the bin foot profile exactly:
+    // - At top (z=plate_height): full size opening (41.5mm)
+    // - Upper taper: 2.15mm at 45°, shrinks by 2.15mm on each side
+    // - Riser: 1.8mm vertical wall
+    // - Lower taper: 0.7mm at 45°, shrinks by 0.7mm more on each side
+    // - Bottom: smallest (35.6mm)
+    
+    translate([clearance, clearance, base_thickness]) {
         hull() {
-            // Top of socket - full size
+            // Top of socket - full size (41.5mm)
             translate([0, 0, socket_depth - 0.01])
-            cube([socket_size, socket_size, 0.01]);
+            cube([socket_full_size, socket_full_size, 0.01]);
             
-            // Bottom of socket - chamfered
-            translate([0.8, 0.8, 0])
-            cube([socket_size - 1.6, socket_size - 1.6, 0.01]);
+            // After upper taper (at z = lower_taper + riser_height)
+            // Inset by upper_taper (2.15mm) on each side
+            translate([upper_taper, upper_taper, lower_taper + riser_height])
+            cube([socket_full_size - upper_taper * 2, socket_full_size - upper_taper * 2, 0.01]);
+            
+            // After riser, start of lower taper (at z = lower_taper)
+            translate([upper_taper, upper_taper, lower_taper])
+            cube([socket_full_size - upper_taper * 2, socket_full_size - upper_taper * 2, 0.01]);
+            
+            // Bottom of socket - smallest
+            // Total inset = upper_taper + lower_taper = 2.85mm on each side
+            total_inset = upper_taper + lower_taper;
+            translate([total_inset, total_inset, 0])
+            cube([socket_full_size - total_inset * 2, socket_full_size - total_inset * 2, 0.01]);
         }
     }
     
-    // Magnet holes
+    // Magnet holes (in the base below the socket)
     if (style == "magnet") {
         magnet_holes();
     }
@@ -366,6 +399,7 @@ module grid_socket() {
 }
 
 module magnet_holes() {
+    // Magnet positions: 4.8mm from each edge of grid unit
     positions = [
         [4.8, 4.8],
         [4.8, grid_unit - 4.8],
@@ -375,11 +409,12 @@ module magnet_holes() {
     
     for (pos = positions) {
         translate([pos[0], pos[1], -0.1])
-        cylinder(d = magnet_diameter, h = magnet_depth + 0.1);
+        cylinder(d = magnet_diameter, h = magnet_depth + 0.2);
     }
 }
 
 module screw_holes() {
+    // Screw positions: same as magnets
     positions = [
         [4.8, 4.8],
         [4.8, grid_unit - 4.8],
@@ -388,16 +423,21 @@ module screw_holes() {
     ];
     
     for (pos = positions) {
+        // Countersunk screw hole
         translate([pos[0], pos[1], -0.1])
-        cylinder(d = screw_diameter, h = plate_height + 0.2);
+        union() {
+            cylinder(d = screw_diameter, h = plate_height + 0.2);
+            // Countersink
+            cylinder(d1 = screw_diameter * 2, d2 = screw_diameter, h = 2.5);
+        }
     }
 }
 
 module weight_cutout() {
-    // Hollow out for weight or to save material
-    inset = 6;
+    // Large central cutout for adding weight
+    inset = 8;
     translate([inset, inset, -0.1])
-    cube([grid_unit - inset * 2, grid_unit - inset * 2, plate_height - 1]);
+    cube([grid_unit - inset * 2, grid_unit - inset * 2, base_thickness - 0.5]);
 }
 
 module corner_cuts() {
