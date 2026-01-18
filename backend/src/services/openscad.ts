@@ -100,34 +100,44 @@ module rounded_rect(w, d, h, r) {
     }
 }
 
-// Base profile for Gridfinity stacking
-module gridfinity_base_profile() {
+// Gridfinity base foot profile (creates the stacking interface)
+// This profile is revolved to create the circular foot on each grid unit
+module gridfinity_foot_profile() {
+    // Standard Gridfinity foot profile dimensions
+    foot_outer = 17.5;  // Outer radius of foot
+    foot_inner = 15.5;  // Inner radius after step
+    step_height = 0.8;  // Height of bottom step
+    slope_height = 1.8; // Height of sloped section
+    
     polygon(points=[
-        [0, 0],
-        [0.8, 0],
-        [0.8, 0.8],
-        [2.15, 2.15],
-        [2.15, base_height],
-        [0, base_height]
+        [foot_inner, 0],
+        [foot_outer, 0],
+        [foot_outer, step_height],
+        [foot_outer - 0.7, step_height],
+        [foot_inner, step_height + slope_height],
+        [foot_inner, base_height]
     ]);
 }
 
-// Single grid base
+// Single grid base with proper Gridfinity stacking foot
 module grid_base(r=0) {
     difference() {
         union() {
-            // Main base block
+            // Main base block (slightly inset from grid edges)
             translate([0.25, 0.25, 0])
             rounded_rect(grid_unit - 0.5, grid_unit - 0.5, base_height, r > 0 ? min(r, 2) : 0);
             
-            // Stacking lip profile
+            // Gridfinity stacking foot (circular profile at center of each grid unit)
             translate([grid_unit/2, grid_unit/2, 0])
-            rotate_extrude($fn=24)
-            translate([grid_unit/2 - 2.4, 0, 0])
-            gridfinity_base_profile();
+            rotate_extrude($fn=32)
+            gridfinity_foot_profile();
         }
         
-        // Magnet holes
+        // Hollow out the center of the foot (creates the distinctive Gridfinity look)
+        translate([grid_unit/2, grid_unit/2, -0.1])
+        cylinder(r=15.5, h=base_height - 1, $fn=32);
+        
+        // Magnet holes at corners
         if (magnet_enabled) {
             for (x = [4.8, grid_unit - 4.8])
             for (y = [4.8, grid_unit - 4.8])
@@ -135,7 +145,7 @@ module grid_base(r=0) {
             cylinder(d=magnet_diameter, h=magnet_depth + 0.1, $fn=16);
         }
         
-        // Screw holes
+        // Screw holes at corners
         if (screw_enabled) {
             for (x = [4.8, grid_unit - 4.8])
             for (y = [4.8, grid_unit - 4.8])
