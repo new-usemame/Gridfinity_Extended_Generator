@@ -1,0 +1,25 @@
+---
+description: Always use anonymous git identity for commits and pushes
+globs:
+alwaysApply: true
+---
+
+# Git Anonymous Commits Rule
+
+When committing and pushing changes to git in this project:
+
+1. **Always configure git to use anonymous identity before committing:**
+   ```bash
+   git config user.name "anonymous"
+   git config user.email "anonymous@users.noreply.github.com"
+   ```
+
+2. **Never use these names/usernames:**
+   - Condo97
+   - acoundou
+   - Alex
+   - Any variation of the above
+
+3. **Always push to the `origin` remote** which is configured to use the anonymous GitHub account (new-usemame)
+
+4. **Commit message format:** Use clear, descriptive commit messages without any personal identifiers
