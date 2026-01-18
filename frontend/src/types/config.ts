@@ -65,12 +65,12 @@ export interface BaseplateConfig {
 
 // Default configurations
 export const defaultBoxConfig: BoxConfig = {
-  width: 1,
-  depth: 1,
+  width: 2,
+  depth: 2,
   height: 3,
   wallThickness: 0.95,
   floorThickness: 0.7,
-  magnetEnabled: true,
+  magnetEnabled: false,
   magnetDiameter: 6,
   magnetDepth: 2,
   screwEnabled: false,
