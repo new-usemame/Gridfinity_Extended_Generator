@@ -72,11 +72,24 @@ wall_pattern_spacing = ${config.wallPatternSpacing};
 // SIMPLE TAPER foot - ONE taper from small bottom to larger top
 // Chamfer angle determines the taper steepness
 // Chamfer height is the total height of the foot
-foot_taper_height = foot_chamfer_height;
+
+// When prevent_bottom_overhangs is ON, foot tapers to a sharp peak (no flat top)
+// When OFF, foot tapers to full size (flat top)
+foot_full_size_base = grid_unit - clearance * 2;  // 41.5mm
+
+// Calculate how much extra height is needed to taper to a peak
+// Peak size is very small (2mm) to create sharp V
+peak_top_size = 2;
+extra_taper_for_peak = (foot_full_size_base - peak_top_size) / 2 * tan(90 - foot_chamfer_angle);
+
+// Foot taper height depends on whether we're preventing overhangs
+foot_taper_height = prevent_bottom_overhangs ? 
+    foot_chamfer_height + extra_taper_for_peak : 
+    foot_chamfer_height;
+
 // Calculate bottom inset from angle: inset = height / tan(angle)
-// tan(45°) = 1, tan(60°) ≈ 1.73, tan(30°) ≈ 0.58
 foot_bottom_inset = foot_chamfer_height / tan(foot_chamfer_angle);
-// Total base height (foot taper only, no extra lip)
+// Total base height
 base_height = foot_taper_height;
 stacking_lip_height = 4.4;
 gf_corner_radius = 3.75;  // Standard Gridfinity corner radius
@@ -169,18 +182,21 @@ module rounded_rect_profile(width, depth, height, radius) {
 
 module gridfinity_foot() {
     // ONE SIMPLE TAPER per foot
-    // Small at bottom, expands to full size at top
-    // This is what fits into the baseplate socket
-    // Angle and height control the taper steepness and size
+    // When prevent_bottom_overhangs is OFF: tapers to full size (flat top)
+    // When prevent_bottom_overhangs is ON: tapers to sharp peak (no flat top)
     
     // Use user-specified feet corner radius, default to standard 3.75mm
     foot_radius = feet_corner_radius > 0 ? feet_corner_radius : gf_corner_radius;
-    foot_full_size = grid_unit - clearance * 2;  // 41.5mm at top
+    foot_full_size = grid_unit - clearance * 2;  // 41.5mm
     
     // Bottom size - calculated from chamfer angle and height
-    // foot_bottom_inset is pre-calculated: height / tan(angle)
     bottom_size = foot_full_size - foot_bottom_inset * 2;
     bottom_radius = max(0.5, foot_radius - foot_bottom_inset);
+    
+    // Top size depends on whether we're preventing overhangs
+    top_size = prevent_bottom_overhangs ? peak_top_size : foot_full_size;
+    top_inset = (foot_full_size - top_size) / 2;
+    top_radius = max(0.5, foot_radius - top_inset);
     
     translate([clearance, clearance, 0])
     hull() {
@@ -188,9 +204,13 @@ module gridfinity_foot() {
         translate([foot_bottom_inset, foot_bottom_inset, 0])
         rounded_rect_profile(bottom_size, bottom_size, 0.01, bottom_radius);
         
-        // Top - full size (ONE simple taper from bottom to here)
-        translate([0, 0, foot_taper_height - 0.01])
-        rounded_rect_profile(foot_full_size, foot_full_size, 0.02, foot_radius);
+        // Intermediate point at original foot height (full size) - for proper socket fit
+        translate([0, 0, foot_chamfer_height - 0.01])
+        rounded_rect_profile(foot_full_size, foot_full_size, 0.01, foot_radius);
+        
+        // Top - either full size (flat) or small (peaked)
+        translate([top_inset, top_inset, foot_taper_height - 0.01])
+        rounded_rect_profile(top_size, top_size, 0.02, top_radius);
     }
 }
 
@@ -222,43 +242,15 @@ module screw_holes() {
     }
 }
 
-// Walls with small chamfer at bottom edge to prevent overhangs where feet meet walls
-module walls_with_bottom_chamfer(width, depth, height, radius, chamfer) {
-    // Create walls with a small 45-degree chamfer at the bottom edge
-    // This prevents the overhang where the foot top meets the wall bottom
-    hull() {
-        // Bottom - slightly inset by chamfer amount
-        translate([chamfer, chamfer, 0])
-        rounded_rect_profile(width - chamfer * 2, depth - chamfer * 2, 0.01, max(0.5, radius - chamfer));
-        
-        // Just above chamfer - full size
-        translate([0, 0, chamfer])
-        rounded_rect_profile(width, depth, 0.01, radius);
-        
-        // Top - full size
-        translate([0, 0, height - 0.01])
-        rounded_rect_profile(width, depth, 0.02, radius);
-    }
-}
-
 module gridfinity_walls() {
     wall_height = box_height - base_height;
     // Use the standard Gridfinity corner radius or user override
     outer_radius = corner_radius > 0 ? corner_radius : gf_corner_radius;
     inner_radius = max(0, outer_radius - wall_thickness);
     
-    // Small chamfer size for overhang prevention (45-degree, 0.5mm)
-    overhang_chamfer = 0.5;
-    
     difference() {
         // Outer walls with rounded corners
-        if (prevent_bottom_overhangs) {
-            // Walls with small chamfer at bottom to prevent overhangs
-            walls_with_bottom_chamfer(box_width, box_depth, wall_height, outer_radius, overhang_chamfer);
-        } else {
-            // Standard walls
-            rounded_rect(box_width, box_depth, wall_height, outer_radius);
-        }
+        rounded_rect(box_width, box_depth, wall_height, outer_radius);
         
         // Inner cavity with rounded corners
         translate([wall_thickness, wall_thickness, floor_thickness])
