@@ -101,45 +101,29 @@ module rounded_rect(w, d, h, r) {
     }
 }
 
-// Gridfinity base foot profile (creates the stacking interface)
-// This profile is revolved to create the circular foot on each grid unit
-// base_chamfer tapers the bottom edge inward for easier baseplate insertion
-module gridfinity_foot_profile() {
-    // Standard Gridfinity foot profile dimensions
-    foot_outer = 17.5;  // Outer radius of foot
-    foot_inner = 15.5;  // Inner radius after step
-    step_height = 0.8;  // Height of bottom step
-    slope_height = 1.8; // Height of sloped section
-    chamfer = base_chamfer; // Taper on bottom edge
-    
-    polygon(points=[
-        [foot_inner, 0],
-        [foot_outer - chamfer, 0],           // Bottom edge pulled in by chamfer
-        [foot_outer, chamfer],               // Chamfer rises to full width
-        [foot_outer, step_height],
-        [foot_outer - 0.7, step_height],
-        [foot_inner, step_height + slope_height],
-        [foot_inner, base_height]
-    ]);
-}
-
-// Single grid base with proper Gridfinity stacking foot
+// Single grid base - solid block with chamfered bottom edge
+// The chamfer helps the base slide into baseplate sockets
 module grid_base(r=0) {
+    base_size = grid_unit - 0.5;  // 41.5mm (0.25mm clearance on each side)
+    chamfer = base_chamfer;
+    
     difference() {
-        union() {
-            // Main base block (slightly inset from grid edges)
+        // Main base with chamfered bottom edge using hull
+        if (chamfer > 0) {
+            hull() {
+                // Bottom face (smaller due to chamfer)
+                translate([0.25 + chamfer, 0.25 + chamfer, 0])
+                cube([base_size - chamfer*2, base_size - chamfer*2, 0.01]);
+                
+                // Top of chamfer and rest of base
+                translate([0.25, 0.25, chamfer])
+                cube([base_size, base_size, base_height - chamfer]);
+            }
+        } else {
+            // No chamfer - simple cube
             translate([0.25, 0.25, 0])
-            rounded_rect(grid_unit - 0.5, grid_unit - 0.5, base_height, r > 0 ? min(r, 2) : 0);
-            
-            // Gridfinity stacking foot (circular profile at center of each grid unit)
-            translate([grid_unit/2, grid_unit/2, 0])
-            rotate_extrude($fn=32)
-            gridfinity_foot_profile();
+            cube([base_size, base_size, base_height]);
         }
-        
-        // Hollow out the center of the foot (creates the distinctive Gridfinity look)
-        translate([grid_unit/2, grid_unit/2, -0.1])
-        cylinder(r=15.5, h=base_height - 1, $fn=32);
         
         // Magnet holes at corners
         if (magnet_enabled) {
