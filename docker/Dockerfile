@@ -3,14 +3,25 @@
 
 FROM node:20-bookworm-slim
 
-# Install OpenSCAD and dependencies
+# Install dependencies for OpenSCAD AppImage
 RUN apt-get update && apt-get install -y \
-    openscad \
+    wget \
+    fuse \
+    libfuse2 \
     xvfb \
     libgl1-mesa-glx \
     libgl1-mesa-dri \
+    libglu1-mesa \
     git \
     && rm -rf /var/lib/apt/lists/*
+
+# Download and install OpenSCAD Development Snapshot (required for gridfinity_extended)
+RUN wget -O /usr/local/bin/openscad https://files.openscad.org/snapshots/OpenSCAD-2024.12.06.ai20531-x86_64.AppImage \
+    && chmod +x /usr/local/bin/openscad
+
+# Extract AppImage for running in container (AppImage requires FUSE which doesn't work well in Docker)
+RUN cd /opt && /usr/local/bin/openscad --appimage-extract \
+    && ln -sf /opt/squashfs-root/AppRun /usr/local/bin/openscad
 
 # Create app directory
 WORKDIR /app
