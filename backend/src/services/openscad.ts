@@ -45,18 +45,29 @@ floor_thickness = ${config.floorThickness};
 magnet_enabled = ${config.magnetEnabled};
 magnet_diameter = ${config.magnetDiameter};
 magnet_depth = ${config.magnetDepth};
+magnet_easy_release = "${config.magnetEasyRelease}";
 screw_enabled = ${config.screwEnabled};
 screw_diameter = ${config.screwDiameter};
 lip_style = "${config.lipStyle}";
 dividers_x = ${config.dividersX};
 dividers_y = ${config.dividersY};
 finger_slide = ${config.fingerSlide};
+finger_slide_style = "${config.fingerSlideStyle}";
+finger_slide_radius = ${config.fingerSlideRadius};
 label_enabled = ${config.labelEnabled};
+corner_radius = ${config.cornerRadius};
+flat_base = "${config.flatBase}";
+efficient_floor = "${config.efficientFloor}";
+tapered_corner = "${config.taperedCorner}";
+tapered_corner_size = ${config.taperedCornerSize};
+wall_pattern = "${config.wallPattern}";
+wall_pattern_spacing = ${config.wallPatternSpacing};
 
 /* [Constants] */
 grid_unit = 42;
 base_height = 5;
 stacking_lip_height = 4.4;
+gf_corner_radius = 3.75;  // Standard Gridfinity corner radius
 $fn = 32;
 
 /* [Calculated] */
@@ -74,6 +85,25 @@ module gridfinity_box() {
     // Box walls
     translate([0, 0, base_height])
     gridfinity_walls();
+}
+
+// Rounded rectangle module for corner rounding
+module rounded_rect(width, depth, height, radius) {
+    if (radius <= 0) {
+        cube([width, depth, height]);
+    } else {
+        r = min(radius, min(width, depth) / 2);
+        hull() {
+            translate([r, r, 0])
+            cylinder(r = r, h = height);
+            translate([width - r, r, 0])
+            cylinder(r = r, h = height);
+            translate([r, depth - r, 0])
+            cylinder(r = r, h = height);
+            translate([width - r, depth - r, 0])
+            cylinder(r = r, h = height);
+        }
+    }
 }
 
 module gridfinity_base() {
@@ -187,29 +217,44 @@ module screw_holes() {
 
 module gridfinity_walls() {
     wall_height = box_height - base_height;
+    // Use the standard Gridfinity corner radius or user override
+    outer_radius = corner_radius > 0 ? corner_radius : gf_corner_radius;
+    inner_radius = max(0, outer_radius - wall_thickness);
     
     difference() {
-        // Outer walls
-        cube([box_width, box_depth, wall_height]);
+        // Outer walls with rounded corners
+        rounded_rect(box_width, box_depth, wall_height, outer_radius);
         
-        // Inner cavity
+        // Inner cavity with rounded corners
         translate([wall_thickness, wall_thickness, floor_thickness])
-        cube([
+        rounded_rect(
             box_width - wall_thickness * 2,
             box_depth - wall_thickness * 2,
-            wall_height
-        ]);
+            wall_height,
+            inner_radius
+        );
         
         // Stacking lip cutout at top
         if (lip_style != "none") {
-            lip_h = lip_style == "reduced" ? stacking_lip_height * 0.6 : stacking_lip_height;
+            lip_h = lip_style == "reduced" ? stacking_lip_height * 0.6 : 
+                    lip_style == "minimum" ? stacking_lip_height * 0.4 : stacking_lip_height;
             translate([0, 0, wall_height - lip_h])
-            stacking_lip_cutout(lip_h);
+            stacking_lip_cutout(lip_h, outer_radius);
         }
         
         // Finger slide
         if (finger_slide) {
             finger_slide_cutout();
+        }
+        
+        // Tapered corners (internal cutouts at top corners for easier access)
+        if (tapered_corner != "none") {
+            tapered_corner_cutouts(wall_height, outer_radius);
+        }
+        
+        // Wall pattern
+        if (wall_pattern != "none") {
+            wall_pattern_cutouts(wall_height);
         }
     }
     
@@ -224,12 +269,91 @@ module gridfinity_walls() {
     }
 }
 
-module stacking_lip_cutout(lip_h) {
+module tapered_corner_cutouts(wall_height, outer_radius) {
+    // Create tapered cutouts at the top internal corners for easier item access
+    taper_size = tapered_corner_size;
+    taper_height = wall_height * 0.6;
+    setback = outer_radius > 0 ? outer_radius : gf_corner_radius;
+    
+    // All four corners
+    for (pos = [[setback, setback], [box_width - setback, setback], 
+                [setback, box_depth - setback], [box_width - setback, box_depth - setback]]) {
+        translate([pos[0], pos[1], wall_height - taper_height])
+        if (tapered_corner == "rounded") {
+            cylinder(r1 = 0, r2 = taper_size, h = taper_height + 0.1);
+        } else {
+            // chamfered
+            linear_extrude(height = taper_height + 0.1, scale = taper_size / 0.1)
+            square(0.1, center = true);
+        }
+    }
+}
+
+module wall_pattern_cutouts(wall_height) {
+    // Create decorative/weight-saving patterns on walls
+    pattern_depth = wall_thickness * 0.6;
+    pattern_border = 5;
+    pattern_cell = 10;
+    spacing = wall_pattern_spacing;
+    
+    // Front wall pattern
+    translate([pattern_border, -0.1, pattern_border])
+    wall_pattern_grid(box_width - pattern_border * 2, wall_height - pattern_border * 2 - stacking_lip_height, pattern_depth + 0.1, pattern_cell, spacing);
+    
+    // Back wall pattern  
+    translate([pattern_border, box_depth - pattern_depth, pattern_border])
+    wall_pattern_grid(box_width - pattern_border * 2, wall_height - pattern_border * 2 - stacking_lip_height, pattern_depth + 0.1, pattern_cell, spacing);
+    
+    // Left wall pattern
+    translate([-0.1, pattern_border, pattern_border])
+    rotate([0, 90, 0])
+    rotate([0, 0, 90])
+    wall_pattern_grid(box_depth - pattern_border * 2, wall_height - pattern_border * 2 - stacking_lip_height, pattern_depth + 0.1, pattern_cell, spacing);
+    
+    // Right wall pattern
+    translate([box_width - pattern_depth, pattern_border, pattern_border])
+    rotate([0, 90, 0])
+    rotate([0, 0, 90])
+    wall_pattern_grid(box_depth - pattern_border * 2, wall_height - pattern_border * 2 - stacking_lip_height, pattern_depth + 0.1, pattern_cell, spacing);
+}
+
+module wall_pattern_grid(width, height, depth, cell_size, spacing) {
+    cols = floor(width / (cell_size + spacing));
+    rows = floor(height / (cell_size + spacing));
+    offset_x = (width - cols * (cell_size + spacing) + spacing) / 2;
+    offset_y = (height - rows * (cell_size + spacing) + spacing) / 2;
+    
+    for (col = [0:cols-1]) {
+        for (row = [0:rows-1]) {
+            translate([offset_x + col * (cell_size + spacing), offset_y + row * (cell_size + spacing), 0])
+            if (wall_pattern == "hexgrid") {
+                // Hexagonal pattern
+                translate([cell_size/2, cell_size/2, 0])
+                cylinder(r = cell_size / 2, h = depth, $fn = 6);
+            } else if (wall_pattern == "grid") {
+                // Square grid
+                cube([cell_size, cell_size, depth]);
+            } else if (wall_pattern == "voronoi") {
+                // Approximate voronoi with offset circles
+                translate([cell_size/2, cell_size/2, 0])
+                cylinder(r = cell_size / 2 * 0.8, h = depth, $fn = 16);
+            } else {
+                // Brick pattern
+                brick_offset = (row % 2 == 0) ? 0 : cell_size / 2;
+                translate([brick_offset, 0, 0])
+                cube([cell_size * 1.5, cell_size * 0.7, depth]);
+            }
+        }
+    }
+}
+
+module stacking_lip_cutout(lip_h, radius) {
     inset = 1.9;
+    inner_r = max(0, radius - inset);
     difference() {
-        cube([box_width, box_depth, lip_h + 1]);
+        rounded_rect(box_width, box_depth, lip_h + 1, radius);
         translate([inset, inset, 0])
-        cube([box_width - inset * 2, box_depth - inset * 2, lip_h + 1]);
+        rounded_rect(box_width - inset * 2, box_depth - inset * 2, lip_h + 1, inner_r);
     }
 }
 
@@ -238,10 +362,40 @@ module finger_slide_cutout() {
     slide_width = box_width * 0.6;
     slide_depth = 15;
     slide_height = wall_height * 0.5;
+    r = finger_slide_radius;
     
     translate([(box_width - slide_width) / 2, -1, wall_height - slide_height])
-    rotate([-30, 0, 0])
-    cube([slide_width, slide_depth, slide_height]);
+    if (finger_slide_style == "rounded") {
+        // Rounded finger slide
+        rotate([-30, 0, 0])
+        hull() {
+            translate([r, 0, 0])
+            cylinder(r = r, h = slide_depth);
+            translate([slide_width - r, 0, 0])
+            cylinder(r = r, h = slide_depth);
+            translate([0, 0, slide_height])
+            cube([slide_width, slide_depth, 0.1]);
+        }
+    } else if (finger_slide_style == "chamfered") {
+        // Chamfered finger slide  
+        rotate([-30, 0, 0])
+        polyhedron(
+            points = [
+                [0, 0, 0], [slide_width, 0, 0],
+                [slide_width, slide_depth, 0], [0, slide_depth, 0],
+                [0, 0, slide_height], [slide_width, 0, slide_height],
+                [slide_width, slide_depth, slide_height], [0, slide_depth, slide_height]
+            ],
+            faces = [
+                [0,1,2,3], [4,5,6,7], [0,1,5,4],
+                [1,2,6,5], [2,3,7,6], [3,0,4,7]
+            ]
+        );
+    } else {
+        // Default rectangular
+        rotate([-30, 0, 0])
+        cube([slide_width, slide_depth, slide_height]);
+    }
 }
 
 module label_tab() {
@@ -291,9 +445,15 @@ module dividers() {
 width_units = ${config.width};
 depth_units = ${config.depth};
 style = "${config.style}";
+plate_style = "${config.plateStyle}";
 magnet_diameter = ${config.magnetDiameter};
 magnet_depth = ${config.magnetDepth};
+magnet_z_offset = ${config.magnetZOffset};
+magnet_top_cover = ${config.magnetTopCover};
 screw_diameter = ${config.screwDiameter};
+center_screw = ${config.centerScrew};
+weight_cavity = ${config.weightCavity};
+remove_bottom_taper = ${config.removeBottomTaper};
 corner_radius = ${config.cornerRadius};
 
 /* [Constants - Official Gridfinity Spec] */
@@ -353,6 +513,9 @@ module grid_socket() {
     
     socket_full_size = grid_unit - clearance * 2;  // 41.5mm at top
     
+    // Determine if we should remove the bottom taper
+    bottom_z = remove_bottom_taper ? lower_taper : 0;
+    
     // The socket is an open hole with chamfered profile
     // Cut from top all the way through to bottom
     
@@ -372,22 +535,54 @@ module grid_socket() {
             cube([socket_full_size - upper_taper * 2, socket_full_size - upper_taper * 2, 0.01]);
             
             // Bottom - goes all the way through (z=0 and below)
-            // The smallest opening at the bottom
-            total_inset = upper_taper + lower_taper;
-            translate([total_inset, total_inset, 0])
-            cube([socket_full_size - total_inset * 2, socket_full_size - total_inset * 2, 0.2]);
+            // If remove_bottom_taper, keep flat at lower_taper level
+            if (!remove_bottom_taper) {
+                total_inset = upper_taper + lower_taper;
+                translate([total_inset, total_inset, 0])
+                cube([socket_full_size - total_inset * 2, socket_full_size - total_inset * 2, 0.2]);
+            }
         }
     }
     
-    // Magnet holes - these add rings around the socket openings
+    // Magnet holes
     if (style == "magnet") {
         magnet_holes();
     }
     
-    // Screw holes
+    // Screw holes (corner)
     if (style == "screw") {
         screw_holes();
     }
+    
+    // Center screw hole
+    if (center_screw) {
+        center_screw_hole();
+    }
+    
+    // Weight cavity
+    if (weight_cavity || style == "weighted") {
+        weight_cavity_cutout();
+    }
+}
+
+module center_screw_hole() {
+    // Center mounting screw hole
+    translate([grid_unit / 2, grid_unit / 2, -0.1])
+    union() {
+        cylinder(d = screw_diameter, h = plate_height + 0.2);
+        // Countersink at top
+        translate([0, 0, plate_height - 2.4])
+        cylinder(d1 = screw_diameter, d2 = screw_diameter * 2.5, h = 2.5);
+    }
+}
+
+module weight_cavity_cutout() {
+    // Large central cavity for adding weight (lead, steel, etc.)
+    cavity_size = 21.4;  // Standard gridfinity weight cavity
+    cavity_depth = 4;
+    
+    translate([(grid_unit - cavity_size) / 2, (grid_unit - cavity_size) / 2, -0.1])
+    cube([cavity_size, cavity_size, cavity_depth + 0.1]);
 }
 
 module magnet_holes() {
@@ -400,9 +595,20 @@ module magnet_holes() {
         [grid_unit - 4.8, grid_unit - 4.8]
     ];
     
+    // Calculate magnet hole position based on z-offset and top cover
+    magnet_z = magnet_z_offset > 0 ? magnet_z_offset : 
+               magnet_top_cover > 0 ? plate_height - magnet_depth - magnet_top_cover : 
+               plate_height - magnet_depth;
+    
     for (pos = positions) {
-        translate([pos[0], pos[1], -0.1])
-        cylinder(d = magnet_diameter, h = magnet_depth + 0.2);
+        translate([pos[0], pos[1], magnet_z])
+        cylinder(d = magnet_diameter, h = magnet_depth + 0.1);
+        
+        // If using z-offset, create access hole from bottom
+        if (magnet_z_offset > 0) {
+            translate([pos[0], pos[1], -0.1])
+            cylinder(d = magnet_diameter * 0.6, h = magnet_z_offset + 0.1);
+        }
     }
 }
 
@@ -428,39 +634,44 @@ module screw_holes() {
 }
 
 module corner_cuts() {
-    // Cut corners for rounded appearance
+    // Cut corners for rounded appearance using proper cylinder positioning
     r = corner_radius;
+    fudge = 0.1;
     
-    // Bottom-left
-    translate([-0.1, -0.1, -0.1])
+    // Bottom-left corner (0,0)
     difference() {
-        cube([r + 0.1, r + 0.1, plate_height + 0.2]);
-        translate([r, r, -0.1])
-        cylinder(r = r, h = plate_height + 0.4);
+        translate([-fudge, -fudge, -fudge])
+        cube([r + fudge, r + fudge, plate_height + fudge * 2]);
+        
+        translate([r, r, -fudge * 2])
+        cylinder(r = r, h = plate_height + fudge * 4);
     }
     
-    // Bottom-right
-    translate([plate_width - r, -0.1, -0.1])
+    // Bottom-right corner (width,0)
     difference() {
-        cube([r + 0.1, r + 0.1, plate_height + 0.2]);
-        translate([0, r, -0.1])
-        cylinder(r = r, h = plate_height + 0.4);
+        translate([plate_width - r, -fudge, -fudge])
+        cube([r + fudge, r + fudge, plate_height + fudge * 2]);
+        
+        translate([plate_width - r, r, -fudge * 2])
+        cylinder(r = r, h = plate_height + fudge * 4);
     }
     
-    // Top-left
-    translate([-0.1, plate_depth - r, -0.1])
+    // Top-left corner (0,depth)
     difference() {
-        cube([r + 0.1, r + 0.1, plate_height + 0.2]);
-        translate([r, 0, -0.1])
-        cylinder(r = r, h = plate_height + 0.4);
+        translate([-fudge, plate_depth - r, -fudge])
+        cube([r + fudge, r + fudge, plate_height + fudge * 2]);
+        
+        translate([r, plate_depth - r, -fudge * 2])
+        cylinder(r = r, h = plate_height + fudge * 4);
     }
     
-    // Top-right
-    translate([plate_width - r, plate_depth - r, -0.1])
+    // Top-right corner (width,depth)
     difference() {
-        cube([r + 0.1, r + 0.1, plate_height + 0.2]);
-        translate([0, 0, -0.1])
-        cylinder(r = r, h = plate_height + 0.4);
+        translate([plate_width - r, plate_depth - r, -fudge])
+        cube([r + fudge, r + fudge, plate_height + fudge * 2]);
+        
+        translate([plate_width - r, plate_depth - r, -fudge * 2])
+        cylinder(r = r, h = plate_height + fudge * 4);
     }
 }
 `;

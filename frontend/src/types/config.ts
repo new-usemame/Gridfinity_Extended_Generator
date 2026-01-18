@@ -13,13 +13,16 @@ export interface BoxConfig {
   magnetEnabled: boolean;
   magnetDiameter: number;
   magnetDepth: number;
+  magnetEasyRelease: 'off' | 'auto' | 'inner' | 'outer';
   
   // Screw holes
   screwEnabled: boolean;
   screwDiameter: number;
   
-  // Features
+  // Finger slide
   fingerSlide: boolean;
+  fingerSlideStyle: 'none' | 'rounded' | 'chamfered';
+  fingerSlideRadius: number;
   fingerSlidePosition: 'front' | 'back' | 'left' | 'right';
   
   // Label
@@ -32,12 +35,21 @@ export interface BoxConfig {
   dividersY: number;
   
   // Lip style
-  lipStyle: 'none' | 'standard' | 'reduced';
+  lipStyle: 'none' | 'standard' | 'reduced' | 'minimum';
   
   // Base style
-  baseStyle: 'standard' | 'efficient' | 'filled';
+  flatBase: 'off' | 'stackable' | 'rounded';
+  efficientFloor: 'off' | 'on' | 'rounded' | 'smooth';
   
-  // Corner radius
+  // Tapered corner
+  taperedCorner: 'none' | 'rounded' | 'chamfered';
+  taperedCornerSize: number;
+  
+  // Wall pattern
+  wallPattern: 'none' | 'hexgrid' | 'grid' | 'voronoi' | 'brick';
+  wallPatternSpacing: number;
+  
+  // Corner radius (for the outer box)
   cornerRadius: number;
 }
 
@@ -49,16 +61,25 @@ export interface BaseplateConfig {
   
   // Style
   style: 'default' | 'magnet' | 'weighted' | 'screw';
+  plateStyle: 'default' | 'cnclaser';
   
-  // Lid options
-  lidOption: 'none' | 'flat' | 'halfPitch';
-  
-  // Magnet/Screw configuration
+  // Magnet configuration
   magnetDiameter: number;
   magnetDepth: number;
-  screwDiameter: number;
+  magnetZOffset: number;
+  magnetTopCover: number;
   
-  // Corner radius (NEW feature)
+  // Screw configuration  
+  screwDiameter: number;
+  centerScrew: boolean;
+  
+  // Weight cavity
+  weightCavity: boolean;
+  
+  // Bottom taper
+  removeBottomTaper: boolean;
+  
+  // Corner radius
   cornerRadius: number;
   cornerSegments: number;
 }
@@ -71,11 +92,14 @@ export const defaultBoxConfig: BoxConfig = {
   wallThickness: 0.95,
   floorThickness: 0.7,
   magnetEnabled: false,
-  magnetDiameter: 6,
-  magnetDepth: 2,
+  magnetDiameter: 6.5,
+  magnetDepth: 2.4,
+  magnetEasyRelease: 'auto',
   screwEnabled: false,
   screwDiameter: 3,
   fingerSlide: false,
+  fingerSlideStyle: 'rounded',
+  fingerSlideRadius: 8,
   fingerSlidePosition: 'front',
   labelEnabled: false,
   labelPosition: 'front',
@@ -83,19 +107,29 @@ export const defaultBoxConfig: BoxConfig = {
   dividersX: 0,
   dividersY: 0,
   lipStyle: 'standard',
-  baseStyle: 'standard',
-  cornerRadius: 0
+  flatBase: 'off',
+  efficientFloor: 'off',
+  taperedCorner: 'none',
+  taperedCornerSize: 10,
+  wallPattern: 'none',
+  wallPatternSpacing: 2,
+  cornerRadius: 3.75
 };
 
 export const defaultBaseplateConfig: BaseplateConfig = {
   width: 3,
   depth: 3,
   style: 'default',
-  lidOption: 'none',
-  magnetDiameter: 6,
-  magnetDepth: 2,
+  plateStyle: 'default',
+  magnetDiameter: 6.5,
+  magnetDepth: 2.4,
+  magnetZOffset: 0,
+  magnetTopCover: 0,
   screwDiameter: 3,
-  cornerRadius: 0,
+  centerScrew: false,
+  weightCavity: false,
+  removeBottomTaper: false,
+  cornerRadius: 3.75,
   cornerSegments: 32
 };
 

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { BoxConfig, BaseplateConfig } from '../../types/config';
 import { SliderInput } from './SliderInput';
 import { ToggleInput } from './ToggleInput';
@@ -36,9 +37,9 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
   };
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-4 space-y-3">
       {/* Dimensions Section */}
-      <Section title="Dimensions" icon="📐">
+      <CollapsibleSection title="Dimensions" icon="📐" defaultOpen>
         <SliderInput
           label="Width"
           value={config.width}
@@ -66,10 +67,10 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           unit="units"
           onChange={(v) => update('height', v)}
         />
-      </Section>
+      </CollapsibleSection>
 
-      {/* Wall Settings Section */}
-      <Section title="Wall & Floor" icon="🧱">
+      {/* Wall & Floor Section */}
+      <CollapsibleSection title="Wall & Floor" icon="🧱">
         <SliderInput
           label="Wall Thickness"
           value={config.wallThickness}
@@ -88,10 +89,40 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           unit="mm"
           onChange={(v) => update('floorThickness', v)}
         />
-      </Section>
+        <SliderInput
+          label="Corner Radius"
+          value={config.cornerRadius}
+          min={0}
+          max={5}
+          step={0.25}
+          unit="mm"
+          onChange={(v) => update('cornerRadius', v)}
+        />
+      </CollapsibleSection>
 
-      {/* Magnets Section */}
-      <Section title="Magnets" icon="🧲">
+      {/* Base Options Section */}
+      <CollapsibleSection title="Base Options" icon="🏠">
+        <SelectInput
+          label="Base Style"
+          value={config.flatBase}
+          options={[
+            { value: 'off', label: 'Standard (Stackable)' },
+            { value: 'stackable', label: 'Gridfinity Stackable' },
+            { value: 'rounded', label: 'Rounded (Non-stackable)' }
+          ]}
+          onChange={(v) => update('flatBase', v as BoxConfig['flatBase'])}
+        />
+        <SelectInput
+          label="Floor Type"
+          value={config.efficientFloor}
+          options={[
+            { value: 'off', label: 'Solid Floor' },
+            { value: 'on', label: 'Efficient (Saves Material)' },
+            { value: 'rounded', label: 'Rounded Efficient' },
+            { value: 'smooth', label: 'Smooth Efficient' }
+          ]}
+          onChange={(v) => update('efficientFloor', v as BoxConfig['efficientFloor'])}
+        />
         <ToggleInput
           label="Enable Magnets"
           value={config.magnetEnabled}
@@ -104,7 +135,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
               value={config.magnetDiameter}
               min={3}
               max={10}
-              step={0.5}
+              step={0.1}
               unit="mm"
               onChange={(v) => update('magnetDiameter', v)}
             />
@@ -113,16 +144,23 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
               value={config.magnetDepth}
               min={1}
               max={5}
-              step={0.5}
+              step={0.1}
               unit="mm"
               onChange={(v) => update('magnetDepth', v)}
             />
+            <SelectInput
+              label="Easy Release"
+              value={config.magnetEasyRelease}
+              options={[
+                { value: 'off', label: 'Off' },
+                { value: 'auto', label: 'Auto' },
+                { value: 'inner', label: 'Inner' },
+                { value: 'outer', label: 'Outer' }
+              ]}
+              onChange={(v) => update('magnetEasyRelease', v as BoxConfig['magnetEasyRelease'])}
+            />
           </>
         )}
-      </Section>
-
-      {/* Screws Section */}
-      <Section title="Screw Holes" icon="🔩">
         <ToggleInput
           label="Enable Screw Holes"
           value={config.screwEnabled}
@@ -139,38 +177,158 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
             onChange={(v) => update('screwDiameter', v)}
           />
         )}
-      </Section>
+      </CollapsibleSection>
 
-      {/* Features Section */}
-      <Section title="Features" icon="✨">
+      {/* Lip Style Section */}
+      <CollapsibleSection title="Lip Style" icon="🔝">
+        <SelectInput
+          label="Stacking Lip"
+          value={config.lipStyle}
+          options={[
+            { value: 'standard', label: 'Standard (Full)' },
+            { value: 'reduced', label: 'Reduced' },
+            { value: 'minimum', label: 'Minimum' },
+            { value: 'none', label: 'None (Non-stackable)' }
+          ]}
+          onChange={(v) => update('lipStyle', v as BoxConfig['lipStyle'])}
+        />
+        <p className="text-xs text-slate-500">
+          Standard lip allows bins to stack. Reduced/minimum lips provide easier access.
+        </p>
+      </CollapsibleSection>
+
+      {/* Finger Slide Section */}
+      <CollapsibleSection title="Finger Slide" icon="👆">
         <ToggleInput
-          label="Finger Slide"
+          label="Enable Finger Slide"
           value={config.fingerSlide}
           onChange={(v) => update('fingerSlide', v)}
         />
         {config.fingerSlide && (
-          <SelectInput
-            label="Slide Position"
-            value={config.fingerSlidePosition}
-            options={[
-              { value: 'front', label: 'Front' },
-              { value: 'back', label: 'Back' },
-              { value: 'left', label: 'Left' },
-              { value: 'right', label: 'Right' }
-            ]}
-            onChange={(v) => update('fingerSlidePosition', v as BoxConfig['fingerSlidePosition'])}
+          <>
+            <SelectInput
+              label="Slide Style"
+              value={config.fingerSlideStyle}
+              options={[
+                { value: 'rounded', label: 'Rounded' },
+                { value: 'chamfered', label: 'Chamfered' },
+                { value: 'none', label: 'Rectangular' }
+              ]}
+              onChange={(v) => update('fingerSlideStyle', v as BoxConfig['fingerSlideStyle'])}
+            />
+            <SliderInput
+              label="Slide Radius"
+              value={config.fingerSlideRadius}
+              min={4}
+              max={20}
+              step={1}
+              unit="mm"
+              onChange={(v) => update('fingerSlideRadius', v)}
+            />
+            <SelectInput
+              label="Position"
+              value={config.fingerSlidePosition}
+              options={[
+                { value: 'front', label: 'Front' },
+                { value: 'back', label: 'Back' },
+                { value: 'left', label: 'Left' },
+                { value: 'right', label: 'Right' }
+              ]}
+              onChange={(v) => update('fingerSlidePosition', v as BoxConfig['fingerSlidePosition'])}
+            />
+          </>
+        )}
+      </CollapsibleSection>
+
+      {/* Tapered Corners Section */}
+      <CollapsibleSection title="Tapered Corners" icon="📐">
+        <SelectInput
+          label="Corner Style"
+          value={config.taperedCorner}
+          options={[
+            { value: 'none', label: 'None' },
+            { value: 'rounded', label: 'Rounded' },
+            { value: 'chamfered', label: 'Chamfered' }
+          ]}
+          onChange={(v) => update('taperedCorner', v as BoxConfig['taperedCorner'])}
+        />
+        {config.taperedCorner !== 'none' && (
+          <SliderInput
+            label="Taper Size"
+            value={config.taperedCornerSize}
+            min={5}
+            max={20}
+            step={1}
+            unit="mm"
+            onChange={(v) => update('taperedCornerSize', v)}
           />
         )}
-        
+        <p className="text-xs text-slate-500">
+          Tapered internal corners make it easier to grab items from the bin.
+        </p>
+      </CollapsibleSection>
+
+      {/* Wall Pattern Section */}
+      <CollapsibleSection title="Wall Pattern" icon="⬡">
+        <SelectInput
+          label="Pattern Style"
+          value={config.wallPattern}
+          options={[
+            { value: 'none', label: 'None (Solid)' },
+            { value: 'hexgrid', label: 'Hexagon Grid' },
+            { value: 'grid', label: 'Square Grid' },
+            { value: 'voronoi', label: 'Voronoi' },
+            { value: 'brick', label: 'Brick Pattern' }
+          ]}
+          onChange={(v) => update('wallPattern', v as BoxConfig['wallPattern'])}
+        />
+        {config.wallPattern !== 'none' && (
+          <SliderInput
+            label="Pattern Spacing"
+            value={config.wallPatternSpacing}
+            min={1}
+            max={5}
+            step={0.5}
+            unit="mm"
+            onChange={(v) => update('wallPatternSpacing', v)}
+          />
+        )}
+        <p className="text-xs text-slate-500">
+          Wall patterns reduce material usage and add visual interest.
+        </p>
+      </CollapsibleSection>
+
+      {/* Dividers Section */}
+      <CollapsibleSection title="Dividers" icon="▦">
+        <NumberInput
+          label="Dividers X (Left-Right)"
+          value={config.dividersX}
+          min={0}
+          max={10}
+          step={1}
+          onChange={(v) => update('dividersX', v)}
+        />
+        <NumberInput
+          label="Dividers Y (Front-Back)"
+          value={config.dividersY}
+          min={0}
+          max={10}
+          step={1}
+          onChange={(v) => update('dividersY', v)}
+        />
+      </CollapsibleSection>
+
+      {/* Label Tab Section */}
+      <CollapsibleSection title="Label Tab" icon="🏷️">
         <ToggleInput
-          label="Label Tab"
+          label="Enable Label Tab"
           value={config.labelEnabled}
           onChange={(v) => update('labelEnabled', v)}
         />
         {config.labelEnabled && (
           <>
             <SelectInput
-              label="Label Position"
+              label="Position"
               value={config.labelPosition}
               options={[
                 { value: 'front', label: 'Front' },
@@ -191,67 +349,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
             />
           </>
         )}
-      </Section>
-
-      {/* Dividers Section */}
-      <Section title="Dividers" icon="▦">
-        <NumberInput
-          label="Dividers X"
-          value={config.dividersX}
-          min={0}
-          max={10}
-          step={1}
-          onChange={(v) => update('dividersX', v)}
-        />
-        <NumberInput
-          label="Dividers Y"
-          value={config.dividersY}
-          min={0}
-          max={10}
-          step={1}
-          onChange={(v) => update('dividersY', v)}
-        />
-      </Section>
-
-      {/* Style Section */}
-      <Section title="Style" icon="🎨">
-        <SelectInput
-          label="Lip Style"
-          value={config.lipStyle}
-          options={[
-            { value: 'none', label: 'None' },
-            { value: 'standard', label: 'Standard' },
-            { value: 'reduced', label: 'Reduced' }
-          ]}
-          onChange={(v) => update('lipStyle', v as BoxConfig['lipStyle'])}
-        />
-        <SelectInput
-          label="Base Style"
-          value={config.baseStyle}
-          options={[
-            { value: 'standard', label: 'Standard' },
-            { value: 'efficient', label: 'Efficient Floor' },
-            { value: 'filled', label: 'Filled' }
-          ]}
-          onChange={(v) => update('baseStyle', v as BoxConfig['baseStyle'])}
-        />
-      </Section>
-
-      {/* Corner Rounding Section */}
-      <Section title="Corner Rounding" icon="⭕">
-        <SliderInput
-          label="Corner Radius"
-          value={config.cornerRadius}
-          min={0}
-          max={5}
-          step={0.25}
-          unit="mm"
-          onChange={(v) => update('cornerRadius', v)}
-        />
-        <p className="text-xs text-slate-500 mt-2">
-          Rounded corners make printing easier and reduce sharp edges.
-        </p>
-      </Section>
+      </CollapsibleSection>
     </div>
   );
 }
@@ -262,9 +360,9 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
   };
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-4 space-y-3">
       {/* Dimensions Section */}
-      <Section title="Dimensions" icon="📐">
+      <CollapsibleSection title="Dimensions" icon="📐" defaultOpen>
         <SliderInput
           label="Width"
           value={config.width}
@@ -283,74 +381,122 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
           unit="units"
           onChange={(v) => update('depth', v)}
         />
-      </Section>
+      </CollapsibleSection>
 
       {/* Style Section */}
-      <Section title="Style" icon="🎨">
+      <CollapsibleSection title="Plate Style" icon="🎨" defaultOpen>
         <SelectInput
-          label="Baseplate Style"
+          label="Socket Style"
           value={config.style}
           options={[
-            { value: 'default', label: 'Default' },
-            { value: 'magnet', label: 'Magnet Holes' },
-            { value: 'weighted', label: 'Weighted (Hollow)' },
-            { value: 'screw', label: 'Screw Holes' }
+            { value: 'default', label: 'Default (Open Sockets)' },
+            { value: 'magnet', label: 'With Magnets' },
+            { value: 'weighted', label: 'Weighted (Weight Cavity)' },
+            { value: 'screw', label: 'With Screw Holes' }
           ]}
           onChange={(v) => update('style', v as BaseplateConfig['style'])}
         />
         <SelectInput
-          label="Lid Option"
-          value={config.lidOption}
+          label="Plate Type"
+          value={config.plateStyle}
           options={[
-            { value: 'none', label: 'None' },
-            { value: 'flat', label: 'Flat Lid' },
-            { value: 'halfPitch', label: 'Half-Pitch Grid' }
+            { value: 'default', label: 'Standard 3D Print' },
+            { value: 'cnclaser', label: 'CNC / Laser Cut' }
           ]}
-          onChange={(v) => update('lidOption', v as BaseplateConfig['lidOption'])}
+          onChange={(v) => update('plateStyle', v as BaseplateConfig['plateStyle'])}
         />
-      </Section>
+        <ToggleInput
+          label="Remove Bottom Taper"
+          value={config.removeBottomTaper}
+          onChange={(v) => update('removeBottomTaper', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Removing bottom taper creates flat socket bottoms for CNC/laser cutting.
+        </p>
+      </CollapsibleSection>
 
-      {/* Magnet/Screw Configuration */}
-      {(config.style === 'magnet' || config.style === 'screw') && (
-        <Section title="Hardware" icon="🔧">
-          {config.style === 'magnet' && (
-            <>
-              <NumberInput
-                label="Magnet Diameter"
-                value={config.magnetDiameter}
-                min={3}
-                max={10}
-                step={0.5}
-                unit="mm"
-                onChange={(v) => update('magnetDiameter', v)}
-              />
-              <NumberInput
-                label="Magnet Depth"
-                value={config.magnetDepth}
-                min={1}
-                max={5}
-                step={0.5}
-                unit="mm"
-                onChange={(v) => update('magnetDepth', v)}
-              />
-            </>
-          )}
-          {config.style === 'screw' && (
-            <NumberInput
-              label="Screw Diameter"
-              value={config.screwDiameter}
-              min={2}
-              max={6}
-              step={0.5}
-              unit="mm"
-              onChange={(v) => update('screwDiameter', v)}
-            />
-          )}
-        </Section>
+      {/* Magnets Section */}
+      {(config.style === 'magnet' || config.style === 'default') && (
+        <CollapsibleSection title="Magnets" icon="🧲">
+          <NumberInput
+            label="Magnet Diameter"
+            value={config.magnetDiameter}
+            min={3}
+            max={10}
+            step={0.1}
+            unit="mm"
+            onChange={(v) => update('magnetDiameter', v)}
+          />
+          <NumberInput
+            label="Magnet Depth"
+            value={config.magnetDepth}
+            min={1}
+            max={5}
+            step={0.1}
+            unit="mm"
+            onChange={(v) => update('magnetDepth', v)}
+          />
+          <NumberInput
+            label="Z Offset (Raise Magnet)"
+            value={config.magnetZOffset}
+            min={0}
+            max={3}
+            step={0.1}
+            unit="mm"
+            onChange={(v) => update('magnetZOffset', v)}
+          />
+          <NumberInput
+            label="Top Cover (Capture)"
+            value={config.magnetTopCover}
+            min={0}
+            max={2}
+            step={0.1}
+            unit="mm"
+            onChange={(v) => update('magnetTopCover', v)}
+          />
+          <p className="text-xs text-slate-500">
+            Z Offset raises magnets for glue-in. Top Cover creates ceiling to capture magnets.
+          </p>
+        </CollapsibleSection>
       )}
 
-      {/* Corner Rounding Section - NEW FEATURE */}
-      <Section title="Corner Rounding" icon="⭕" highlight>
+      {/* Screws Section */}
+      {(config.style === 'screw' || config.style === 'default') && (
+        <CollapsibleSection title="Screw Holes" icon="🔩">
+          <NumberInput
+            label="Screw Diameter"
+            value={config.screwDiameter}
+            min={2}
+            max={6}
+            step={0.5}
+            unit="mm"
+            onChange={(v) => update('screwDiameter', v)}
+          />
+          <ToggleInput
+            label="Center Screw Hole"
+            value={config.centerScrew}
+            onChange={(v) => update('centerScrew', v)}
+          />
+          <p className="text-xs text-slate-500">
+            Center screw allows mounting baseplate to surface.
+          </p>
+        </CollapsibleSection>
+      )}
+
+      {/* Weight Cavity Section */}
+      <CollapsibleSection title="Weight Cavity" icon="⚖️">
+        <ToggleInput
+          label="Enable Weight Cavity"
+          value={config.weightCavity}
+          onChange={(v) => update('weightCavity', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Creates hollow space to add weights (lead, steel balls) for stability.
+        </p>
+      </CollapsibleSection>
+
+      {/* Corner Rounding Section */}
+      <CollapsibleSection title="Corner Rounding" icon="⭕">
         <SliderInput
           label="Corner Radius"
           value={config.cornerRadius}
@@ -368,25 +514,51 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
           step={4}
           onChange={(v) => update('cornerSegments', v)}
         />
-        <p className="text-xs text-slate-500 mt-2">
-          Rounded corners make printing easier and reduce sharp edges. Higher segments = smoother curves but larger file size.
+        <p className="text-xs text-slate-500">
+          Higher segments = smoother curves but larger file size.
         </p>
-      </Section>
+      </CollapsibleSection>
     </div>
   );
 }
 
-function Section({ title, icon, children, highlight = false }: { title: string; icon: string; children: React.ReactNode; highlight?: boolean }) {
+function CollapsibleSection({ 
+  title, 
+  icon, 
+  children, 
+  defaultOpen = false 
+}: { 
+  title: string; 
+  icon: string; 
+  children: React.ReactNode; 
+  defaultOpen?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
   return (
-    <div className={`rounded-xl p-4 ${highlight ? 'bg-green-900/20 border border-green-500/30' : 'bg-slate-800/50 border border-slate-700/50'}`}>
-      <h3 className={`text-sm font-semibold mb-4 flex items-center gap-2 ${highlight ? 'text-green-400' : 'text-slate-300'}`}>
-        <span>{icon}</span>
-        {title}
-        {highlight && <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">New</span>}
-      </h3>
-      <div className="space-y-4">
-        {children}
-      </div>
+    <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 overflow-hidden">
+      <button
+        className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-slate-700/30 transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+          <span>{icon}</span>
+          {title}
+        </h3>
+        <svg 
+          className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          fill="none" 
+          viewBox="0 0 24 24" 
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div className="px-4 pb-4 pt-2 space-y-4 border-t border-slate-700/50">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
