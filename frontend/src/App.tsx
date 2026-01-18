@@ -12,15 +12,14 @@ function App() {
   const [boxConfig, setBoxConfig] = useState<BoxConfig>(defaultBoxConfig);
   const [baseplateConfig, setBaseplateConfig] = useState<BaseplateConfig>(defaultBaseplateConfig);
 
-  // Sync socket dimensions with foot dimensions when enabled
+  // Sync socket chamfer with foot chamfer when enabled
   const handleBoxConfigChange = useCallback((config: BoxConfig) => {
     setBoxConfig(config);
     if (baseplateConfig.syncSocketWithFoot) {
       setBaseplateConfig({
         ...baseplateConfig,
-        socketLowerTaperHeight: config.footLowerTaperHeight,
-        socketRiserHeight: config.footRiserHeight,
-        socketUpperTaperHeight: config.footUpperTaperHeight,
+        socketChamferAngle: config.footChamferAngle,
+        socketChamferHeight: config.footChamferHeight,
       });
     }
   }, [baseplateConfig]);
@@ -31,9 +30,8 @@ function App() {
     if (config.syncSocketWithFoot) {
       setBoxConfig({
         ...boxConfig,
-        footLowerTaperHeight: config.socketLowerTaperHeight,
-        footRiserHeight: config.socketRiserHeight,
-        footUpperTaperHeight: config.socketUpperTaperHeight,
+        footChamferAngle: config.socketChamferAngle,
+        footChamferHeight: config.socketChamferHeight,
       });
     }
   }, [boxConfig]);

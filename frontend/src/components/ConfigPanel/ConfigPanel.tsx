@@ -179,58 +179,34 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
         <p className="text-xs text-slate-500">
           Rounds the corners of the feet. Standard is 3.75mm.
         </p>
-      </CollapsibleSection>
-
-      {/* Foot Chamfer/Taper Section */}
-      <CollapsibleSection title="Foot Chamfers & Tapers" icon="📐">
-        <SliderInput
-          label="Bottom Taper Height"
-          value={config.footLowerTaperHeight}
-          min={0}
-          max={2}
-          step={0.1}
-          unit="mm"
-          onChange={(v) => update('footLowerTaperHeight', v)}
-        />
-        <p className="text-xs text-slate-500">
-          Height of bottom chamfer. Set to 0 for vertical (no taper) - better for printing. Standard: 0.8mm.
-        </p>
-        <NumberInput
-          label="Bottom Diameter"
-          value={config.footBottomDiameter}
-          min={1.6}
-          max={20}
-          step={0.1}
-          unit="mm"
-          onChange={(v) => update('footBottomDiameter', v)}
-        />
-        <p className="text-xs text-slate-500">
-          Starting diameter at bottom. Larger = less steep angle. Standard: 1.6mm.
-        </p>
-        <SliderInput
-          label="Riser Height"
-          value={config.footRiserHeight}
-          min={0.5}
-          max={3}
-          step={0.1}
-          unit="mm"
-          onChange={(v) => update('footRiserHeight', v)}
-        />
-        <p className="text-xs text-slate-500">
-          Height of vertical section. Standard: 1.8mm.
-        </p>
-        <SliderInput
-          label="Upper Taper Height"
-          value={config.footUpperTaperHeight}
-          min={1}
-          max={4}
-          step={0.1}
-          unit="mm"
-          onChange={(v) => update('footUpperTaperHeight', v)}
-        />
-        <p className="text-xs text-slate-500">
-          Height of upper chamfer. Standard: 2.15mm.
-        </p>
+        
+        <div className="mt-4 pt-4 border-t border-slate-700">
+          <h4 className="text-xs font-semibold text-slate-400 mb-3">FOOT CHAMFER</h4>
+          <SliderInput
+            label="Chamfer Angle"
+            value={config.footChamferAngle}
+            min={30}
+            max={75}
+            step={1}
+            unit="°"
+            onChange={(v) => update('footChamferAngle', v)}
+          />
+          <p className="text-xs text-slate-500">
+            45° = standard. Higher = steeper taper. Lower = gentler taper.
+          </p>
+          <SliderInput
+            label="Chamfer Height"
+            value={config.footChamferHeight}
+            min={2}
+            max={8}
+            step={0.25}
+            unit="mm"
+            onChange={(v) => update('footChamferHeight', v)}
+          />
+          <p className="text-xs text-slate-500">
+            Total height of the foot chamfer. Standard: 4.75mm.
+          </p>
+        </div>
       </CollapsibleSection>
 
       {/* Floor Section */}
@@ -661,59 +637,47 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
         </p>
       </CollapsibleSection>
 
-      {/* Socket Chamfer/Taper Section */}
-      <CollapsibleSection title="Socket Chamfers & Tapers" icon="📐">
+      {/* Socket Chamfer Section */}
+      <CollapsibleSection title="Socket Chamfer" icon="📐">
         <ToggleInput
-          label="Sync with Foot Dimensions"
+          label="Sync with Foot Chamfer"
           value={config.syncSocketWithFoot}
           onChange={(v) => update('syncSocketWithFoot', v)}
         />
         <p className="text-xs text-slate-500">
-          When enabled, socket dimensions automatically match foot dimensions for proper fit.
+          When enabled, socket chamfer automatically matches foot chamfer for proper fit.
         </p>
         {!config.syncSocketWithFoot && (
           <div className="mt-2 p-2 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
             <p className="text-xs text-yellow-400">
-              ⚠️ Socket dimensions must match foot dimensions or they won't fit together!
+              ⚠️ Socket angle & height must match foot for proper fit!
             </p>
           </div>
         )}
         <div className={config.syncSocketWithFoot ? 'opacity-50 pointer-events-none' : ''}>
           <SliderInput
-            label="Bottom Taper Height"
-            value={config.socketLowerTaperHeight}
-            min={0}
-            max={2}
-            step={0.1}
-            unit="mm"
-            onChange={(v) => update('socketLowerTaperHeight', v)}
+            label="Chamfer Angle"
+            value={config.socketChamferAngle}
+            min={30}
+            max={75}
+            step={1}
+            unit="°"
+            onChange={(v) => update('socketChamferAngle', v)}
           />
           <p className="text-xs text-slate-500">
-            Height of bottom chamfer in socket. Set to 0 for vertical. Standard: 0.7mm.
+            Should match foot chamfer angle. 45° = standard.
           </p>
           <SliderInput
-            label="Riser Height"
-            value={config.socketRiserHeight}
-            min={0.5}
-            max={3}
-            step={0.1}
+            label="Chamfer Height"
+            value={config.socketChamferHeight}
+            min={2}
+            max={8}
+            step={0.25}
             unit="mm"
-            onChange={(v) => update('socketRiserHeight', v)}
+            onChange={(v) => update('socketChamferHeight', v)}
           />
           <p className="text-xs text-slate-500">
-            Height of vertical section. Standard: 1.8mm.
-          </p>
-          <SliderInput
-            label="Upper Taper Height"
-            value={config.socketUpperTaperHeight}
-            min={1}
-            max={4}
-            step={0.1}
-            unit="mm"
-            onChange={(v) => update('socketUpperTaperHeight', v)}
-          />
-          <p className="text-xs text-slate-500">
-            Height of upper chamfer. Standard: 2.15mm.
+            Should match foot chamfer height. Standard: 4.75mm.
           </p>
         </div>
       </CollapsibleSection>

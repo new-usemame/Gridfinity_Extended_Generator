@@ -61,11 +61,9 @@ export interface BoxConfig {
   feetCornerRadius: number;
   gridSize: number;  // Grid unit size in mm (standard is 42mm)
   
-  // Foot chamfer/taper options
-  footLowerTaperHeight: number;  // Height of bottom taper (0 = vertical/no taper)
-  footRiserHeight: number;       // Height of vertical riser section
-  footUpperTaperHeight: number;  // Height of upper taper
-  footBottomDiameter: number;    // Starting diameter at bottom (larger = less steep)
+  // Foot chamfer - simple angle and height controls
+  footChamferAngle: number;   // Angle in degrees (45 = standard, higher = steeper)
+  footChamferHeight: number;  // Total height of the chamfered foot in mm
 }
 
 // Baseplate Configuration
@@ -101,11 +99,10 @@ export interface BaseplateConfig {
   // Grid size
   gridSize: number;
   
-  // Socket chamfer/taper options (inverse of foot profile)
-  socketLowerTaperHeight: number;  // Height of bottom taper (0 = vertical/no taper)
-  socketRiserHeight: number;       // Height of vertical riser section
-  socketUpperTaperHeight: number;  // Height of upper taper
-  syncSocketWithFoot: boolean;     // Auto-sync socket dimensions with foot dimensions
+  // Socket chamfer - simple angle and height controls (should match foot for proper fit)
+  socketChamferAngle: number;   // Angle in degrees (should match footChamferAngle)
+  socketChamferHeight: number;  // Total height of socket in mm (should match footChamferHeight)
+  syncSocketWithFoot: boolean;  // Auto-sync socket dimensions with foot dimensions
 }
 
 // Default configurations
@@ -143,10 +140,8 @@ export const defaultBoxConfig: BoxConfig = {
   innerBottomRadius: 0.8,    // Slight fillet on inside corners
   feetCornerRadius: 3.75,
   gridSize: 42,
-  footLowerTaperHeight: 0.8,  // Standard: 0.8mm (set to 0 for vertical)
-  footRiserHeight: 1.8,        // Standard: 1.8mm
-  footUpperTaperHeight: 2.15,  // Standard: 2.15mm
-  footBottomDiameter: 1.6      // Standard: 1.6mm (larger = less steep angle)
+  footChamferAngle: 45,      // 45 degrees = standard Gridfinity
+  footChamferHeight: 4.75    // Standard total height: 0.8 + 1.8 + 2.15 = 4.75mm
 };
 
 export const defaultBaseplateConfig: BaseplateConfig = {
@@ -165,8 +160,7 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   cornerRadius: 3.75,
   cornerSegments: 32,
   gridSize: 42,
-  socketLowerTaperHeight: 0.8,  // Matches foot lower taper for proper fit
-  socketRiserHeight: 1.8,        // Standard: 1.8mm
-  socketUpperTaperHeight: 2.15,  // Standard: 2.15mm
-  syncSocketWithFoot: true        // Auto-sync with foot by default
+  socketChamferAngle: 45,      // Should match footChamferAngle for proper fit
+  socketChamferHeight: 4.75,   // Should match footChamferHeight for proper fit
+  syncSocketWithFoot: true     // Auto-sync with foot by default
 };

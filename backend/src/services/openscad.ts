@@ -61,10 +61,8 @@ top_edge_radius = ${config.topEdgeRadius};
 inner_bottom_radius = ${config.innerBottomRadius};
 feet_corner_radius = ${config.feetCornerRadius};
 grid_unit = ${config.gridSize};
-foot_lower_taper_height = ${config.footLowerTaperHeight};
-foot_riser_height = ${config.footRiserHeight};
-foot_upper_taper_height = ${config.footUpperTaperHeight};
-foot_bottom_diameter = ${config.footBottomDiameter};
+foot_chamfer_angle = ${config.footChamferAngle};
+foot_chamfer_height = ${config.footChamferHeight};
 flat_base = "${config.flatBase}";
 efficient_floor = "${config.efficientFloor}";
 tapered_corner = "${config.taperedCorner}";
@@ -74,9 +72,12 @@ wall_pattern_spacing = ${config.wallPatternSpacing};
 
 /* [Constants] */
 // SIMPLE TAPER foot - ONE taper from small bottom to larger top
-// foot_lower_taper_height + foot_riser_height = total foot taper height
-// foot_upper_taper_height = chamfer from foot top to box walls
-foot_taper_height = foot_lower_taper_height + foot_riser_height + foot_upper_taper_height;
+// Chamfer angle determines the taper steepness
+// Chamfer height is the total height of the foot
+foot_taper_height = foot_chamfer_height;
+// Calculate bottom inset from angle: inset = height / tan(angle)
+// tan(45°) = 1, tan(60°) ≈ 1.73, tan(30°) ≈ 0.58
+foot_bottom_inset = foot_chamfer_height / tan(foot_chamfer_angle);
 // Total base height (foot taper only, no extra lip)
 base_height = foot_taper_height;
 stacking_lip_height = 4.4;
@@ -269,21 +270,21 @@ module gridfinity_foot() {
     // ONE SIMPLE TAPER per foot
     // Small at bottom, expands to full size at top
     // This is what fits into the baseplate socket
+    // Angle and height control the taper steepness and size
     
     // Use user-specified feet corner radius, default to standard 3.75mm
     foot_radius = feet_corner_radius > 0 ? feet_corner_radius : gf_corner_radius;
     foot_full_size = grid_unit - clearance * 2;  // 41.5mm at top
     
-    // Bottom size - calculated to match socket taper angle (45 degrees)
-    // The inset equals the taper height for a 45-degree angle
-    bottom_inset = foot_taper_height;
-    bottom_size = foot_full_size - bottom_inset * 2;
-    bottom_radius = max(0.5, foot_radius - bottom_inset);
+    // Bottom size - calculated from chamfer angle and height
+    // foot_bottom_inset is pre-calculated: height / tan(angle)
+    bottom_size = foot_full_size - foot_bottom_inset * 2;
+    bottom_radius = max(0.5, foot_radius - foot_bottom_inset);
     
     translate([clearance, clearance, 0])
     hull() {
-        // Bottom - smaller size (inset by taper height on each side)
-        translate([bottom_inset, bottom_inset, 0])
+        // Bottom - smaller size (inset calculated from angle)
+        translate([foot_bottom_inset, foot_bottom_inset, 0])
         rounded_rect_profile(bottom_size, bottom_size, 0.01, bottom_radius);
         
         // Top - full size (ONE simple taper from bottom to here)
@@ -567,16 +568,18 @@ weight_cavity = ${config.weightCavity};
 remove_bottom_taper = ${config.removeBottomTaper};
 corner_radius = ${config.cornerRadius};
 grid_unit = ${config.gridSize};
-socket_lower_taper_height = ${config.socketLowerTaperHeight};
-socket_riser_height = ${config.socketRiserHeight};
-socket_upper_taper_height = ${config.socketUpperTaperHeight};
+socket_chamfer_angle = ${config.socketChamferAngle};
+socket_chamfer_height = ${config.socketChamferHeight};
 
 /* [Constants - Official Gridfinity Spec] */
 clearance = 0.25;  // Gap between bin and socket walls
 
 // Socket profile - ONE SIMPLE TAPER matching bin foot
 // Full size at top, tapers down to smaller size at bottom
-socket_taper_height = socket_lower_taper_height + socket_riser_height + socket_upper_taper_height;
+// Chamfer angle determines the taper steepness
+socket_taper_height = socket_chamfer_height;
+// Calculate bottom inset from angle: inset = height / tan(angle)
+socket_bottom_inset = socket_chamfer_height / tan(socket_chamfer_angle);
 socket_depth = socket_taper_height;
 
 // The baseplate is just the socket frame - no solid floor underneath
@@ -652,15 +655,15 @@ module grid_socket() {
     // 
     // Matches the foot: foot is small at bottom, full at top
     // Socket is full at top, small at bottom (inverse)
+    // Angle and height control the taper (should match foot)
     
     socket_full_size = grid_unit - clearance * 2;  // 41.5mm at top
     socket_corner_radius = 3.75;  // Standard Gridfinity corner radius for sockets
     
-    // Bottom size - matches foot bottom diameter for perfect fit
-    // Using the socket taper to calculate inset
-    bottom_inset = socket_taper_height;  // The taper creates this much inset
-    bottom_size = socket_full_size - bottom_inset * 2;
-    bottom_radius = max(0.5, socket_corner_radius - bottom_inset);
+    // Bottom size - calculated from chamfer angle and height
+    // socket_bottom_inset is pre-calculated: height / tan(angle)
+    bottom_size = socket_full_size - socket_bottom_inset * 2;
+    bottom_radius = max(0.5, socket_corner_radius - socket_bottom_inset);
     
     // The socket is an open hole with ONE simple taper
     translate([clearance, clearance, -0.1]) {
@@ -671,7 +674,7 @@ module grid_socket() {
             
             // Bottom of socket - smaller size (ONE simple taper from top to here)
             if (!remove_bottom_taper) {
-                translate([bottom_inset, bottom_inset, 0])
+                translate([socket_bottom_inset, socket_bottom_inset, 0])
                 socket_rounded_rect(bottom_size, bottom_size, 0.2, bottom_radius);
             } else {
                 // No taper - vertical walls at full size
