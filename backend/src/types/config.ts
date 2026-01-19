@@ -113,6 +113,11 @@ export interface BaseplateConfig {
   socketChamferAngle: number;   // Angle in degrees (should match footChamferAngle)
   socketChamferHeight: number;  // Total height of socket in mm (should match footChamferHeight)
   syncSocketWithFoot: boolean;  // Auto-sync socket dimensions with foot dimensions
+  
+  // Segmentation for 3D printing
+  enableSegmentation: boolean;   // Enable splitting into printable segments
+  printerPlateWidth: number;     // 3D printer build plate width in mm
+  printerPlateDepth: number;     // 3D printer build plate depth in mm
 }
 
 // Default configurations
@@ -176,7 +181,10 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   gridSize: 42,
   socketChamferAngle: 45,      // Should match footChamferAngle for proper fit
   socketChamferHeight: 4.75,   // Should match footChamferHeight for proper fit
-  syncSocketWithFoot: true     // Auto-sync with foot by default
+  syncSocketWithFoot: true,    // Auto-sync with foot by default
+  enableSegmentation: false,    // Segmentation disabled by default
+  printerPlateWidth: 220,       // Common Ender 3 size
+  printerPlateDepth: 220        // Common Ender 3 size
 };
 
 // Grid calculation result for fill_area_mm mode
@@ -202,6 +210,120 @@ export interface GridCalculation {
   paddingFarX: number;   // right
   paddingNearY: number;  // front
   paddingFarY: number;   // back
+}
+
+/**
+ * Segment information for a single printable segment
+ */
+export interface BaseplateSegment {
+  segmentIndex: number;        // Index of this segment (0-based)
+  gridX: number;               // Starting grid X position
+  gridY: number;               // Starting grid Y position
+  widthUnits: number;          // Width in grid units for this segment
+  depthUnits: number;          // Depth in grid units for this segment
+  widthMm: number;             // Width in mm for this segment
+  depthMm: number;             // Depth in mm for this segment
+  hasConnectorLeft: boolean;   // Has connector on left edge
+  hasConnectorRight: boolean;  // Has connector on right edge
+  hasConnectorTop: boolean;    // Has connector on top edge
+  hasConnectorBottom: boolean; // Has connector on bottom edge
+  isCornerSegment: boolean;    // Is this a corner segment (has connectors on 2+ edges)
+}
+
+/**
+ * Segmentation calculation result
+ */
+export interface SegmentationResult {
+  segments: BaseplateSegment[];
+  segmentsX: number;           // Number of segments in X direction
+  segmentsY: number;           // Number of segments in Y direction
+  totalSegments: number;        // Total number of segments
+}
+
+/**
+ * Calculate how to split a baseplate into printable segments
+ */
+export function calculateSegmentation(
+  totalWidthUnits: number,
+  totalDepthUnits: number,
+  gridSize: number,
+  printerPlateWidth: number,
+  printerPlateDepth: number
+): SegmentationResult {
+  // Calculate how many full grid units fit in printer plate (leave some margin)
+  const margin = 5; // 5mm margin on each side
+  const availableWidth = printerPlateWidth - (margin * 2);
+  const availableDepth = printerPlateDepth - (margin * 2);
+  
+  // Calculate max units that fit (must be whole units, no half units)
+  const maxUnitsX = Math.floor(availableWidth / gridSize);
+  const maxUnitsY = Math.floor(availableDepth / gridSize);
+  
+  // Calculate number of segments needed
+  const segmentsX = Math.ceil(totalWidthUnits / maxUnitsX);
+  const segmentsY = Math.ceil(totalDepthUnits / maxUnitsY);
+  
+  // Calculate actual units per segment
+  const unitsPerSegmentX = Math.floor(totalWidthUnits / segmentsX);
+  const unitsPerSegmentY = Math.floor(totalDepthUnits / segmentsY);
+  const remainderX = totalWidthUnits - (unitsPerSegmentX * segmentsX);
+  const remainderY = totalDepthUnits - (unitsPerSegmentY * segmentsY);
+  
+  const segments: BaseplateSegment[] = [];
+  let segmentIndex = 0;
+  
+  for (let sy = 0; sy < segmentsY; sy++) {
+    for (let sx = 0; sx < segmentsX; sx++) {
+      // Calculate segment dimensions
+      let widthUnits = unitsPerSegmentX;
+      let depthUnits = unitsPerSegmentY;
+      
+      // Add remainder to last segments
+      if (sx === segmentsX - 1) {
+        widthUnits += remainderX;
+      }
+      if (sy === segmentsY - 1) {
+        depthUnits += remainderY;
+      }
+      
+      // Calculate grid position
+      const gridX = sx * unitsPerSegmentX;
+      const gridY = sy * unitsPerSegmentY;
+      
+      // Determine connector positions
+      const hasConnectorLeft = sx > 0;
+      const hasConnectorRight = sx < segmentsX - 1;
+      const hasConnectorTop = sy > 0;
+      const hasConnectorBottom = sy < segmentsY - 1;
+      
+      const isCornerSegment = (hasConnectorLeft && hasConnectorTop) ||
+                              (hasConnectorLeft && hasConnectorBottom) ||
+                              (hasConnectorRight && hasConnectorTop) ||
+                              (hasConnectorRight && hasConnectorBottom);
+      
+      segments.push({
+        segmentIndex: segmentIndex++,
+        gridX,
+        gridY,
+        widthUnits,
+        depthUnits,
+        widthMm: widthUnits * gridSize,
+        depthMm: depthUnits * gridSize,
+        hasConnectorLeft,
+        hasConnectorRight,
+        hasConnectorTop,
+        hasConnectorBottom,
+        isCornerSegment
+      });
+    }
+  }
+  
+  return {
+    segments,
+    segmentsX,
+    segmentsY,
+    totalSegments: segments.length
+  };
 }
 
 /**

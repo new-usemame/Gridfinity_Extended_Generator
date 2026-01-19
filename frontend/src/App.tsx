@@ -261,7 +261,11 @@ function App() {
             {generatorType === 'combined' ? (
               <PreviewCanvas
                 boxStlUrl={boxResult?.stlUrl || null}
-                baseplateStlUrl={baseplateResult?.stlUrl || null}
+                baseplateStlUrl={
+                  baseplateResult && 'isSegmented' in baseplateResult && baseplateResult.isSegmented
+                    ? baseplateResult.segments[0]?.stlUrl || null
+                    : baseplateResult?.stlUrl || null
+                }
                 isLoading={isGenerating}
                 isCombinedView={true}
                 boxConfig={boxConfig}
@@ -269,7 +273,11 @@ function App() {
               />
             ) : (
               <PreviewCanvas
-                stlUrl={(generatorType === 'box' ? boxResult : baseplateResult)?.stlUrl || null}
+                stlUrl={
+                  generatorType === 'baseplate' && baseplateResult && 'isSegmented' in baseplateResult && baseplateResult.isSegmented
+                    ? baseplateResult.segments[0]?.stlUrl || null
+                    : (generatorType === 'box' ? boxResult : baseplateResult)?.stlUrl || null
+                }
                 isLoading={isGenerating}
                 isCombinedView={false}
               />

@@ -24,7 +24,15 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid type. Must be "box" or "baseplate"' });
     }
 
-    res.json(result);
+    // Handle segmented baseplate result
+    if (result && 'segments' in result) {
+      res.json({ 
+        segments: result.segments,
+        isSegmented: true 
+      });
+    } else {
+      res.json(result);
+    }
   } catch (error) {
     console.error('Generation error:', error);
     res.status(500).json({ 

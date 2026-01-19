@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { BoxConfig, BaseplateConfig, calculateGridFromMm } from '../../types/config';
+import { BoxConfig, BaseplateConfig, calculateGridFromMm, calculateSegmentation } from '../../types/config';
 import { SliderInput } from './SliderInput';
 import { ToggleInput } from './ToggleInput';
 import { SelectInput } from './SelectInput';
@@ -771,6 +771,100 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
             Should match foot chamfer height. Standard: 4.75mm.
           </p>
         </div>
+      </CollapsibleSection>
+
+      {/* Segmentation Section */}
+      <CollapsibleSection title="Segmentation" icon="🧩">
+        <ToggleInput
+          label="Enable Segmentation"
+          value={config.enableSegmentation}
+          onChange={(v) => update('enableSegmentation', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Split baseplate into smaller segments that fit on your 3D printer plate.
+        </p>
+        
+        {config.enableSegmentation && (
+          <>
+            <NumberInput
+              label="Printer Plate Width"
+              value={config.printerPlateWidth}
+              min={100}
+              max={500}
+              step={5}
+              unit="mm"
+              onChange={(v) => update('printerPlateWidth', v)}
+            />
+            <NumberInput
+              label="Printer Plate Depth"
+              value={config.printerPlateDepth}
+              min={100}
+              max={500}
+              step={5}
+              unit="mm"
+              onChange={(v) => update('printerPlateDepth', v)}
+            />
+            <p className="text-xs text-slate-500">
+              Enter your 3D printer's build plate dimensions. Segments will be automatically calculated to fit.
+            </p>
+            
+            {/* Segmentation Preview */}
+            {(() => {
+              let totalWidthUnits: number;
+              let totalDepthUnits: number;
+              
+              if (config.sizingMode === 'grid_units') {
+                totalWidthUnits = config.width;
+                totalDepthUnits = config.depth;
+              } else {
+                const gridCalc = calculateGridFromMm(
+                  config.targetWidthMm,
+                  config.targetDepthMm,
+                  config.gridSize,
+                  config.allowHalfCellsX,
+                  config.allowHalfCellsY,
+                  config.paddingAlignment
+                );
+                totalWidthUnits = gridCalc.gridUnitsX;
+                totalDepthUnits = gridCalc.gridUnitsY;
+              }
+              
+              const segResult = calculateSegmentation(
+                totalWidthUnits,
+                totalDepthUnits,
+                config.gridSize,
+                config.printerPlateWidth,
+                config.printerPlateDepth
+              );
+              
+              return (
+                <div className="mt-3 p-3 bg-slate-700/50 rounded-lg border border-slate-600">
+                  <h4 className="text-xs font-semibold text-emerald-400 mb-2">SEGMENTATION PREVIEW</h4>
+                  <div className="space-y-1 text-xs">
+                    <p className="text-slate-300">
+                      <span className="text-slate-500">Segments:</span>{' '}
+                      <span className="font-mono text-emerald-300">
+                        {segResult.segmentsX} x {segResult.segmentsY} = {segResult.totalSegments} total
+                      </span>
+                    </p>
+                    <p className="text-slate-300">
+                      <span className="text-slate-500">Max per segment:</span>{' '}
+                      <span className="font-mono">
+                        {Math.floor((config.printerPlateWidth - 10) / config.gridSize)} x {Math.floor((config.printerPlateDepth - 10) / config.gridSize)} units
+                      </span>
+                    </p>
+                    <p className="text-slate-300 text-xs mt-2">
+                      <span className="text-slate-500">Connectors:</span>{' '}
+                      <span className="text-amber-300">
+                        Puzzle piece connectors will be added at borders and corners
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+          </>
+        )}
       </CollapsibleSection>
     </div>
   );
