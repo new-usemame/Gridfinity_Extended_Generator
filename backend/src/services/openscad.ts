@@ -609,16 +609,8 @@ module rounded_rect_plate(width, depth, height, radius) {
 }
 
 module gridfinity_baseplate() {
-    // Calculate half cell info
-    full_cells_x = floor(width_units);
-    full_cells_y = floor(depth_units);
-    has_half_x = width_units - full_cells_x >= 0.5;
-    has_half_y = depth_units - full_cells_y >= 0.5;
-    half_cell_size = grid_unit / 2;
-    
-    // Position the plate so FULL CELLS align with origin (where box sits)
-    // Half cells will be at negative positions (left/negative Z in view)
-    // Full cells will be at origin and positive positions (right/positive Z in view)
+    // Position the plate so grid starts at origin
+    // If there's padding on near side, translate plate to compensate
     plate_offset_x = use_fill_mode ? -padding_near_x : 0;
     plate_offset_y = use_fill_mode ? -padding_near_y : 0;
     
@@ -629,39 +621,43 @@ module gridfinity_baseplate() {
         
         // Socket cutouts for each grid unit
         // Handle both full and half cells
-        // Half cells go on the NEAR edge (left/front) so full cells are on far side where box sits
-        // In Three.js view: SCAD Y → Three.js Z, so low SCAD Y = left (negative Z), high SCAD Y = right (positive Z)
-        // Note: half_offset_x, half_offset_y, and half_cell_size are calculated above
-        
-        // Half cells on X edge (near/left side) - at negative X positions (will be left in view)
-        if (has_half_x) {
-            for (gy = [0:full_cells_y-1]) {
-                translate([grid_offset_x - half_cell_size, grid_offset_y + gy * grid_unit, 0])
-                grid_socket(half_cell_size, grid_unit);
-            }
-        }
-        
-        // Half cells on Y edge (near/front side) - at negative Y positions (will be left/negative Z in view)
-        if (has_half_y) {
-            for (gx = [0:full_cells_x-1]) {
-                translate([grid_offset_x + gx * grid_unit, grid_offset_y - half_cell_size, 0])
-                grid_socket(grid_unit, half_cell_size);
-            }
-        }
-        
-        // Corner half cell (if both X and Y have half cells) - at negative X, negative Y
-        if (has_half_x && has_half_y) {
-            translate([grid_offset_x - half_cell_size, grid_offset_y - half_cell_size, 0])
-            grid_socket(half_cell_size, half_cell_size);
-        }
+        // Half cells go on the FAR edge (right/back) at high X, high Y
+        // After Y-axis flip in preview, high Y becomes low Z (left), so half cells appear on left
+        full_cells_x = floor(width_units);
+        full_cells_y = floor(depth_units);
+        has_half_x = width_units - full_cells_x >= 0.5;
+        has_half_y = depth_units - full_cells_y >= 0.5;
+        half_cell_size = grid_unit / 2;
         
         // Full grid cells - start at origin (0,0) so box can sit on them
-        // These will be at positive positions (right/positive Z in view)
         for (gx = [0:full_cells_x-1]) {
             for (gy = [0:full_cells_y-1]) {
                 translate([grid_offset_x + gx * grid_unit, grid_offset_y + gy * grid_unit, 0])
                 grid_socket(grid_unit, grid_unit);
             }
+        }
+        
+        // Half cells on X edge (far/right side) - AFTER full cells, at high X values
+        if (has_half_x) {
+            for (gy = [0:full_cells_y-1]) {
+                translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + gy * grid_unit, 0])
+                grid_socket(half_cell_size, grid_unit);
+            }
+        }
+        
+        // Half cells on Y edge (far/back side) - AFTER full cells, at high Y values
+        // After transformation, high Y becomes low Z (left side)
+        if (has_half_y) {
+            for (gx = [0:full_cells_x-1]) {
+                translate([grid_offset_x + gx * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
+                grid_socket(grid_unit, half_cell_size);
+            }
+        }
+        
+        // Corner half cell (if both X and Y have half cells) - far corner at high X, high Y
+        if (has_half_x && has_half_y) {
+            translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
+            grid_socket(half_cell_size, half_cell_size);
         }
     }
 }

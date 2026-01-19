@@ -193,12 +193,13 @@ function CombinedSceneContent({
         // Apply coordinate transformation
         // OpenSCAD: X=right, Y=back, Z=up
         // Three.js: X=right, Y=up, Z=front
-        // We want: SCAD +Y → Three.js +Z (so high Y values go to positive Z / right side)
+        // We want: SCAD high Y (back) → Three.js low Z (left) so half cells appear on left
+        //         SCAD low Y (front) → Three.js high Z (right) so full cells appear on right
         const matrix = new THREE.Matrix4();
         matrix.set(
           1, 0, 0, 0,
           0, 0, 1, 0,
-          0, 1, 0, 0,   // Z = Y (not negated, so high SCAD Y → high Three.js Z)
+          0, -1, 0, 0,   // Z = -Y (negated, so high SCAD Y → low Three.js Z / left side)
           0, 0, 0, 1
         );
         loadedGeometry.applyMatrix4(matrix);
@@ -209,9 +210,24 @@ function CombinedSceneContent({
         const box = loadedGeometry.boundingBox!;
         const clearance = 0.25; // Standard Gridfinity clearance
         
-        // Move box so its corner is at (clearance, 0, clearance)
-        // This aligns it with the first grid position on the baseplate
-        loadedGeometry.translate(-box.min.x + clearance, -box.min.y, -box.min.z + clearance);
+        // Calculate where to position box - we want it at high Z (right) on full cells
+        // After Y-axis flip: low SCAD Y (front/full cells) → high Three.js Z (right)
+        // So we position box at high Z, and it extends toward low Z (left)
+        // This leaves empty space on the left over the half cells (which are at low Z)
+        const baseplateDepth = _baseplateConfig ? 
+          (_baseplateConfig.sizingMode === 'fill_area_mm' ? 
+            _baseplateConfig.targetDepthMm : 
+            _baseplateConfig.depth * _baseplateConfig.gridSize) : 0;
+        
+        // Position box at high Z (right side) where full cells are
+        // Box extends from high Z toward low Z (left), leaving empty space over half cells on left
+        const boxZPosition = baseplateDepth > 0 ? 
+          baseplateDepth - (box.max.z - box.min.z) - clearance : 
+          -box.min.z + clearance;
+        
+        // Move box so its corner is at (clearance, 0, boxZPosition)
+        // This positions it on full cells at high Z (right side)
+        loadedGeometry.translate(-box.min.x + clearance, -box.min.y, -box.min.z + boxZPosition);
         
         // Recompute bounding box after translation
         loadedGeometry.computeBoundingBox();
@@ -224,7 +240,7 @@ function CombinedSceneContent({
         console.error('Error loading box STL:', error);
       }
     );
-  }, [boxStlUrl]);
+  }, [boxStlUrl, _baseplateConfig]);
 
   // Load baseplate STL
   useEffect(() => {
@@ -243,12 +259,13 @@ function CombinedSceneContent({
         // Apply coordinate transformation
         // OpenSCAD: X=right, Y=back, Z=up
         // Three.js: X=right, Y=up, Z=front
-        // We want: SCAD +Y → Three.js +Z (so high Y values go to positive Z / right side)
+        // We want: SCAD high Y (back) → Three.js low Z (left) so half cells appear on left
+        //         SCAD low Y (front) → Three.js high Z (right) so full cells appear on right
         const matrix = new THREE.Matrix4();
         matrix.set(
           1, 0, 0, 0,
           0, 0, 1, 0,
-          0, 1, 0, 0,   // Z = Y (not negated, so high SCAD Y → high Three.js Z)
+          0, -1, 0, 0,   // Z = -Y (negated, so high SCAD Y → low Three.js Z / left side)
           0, 0, 0, 1
         );
         loadedGeometry.applyMatrix4(matrix);
@@ -434,13 +451,13 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
         // OpenSCAD uses Z-up, Three.js uses Y-up
         // Apply rotation matrix to convert coordinate systems:
         // - OpenSCAD +X → Three.js +X (unchanged)
-        // - OpenSCAD +Y → Three.js +Z (depth axis)  
+        // - OpenSCAD +Y → Three.js -Z (depth axis, negated)  
         // - OpenSCAD +Z → Three.js +Y (up stays up)
         const matrix = new THREE.Matrix4();
         matrix.set(
           1, 0, 0, 0,
           0, 0, 1, 0,
-          0, 1, 0, 0,   // Z = Y (not negated)
+          0, -1, 0, 0,   // Z = -Y (negated)
           0, 0, 0, 1
         );
         loadedGeometry.applyMatrix4(matrix);
