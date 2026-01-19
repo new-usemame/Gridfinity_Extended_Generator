@@ -66,9 +66,21 @@ export interface BoxConfig {
 
 // Baseplate Configuration
 export interface BaseplateConfig {
-  // Dimensions (in grid units)
+  // Sizing mode
+  sizingMode: 'grid_units' | 'fill_area_mm';
+  
+  // Dimensions (in grid units) - used when sizingMode = 'grid_units'
   width: number;
   depth: number;
+  
+  // Target dimensions in mm - used when sizingMode = 'fill_area_mm'
+  targetWidthMm: number;
+  targetDepthMm: number;
+  
+  // Fill options (for fill_area_mm mode)
+  allowHalfCellsX: boolean;
+  allowHalfCellsY: boolean;
+  paddingAlignment: 'center' | 'near' | 'far';
   
   // Style
   style: 'default' | 'magnet' | 'weighted' | 'screw';
@@ -141,8 +153,14 @@ export const defaultBoxConfig: BoxConfig = {
 };
 
 export const defaultBaseplateConfig: BaseplateConfig = {
+  sizingMode: 'grid_units',
   width: 3,
   depth: 3,
+  targetWidthMm: 200,
+  targetDepthMm: 200,
+  allowHalfCellsX: true,
+  allowHalfCellsY: true,
+  paddingAlignment: 'center',
   style: 'default',
   plateStyle: 'default',
   magnetDiameter: 6.5,
@@ -160,3 +178,97 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   socketChamferHeight: 4.75,   // Should match footChamferHeight for proper fit
   syncSocketWithFoot: true     // Auto-sync with foot by default
 };
+
+// Grid calculation result for fill_area_mm mode
+export interface GridCalculation {
+  // Grid units (can be fractional like 2.5 for half cells)
+  gridUnitsX: number;
+  gridUnitsY: number;
+  
+  // Breakdown
+  fullCellsX: number;
+  fullCellsY: number;
+  hasHalfCellX: boolean;
+  hasHalfCellY: boolean;
+  
+  // Actual grid coverage in mm
+  gridCoverageMmX: number;
+  gridCoverageMmY: number;
+  
+  // Padding amounts
+  totalPaddingX: number;
+  totalPaddingY: number;
+  paddingNearX: number;  // left
+  paddingFarX: number;   // right
+  paddingNearY: number;  // front
+  paddingFarY: number;   // back
+}
+
+/**
+ * Calculate grid cells and padding from target mm dimensions
+ */
+export function calculateGridFromMm(
+  targetWidthMm: number,
+  targetDepthMm: number,
+  gridSize: number,
+  allowHalfCellsX: boolean,
+  allowHalfCellsY: boolean,
+  paddingAlignment: 'center' | 'near' | 'far'
+): GridCalculation {
+  const halfSize = gridSize / 2;
+  
+  // Calculate for X axis (width)
+  const fullCellsX = Math.floor(targetWidthMm / gridSize);
+  const remainderX = targetWidthMm - (fullCellsX * gridSize);
+  const hasHalfCellX = allowHalfCellsX && remainderX >= halfSize;
+  const gridUnitsX = fullCellsX + (hasHalfCellX ? 0.5 : 0);
+  const gridCoverageMmX = gridUnitsX * gridSize;
+  const totalPaddingX = targetWidthMm - gridCoverageMmX;
+  
+  // Calculate for Y axis (depth)
+  const fullCellsY = Math.floor(targetDepthMm / gridSize);
+  const remainderY = targetDepthMm - (fullCellsY * gridSize);
+  const hasHalfCellY = allowHalfCellsY && remainderY >= halfSize;
+  const gridUnitsY = fullCellsY + (hasHalfCellY ? 0.5 : 0);
+  const gridCoverageMmY = gridUnitsY * gridSize;
+  const totalPaddingY = targetDepthMm - gridCoverageMmY;
+  
+  // Distribute padding based on alignment
+  let paddingNearX: number, paddingFarX: number;
+  let paddingNearY: number, paddingFarY: number;
+  
+  if (paddingAlignment === 'center') {
+    paddingNearX = totalPaddingX / 2;
+    paddingFarX = totalPaddingX / 2;
+    paddingNearY = totalPaddingY / 2;
+    paddingFarY = totalPaddingY / 2;
+  } else if (paddingAlignment === 'near') {
+    paddingNearX = totalPaddingX;
+    paddingFarX = 0;
+    paddingNearY = totalPaddingY;
+    paddingFarY = 0;
+  } else {
+    // 'far'
+    paddingNearX = 0;
+    paddingFarX = totalPaddingX;
+    paddingNearY = 0;
+    paddingFarY = totalPaddingY;
+  }
+  
+  return {
+    gridUnitsX,
+    gridUnitsY,
+    fullCellsX,
+    fullCellsY,
+    hasHalfCellX,
+    hasHalfCellY,
+    gridCoverageMmX,
+    gridCoverageMmY,
+    totalPaddingX,
+    totalPaddingY,
+    paddingNearX,
+    paddingFarX,
+    paddingNearY,
+    paddingFarY
+  };
+}

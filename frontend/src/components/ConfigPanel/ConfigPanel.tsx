@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { BoxConfig, BaseplateConfig } from '../../types/config';
+import { useState, useMemo } from 'react';
+import { BoxConfig, BaseplateConfig, calculateGridFromMm } from '../../types/config';
 import { SliderInput } from './SliderInput';
 import { ToggleInput } from './ToggleInput';
 import { SelectInput } from './SelectInput';
@@ -433,28 +433,151 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
     onChange({ ...config, [key]: value });
   };
 
+  // Calculate grid preview for fill_area_mm mode
+  const gridCalc = useMemo(() => {
+    if (config.sizingMode !== 'fill_area_mm') return null;
+    return calculateGridFromMm(
+      config.targetWidthMm,
+      config.targetDepthMm,
+      config.gridSize,
+      config.allowHalfCellsX,
+      config.allowHalfCellsY,
+      config.paddingAlignment
+    );
+  }, [config.sizingMode, config.targetWidthMm, config.targetDepthMm, config.gridSize, 
+      config.allowHalfCellsX, config.allowHalfCellsY, config.paddingAlignment]);
+
   return (
     <div className="p-4 space-y-3">
-      {/* Dimensions Section */}
-      <CollapsibleSection title="Dimensions" icon="📐" defaultOpen>
-        <SliderInput
-          label="Width"
-          value={config.width}
-          min={1}
-          max={10}
-          step={1}
-          unit="units"
-          onChange={(v) => update('width', v)}
-        />
-        <SliderInput
-          label="Depth"
-          value={config.depth}
-          min={1}
-          max={10}
-          step={1}
-          unit="units"
-          onChange={(v) => update('depth', v)}
-        />
+      {/* Sizing Mode Section */}
+      <CollapsibleSection title="Sizing Mode" icon="📏" defaultOpen>
+        <div className="flex gap-2 mb-4">
+          <button
+            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              config.sizingMode === 'grid_units'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+            }`}
+            onClick={() => update('sizingMode', 'grid_units')}
+          >
+            Grid Units
+          </button>
+          <button
+            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              config.sizingMode === 'fill_area_mm'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+            }`}
+            onClick={() => update('sizingMode', 'fill_area_mm')}
+          >
+            Fill Area (mm)
+          </button>
+        </div>
+
+        {config.sizingMode === 'grid_units' ? (
+          <>
+            <SliderInput
+              label="Width"
+              value={config.width}
+              min={1}
+              max={10}
+              step={0.5}
+              unit="units"
+              onChange={(v) => update('width', v)}
+            />
+            <SliderInput
+              label="Depth"
+              value={config.depth}
+              min={1}
+              max={10}
+              step={0.5}
+              unit="units"
+              onChange={(v) => update('depth', v)}
+            />
+            <p className="text-xs text-slate-500">
+              Actual size: {(config.width * config.gridSize).toFixed(0)}mm x {(config.depth * config.gridSize).toFixed(0)}mm
+            </p>
+          </>
+        ) : (
+          <>
+            <NumberInput
+              label="Target Width"
+              value={config.targetWidthMm}
+              min={42}
+              max={1000}
+              step={1}
+              unit="mm"
+              onChange={(v) => update('targetWidthMm', v)}
+            />
+            <NumberInput
+              label="Target Depth"
+              value={config.targetDepthMm}
+              min={42}
+              max={1000}
+              step={1}
+              unit="mm"
+              onChange={(v) => update('targetDepthMm', v)}
+            />
+            
+            <div className="mt-3 pt-3 border-t border-slate-700">
+              <h4 className="text-xs font-semibold text-slate-400 mb-2">FILL OPTIONS</h4>
+              <ToggleInput
+                label="Allow Half Cells (Width)"
+                value={config.allowHalfCellsX}
+                onChange={(v) => update('allowHalfCellsX', v)}
+              />
+              <ToggleInput
+                label="Allow Half Cells (Depth)"
+                value={config.allowHalfCellsY}
+                onChange={(v) => update('allowHalfCellsY', v)}
+              />
+              <SelectInput
+                label="Padding Alignment"
+                value={config.paddingAlignment}
+                options={[
+                  { value: 'center', label: 'Center (Equal padding both sides)' },
+                  { value: 'near', label: 'Near (Padding on left/front)' },
+                  { value: 'far', label: 'Far (Padding on right/back)' }
+                ]}
+                onChange={(v) => update('paddingAlignment', v as BaseplateConfig['paddingAlignment'])}
+              />
+            </div>
+
+            {/* Grid Calculation Preview */}
+            {gridCalc && (
+              <div className="mt-3 p-3 bg-slate-700/50 rounded-lg border border-slate-600">
+                <h4 className="text-xs font-semibold text-emerald-400 mb-2">CALCULATED GRID</h4>
+                <div className="space-y-1 text-xs">
+                  <p className="text-slate-300">
+                    <span className="text-slate-500">Grid size:</span>{' '}
+                    <span className="font-mono text-emerald-300">
+                      {gridCalc.gridUnitsX} x {gridCalc.gridUnitsY}
+                    </span>{' '}
+                    units
+                    {(gridCalc.hasHalfCellX || gridCalc.hasHalfCellY) && (
+                      <span className="text-amber-400 ml-1">
+                        ({gridCalc.hasHalfCellX && 'half-X'}{gridCalc.hasHalfCellX && gridCalc.hasHalfCellY && ', '}{gridCalc.hasHalfCellY && 'half-Y'})
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-slate-300">
+                    <span className="text-slate-500">Grid coverage:</span>{' '}
+                    <span className="font-mono">{gridCalc.gridCoverageMmX.toFixed(1)}mm x {gridCalc.gridCoverageMmY.toFixed(1)}mm</span>
+                  </p>
+                  {(gridCalc.totalPaddingX > 0 || gridCalc.totalPaddingY > 0) && (
+                    <p className="text-slate-300">
+                      <span className="text-slate-500">Edge padding:</span>{' '}
+                      <span className="font-mono text-amber-300">
+                        {gridCalc.paddingNearX.toFixed(1)}/{gridCalc.paddingFarX.toFixed(1)}mm (L/R), {gridCalc.paddingNearY.toFixed(1)}/{gridCalc.paddingFarY.toFixed(1)}mm (F/B)
+                      </span>
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         <NumberInput
           label="Grid Unit Size"
           value={config.gridSize}

@@ -3,7 +3,7 @@ import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { BoxConfig, BaseplateConfig } from '../types/config.js';
+import { BoxConfig, BaseplateConfig, calculateGridFromMm } from '../types/config.js';
 
 const execAsync = promisify(exec);
 
@@ -247,8 +247,8 @@ module gridfinity_walls() {
     outer_radius = corner_radius > 0 ? corner_radius : gf_corner_radius;
     inner_radius = max(0, outer_radius - wall_thickness);
     
-    // Chamfer size for overhang prevention (45-degree, 0.33mm)
-    overhang_chamfer = 0.33;
+    // Chamfer size for overhang prevention (45-degree, 0.3mm)
+    overhang_chamfer = 0.3;
     
     difference() {
         // Outer walls with rounded corners
@@ -472,13 +472,70 @@ module dividers() {
 
   // Generate Baseplate SCAD code
   generateBaseplateScad(config: BaseplateConfig): string {
+    // Calculate dimensions based on sizing mode
+    let widthUnits: number;
+    let depthUnits: number;
+    let outerWidthMm: number;
+    let outerDepthMm: number;
+    let paddingNearX: number;
+    let paddingFarX: number;
+    let paddingNearY: number;
+    let paddingFarY: number;
+    let useFillMode: boolean;
+    
+    if (config.sizingMode === 'fill_area_mm') {
+      // Calculate grid from target mm dimensions
+      const calc = calculateGridFromMm(
+        config.targetWidthMm,
+        config.targetDepthMm,
+        config.gridSize,
+        config.allowHalfCellsX,
+        config.allowHalfCellsY,
+        config.paddingAlignment
+      );
+      
+      widthUnits = calc.gridUnitsX;
+      depthUnits = calc.gridUnitsY;
+      outerWidthMm = config.targetWidthMm;
+      outerDepthMm = config.targetDepthMm;
+      paddingNearX = calc.paddingNearX;
+      paddingFarX = calc.paddingFarX;
+      paddingNearY = calc.paddingNearY;
+      paddingFarY = calc.paddingFarY;
+      useFillMode = true;
+    } else {
+      // Standard grid units mode
+      widthUnits = config.width;
+      depthUnits = config.depth;
+      outerWidthMm = config.width * config.gridSize;
+      outerDepthMm = config.depth * config.gridSize;
+      paddingNearX = 0;
+      paddingFarX = 0;
+      paddingNearY = 0;
+      paddingFarY = 0;
+      useFillMode = false;
+    }
+    
+    // Determine position alignment for SCAD
+    const positionFillGridX = config.paddingAlignment === 'near' ? 'far' : 
+                              config.paddingAlignment === 'far' ? 'near' : 'center';
+    const positionFillGridY = positionFillGridX;
+    
     return `// Gridfinity Baseplate Generator
 // Compatible with standard OpenSCAD
 // Socket profile matches bin foot for proper fit
+// ${useFillMode ? `Fill mode: Target ${outerWidthMm}mm x ${outerDepthMm}mm` : 'Grid units mode'}
 
 /* [Configuration] */
-width_units = ${config.width};
-depth_units = ${config.depth};
+width_units = ${widthUnits};
+depth_units = ${depthUnits};
+outer_width_mm = ${outerWidthMm};
+outer_depth_mm = ${outerDepthMm};
+use_fill_mode = ${useFillMode};
+padding_near_x = ${paddingNearX.toFixed(2)};
+padding_far_x = ${paddingFarX.toFixed(2)};
+padding_near_y = ${paddingNearY.toFixed(2)};
+padding_far_y = ${paddingFarY.toFixed(2)};
 style = "${config.style}";
 plate_style = "${config.plateStyle}";
 magnet_diameter = ${config.magnetDiameter};
@@ -512,8 +569,17 @@ plate_height = socket_depth;
 $fn = 32;
 
 /* [Calculated] */
-plate_width = width_units * grid_unit;
-plate_depth = depth_units * grid_unit;
+// Grid coverage (actual grid area)
+grid_width = width_units * grid_unit;
+grid_depth = depth_units * grid_unit;
+
+// Total plate size (grid + padding)
+plate_width = use_fill_mode ? outer_width_mm : grid_width;
+plate_depth = use_fill_mode ? outer_depth_mm : grid_depth;
+
+// Grid offset (where the grid starts within the plate)
+grid_offset_x = padding_near_x;
+grid_offset_y = padding_near_y;
 
 // Main module
 gridfinity_baseplate();
@@ -539,15 +605,44 @@ module rounded_rect_plate(width, depth, height, radius) {
 
 module gridfinity_baseplate() {
     difference() {
-        // Main plate body with rounded corners
+        // Main plate body with rounded corners (full size including padding)
         rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
         
-        // Socket cutouts for each grid unit
-        for (gx = [0:width_units-1]) {
-            for (gy = [0:depth_units-1]) {
-                translate([gx * grid_unit, gy * grid_unit, 0])
-                grid_socket();
+        // Socket cutouts for each grid unit (offset by padding)
+        // Handle both full and half cells
+        full_cells_x = floor(width_units);
+        full_cells_y = floor(depth_units);
+        has_half_x = width_units - full_cells_x >= 0.5;
+        has_half_y = depth_units - full_cells_y >= 0.5;
+        
+        // Full grid cells
+        for (gx = [0:full_cells_x-1]) {
+            for (gy = [0:full_cells_y-1]) {
+                translate([grid_offset_x + gx * grid_unit, grid_offset_y + gy * grid_unit, 0])
+                grid_socket(grid_unit, grid_unit);
             }
+        }
+        
+        // Half cells on X edge (if any)
+        if (has_half_x) {
+            for (gy = [0:full_cells_y-1]) {
+                translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + gy * grid_unit, 0])
+                grid_socket(grid_unit / 2, grid_unit);
+            }
+        }
+        
+        // Half cells on Y edge (if any)
+        if (has_half_y) {
+            for (gx = [0:full_cells_x-1]) {
+                translate([grid_offset_x + gx * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
+                grid_socket(grid_unit, grid_unit / 2);
+            }
+        }
+        
+        // Corner half cell (if both X and Y have half cells)
+        if (has_half_x && has_half_y) {
+            translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
+            grid_socket(grid_unit / 2, grid_unit / 2);
         }
     }
 }
@@ -571,7 +666,7 @@ module socket_rounded_rect(width, depth, height, radius) {
     }
 }
 
-module grid_socket() {
+module grid_socket(cell_width = grid_unit, cell_depth = grid_unit) {
     // Socket that receives Gridfinity bin foot
     // ONE SIMPLE TAPER - full size at top, smaller at bottom
     // OPEN SOCKET - goes all the way through!
@@ -579,51 +674,57 @@ module grid_socket() {
     // Matches the foot: foot is small at bottom, full at top
     // Socket is full at top, small at bottom (inverse)
     // Angle and height control the taper (should match foot)
+    // Supports full cells (42mm) and half cells (21mm)
     
-    socket_full_size = grid_unit - clearance * 2;  // 41.5mm at top
+    socket_width = cell_width - clearance * 2;
+    socket_depth_size = cell_depth - clearance * 2;
     socket_corner_radius = 3.75;  // Standard Gridfinity corner radius for sockets
     
     // Bottom size - calculated from chamfer angle and height
     // socket_bottom_inset is pre-calculated: height / tan(angle)
-    bottom_size = socket_full_size - socket_bottom_inset * 2;
+    bottom_width = socket_width - socket_bottom_inset * 2;
+    bottom_depth = socket_depth_size - socket_bottom_inset * 2;
     bottom_radius = max(0.5, socket_corner_radius - socket_bottom_inset);
     
     // The socket is an open hole with ONE simple taper
     translate([clearance, clearance, -0.1]) {
         hull() {
-            // Top of socket - full size (41.5mm)
+            // Top of socket - full size
             translate([0, 0, plate_height])
-            socket_rounded_rect(socket_full_size, socket_full_size, 0.2, socket_corner_radius);
+            socket_rounded_rect(socket_width, socket_depth_size, 0.2, socket_corner_radius);
             
             // Bottom of socket - smaller size (ONE simple taper from top to here)
             if (!remove_bottom_taper) {
                 translate([socket_bottom_inset, socket_bottom_inset, 0])
-                socket_rounded_rect(bottom_size, bottom_size, 0.2, bottom_radius);
+                socket_rounded_rect(bottom_width, bottom_depth, 0.2, bottom_radius);
             } else {
                 // No taper - vertical walls at full size
                 translate([0, 0, 0])
-                socket_rounded_rect(socket_full_size, socket_full_size, 0.2, socket_corner_radius);
+                socket_rounded_rect(socket_width, socket_depth_size, 0.2, socket_corner_radius);
             }
         }
     }
     
-    // Magnet holes
-    if (style == "magnet") {
+    // Only add features for full-size cells
+    is_full_cell = cell_width >= grid_unit - 0.1 && cell_depth >= grid_unit - 0.1;
+    
+    // Magnet holes (only for full cells)
+    if (style == "magnet" && is_full_cell) {
         magnet_holes();
     }
     
-    // Screw holes (corner)
-    if (style == "screw") {
+    // Screw holes (corner) (only for full cells)
+    if (style == "screw" && is_full_cell) {
         screw_holes();
     }
     
-    // Center screw hole
-    if (center_screw) {
+    // Center screw hole (only for full cells)
+    if (center_screw && is_full_cell) {
         center_screw_hole();
     }
     
-    // Weight cavity
-    if (weight_cavity || style == "weighted") {
+    // Weight cavity (only for full cells)
+    if ((weight_cavity || style == "weighted") && is_full_cell) {
         weight_cavity_cutout();
     }
 }
