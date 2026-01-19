@@ -867,8 +867,8 @@ grid_width = width_units * grid_unit;
 grid_depth = depth_units * grid_unit;
 plate_width = use_fill_mode ? outer_width_mm : grid_width;
 plate_depth = use_fill_mode ? outer_depth_mm : grid_depth;
-grid_offset_x = 0;
-grid_offset_y = 0;
+grid_offset_x = use_fill_mode ? padding_near_x : 0;
+grid_offset_y = use_fill_mode ? padding_near_y : 0;
 
 gridfinity_baseplate();
 
@@ -887,10 +887,8 @@ module rounded_rect_plate(width, depth, height, radius) {
 }
 
 module gridfinity_baseplate() {
-    plate_offset_x = use_fill_mode ? -padding_near_x : 0;
-    plate_offset_y = use_fill_mode ? -padding_near_y : 0;
-    
-    translate([plate_offset_x, plate_offset_y, 0])
+    // No plate offset needed - the grid_offset positions the sockets correctly within the plate
+    // The plate is created at origin (0,0) with full outer dimensions
     difference() {
         rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
         

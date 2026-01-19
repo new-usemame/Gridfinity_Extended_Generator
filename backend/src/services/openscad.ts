@@ -1805,13 +1805,10 @@ plate_width = use_fill_mode ? outer_width_mm : grid_width;
 plate_depth = use_fill_mode ? outer_depth_mm : grid_depth;
 
 // Grid offset (where the grid starts within the plate)
-// CRITICAL: Full cells must start at origin (0,0) so box can sit on them in preview
-// When padding is "center", we still want full cells at origin, so we ignore near padding
-// and put all padding on the far side. This ensures box alignment.
-// For "near" and "far" padding modes, we can respect them, but for box alignment,
-// we'll always start grid at origin and put padding on far side.
-grid_offset_x = 0;  // Always start at origin for proper box alignment
-grid_offset_y = 0;  // Always start at origin for proper box alignment
+// When using fill mode with padding, offset the grid by the near padding amount
+// This positions the grid correctly within the plate for proper centering
+grid_offset_x = use_fill_mode ? padding_near_x : 0;
+grid_offset_y = use_fill_mode ? padding_near_y : 0;
 
 // Main module
 gridfinity_baseplate();
@@ -1836,12 +1833,8 @@ module rounded_rect_plate(width, depth, height, radius) {
 }
 
 module gridfinity_baseplate() {
-    // Position the plate so grid starts at origin
-    // If there's padding on near side, translate plate to compensate
-    plate_offset_x = use_fill_mode ? -padding_near_x : 0;
-    plate_offset_y = use_fill_mode ? -padding_near_y : 0;
-    
-    translate([plate_offset_x, plate_offset_y, 0])
+    // Plate is created at origin with full dimensions
+    // Grid sockets are offset by grid_offset_x/y to position them correctly within the plate
     difference() {
         // Main plate body with rounded corners (full size including padding)
         rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
@@ -1856,7 +1849,7 @@ module gridfinity_baseplate() {
         has_half_y = depth_units - full_cells_y >= 0.5;
         half_cell_size = grid_unit / 2;
         
-        // Full grid cells - start at origin (0,0) so box can sit on them
+        // Full grid cells - positioned at grid_offset for proper centering
         for (gx = [0:full_cells_x-1]) {
             for (gy = [0:full_cells_y-1]) {
                 translate([grid_offset_x + gx * grid_unit, grid_offset_y + gy * grid_unit, 0])
