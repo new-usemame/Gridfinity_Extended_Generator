@@ -578,8 +578,13 @@ plate_width = use_fill_mode ? outer_width_mm : grid_width;
 plate_depth = use_fill_mode ? outer_depth_mm : grid_depth;
 
 // Grid offset (where the grid starts within the plate)
-grid_offset_x = padding_near_x;
-grid_offset_y = padding_near_y;
+// CRITICAL: Full cells must start at origin (0,0) so box can sit on them in preview
+// When padding is "center", we still want full cells at origin, so we ignore near padding
+// and put all padding on the far side. This ensures box alignment.
+// For "near" and "far" padding modes, we can respect them, but for box alignment,
+// we'll always start grid at origin and put padding on far side.
+grid_offset_x = 0;  // Always start at origin for proper box alignment
+grid_offset_y = 0;  // Always start at origin for proper box alignment
 
 // Main module
 gridfinity_baseplate();
@@ -604,11 +609,17 @@ module rounded_rect_plate(width, depth, height, radius) {
 }
 
 module gridfinity_baseplate() {
+    // Position the plate so grid starts at origin
+    // If there's padding on near side, translate plate to compensate
+    plate_offset_x = use_fill_mode ? -padding_near_x : 0;
+    plate_offset_y = use_fill_mode ? -padding_near_y : 0;
+    
+    translate([plate_offset_x, plate_offset_y, 0])
     difference() {
         // Main plate body with rounded corners (full size including padding)
         rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
         
-        // Socket cutouts for each grid unit (offset by padding)
+        // Socket cutouts for each grid unit
         // Handle both full and half cells
         // Half cells go on the FAR edge (right/back) so full cells start at origin where box sits
         full_cells_x = floor(width_units);
@@ -617,7 +628,7 @@ module gridfinity_baseplate() {
         has_half_y = depth_units - full_cells_y >= 0.5;
         half_cell_size = grid_unit / 2;
         
-        // Full grid cells - start at origin so box can sit on them
+        // Full grid cells - start at origin (0,0) so box can sit on them
         for (gx = [0:full_cells_x-1]) {
             for (gy = [0:full_cells_y-1]) {
                 translate([grid_offset_x + gx * grid_unit, grid_offset_y + gy * grid_unit, 0])
@@ -625,7 +636,7 @@ module gridfinity_baseplate() {
             }
         }
         
-        // Half cells on X edge (far/right side) - AFTER full cells
+        // Half cells on X edge (far/right side) - AFTER full cells, at high X values
         if (has_half_x) {
             for (gy = [0:full_cells_y-1]) {
                 translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + gy * grid_unit, 0])
@@ -633,7 +644,7 @@ module gridfinity_baseplate() {
             }
         }
         
-        // Half cells on Y edge (far/back side) - AFTER full cells
+        // Half cells on Y edge (far/back side) - AFTER full cells, at high Y values
         if (has_half_y) {
             for (gx = [0:full_cells_x-1]) {
                 translate([grid_offset_x + gx * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
@@ -641,7 +652,7 @@ module gridfinity_baseplate() {
             }
         }
         
-        // Corner half cell (if both X and Y have half cells) - far corner
+        // Corner half cell (if both X and Y have half cells) - far corner at high X, high Y
         if (has_half_x && has_half_y) {
             translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
             grid_socket(half_cell_size, half_cell_size);
