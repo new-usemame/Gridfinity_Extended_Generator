@@ -106,14 +106,8 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig }
       await new Promise(resolve => setTimeout(resolve, 500));
     }
     
-    if (result.connector) {
-      setGeneratingSegment('connector');
-      await new Promise(resolve => setTimeout(resolve, 300));
-      downloadConnector();
-    }
-    
-    // Download README
-    const readme = generateReadme(splitInfo, result.connector !== null);
+    // Download README with interlocking edge info
+    const readme = generateReadme(splitInfo, baseplateConfig.connectorEnabled, baseplateConfig.edgePattern);
     const blob = new Blob([readme], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -180,16 +174,6 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig }
     }
   };
 
-  const downloadConnector = () => {
-    if (!result.connector) return;
-    const link = document.createElement('a');
-    link.href = result.connector.stlUrl;
-    link.download = 'connector.stl';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
     <div className="space-y-4">
       {/* Summary */}
@@ -199,9 +183,9 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig }
           <span className="text-sm font-mono text-cyan-400 bg-slate-800 px-2 py-1 rounded">
             {splitInfo.segmentsX} x {splitInfo.segmentsY} segments
           </span>
-          {result.connector && (
+          {baseplateConfig.connectorEnabled && (
             <span className="text-sm font-mono text-emerald-400 bg-slate-800 px-2 py-1 rounded">
-              + connectors
+              interlocking edges
             </span>
           )}
         </div>
@@ -270,43 +254,25 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig }
               </button>
             );
           })}
-          
-          {result.connector && (
-            <button
-              onClick={downloadConnector}
-              disabled={isGenerating}
-              className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                generatingSegment === 'connector'
-                  ? 'bg-emerald-600 text-white animate-pulse'
-                  : isGenerating
-                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                  : 'bg-emerald-700 text-white hover:bg-emerald-600'
-              }`}
-            >
-              {generatingSegment === 'connector' ? (
-                <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              ) : (
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-              )}
-              Connector
-            </button>
-          )}
         </div>
       </div>
     </div>
   );
 }
 
-function generateReadme(splitInfo: SplitResult, hasConnectors: boolean): string {
+function generateReadme(splitInfo: SplitResult, hasInterlocking: boolean, edgePattern: string): string {
+  const patternNames: Record<string, string> = {
+    'dovetail': 'Dovetail (Trapezoidal)',
+    'rectangular': 'Rectangular (Square)',
+    'triangular': 'Triangular (Sawtooth)',
+    'puzzle': 'Puzzle (Jigsaw Bulb)',
+    'tslot': 'T-Slot (T-Hook)'
+  };
+  
   return `GRIDFINITY BASEPLATE - ASSEMBLY INSTRUCTIONS
 =============================================
 
-This ZIP contains a split baseplate with ${splitInfo.totalSegments} segments.
+This contains a split baseplate with ${splitInfo.totalSegments} segments.
 
 SEGMENT LAYOUT:
 ---------------
@@ -319,32 +285,34 @@ ${splitInfo.segments.flat().map(seg =>
   `- segment_${seg.segmentX}_${seg.segmentY}.stl: ${seg.gridUnitsX}x${seg.gridUnitsY} units`
 ).join('\n')}
 
-${hasConnectors ? `CONNECTORS:
------------
-- connector.stl: Print multiple copies to join segments together
-- Insert puzzle-piece connectors into the slots on adjacent segment edges
-- Connectors slide in from above and lock the segments together
-- Print connectors flat (no supports needed)
+${hasInterlocking ? `INTERLOCKING EDGES:
+-------------------
+Edge Pattern: ${patternNames[edgePattern] || edgePattern}
+
+Each segment has interlocking male/female edges built directly in:
+- Right and Back edges have MALE teeth (protrude outward)
+- Left and Front edges have FEMALE cavities (receive teeth from neighbor)
+- Segments snap together - no separate connectors needed!
 
 ASSEMBLY:
 ---------
-1. Print all segments and connectors (all print flat, no supports)
-2. Lay out segments in a grid according to their coordinates
-3. Insert connectors into the slots between adjacent segments
-4. Connectors lock flush and keep segments aligned
+1. Print all segments (print flat, socket side up, no supports needed)
+2. Lay out segments according to their [X,Y] coordinates
+3. Snap segments together - male teeth lock into female cavities
+4. Segments align flush and lock securely
+
+PRINTING TIPS:
+--------------
+- All edges print vertically (2D profile extruded in Z) - no overhangs!
+- Print at 0.2mm layer height for good interlocking detail
+- If fit is too tight, increase tolerance in settings
+- If fit is loose, decrease tolerance
 ` : `ASSEMBLY:
 ---------
 1. Print all segments
 2. Lay out segments in a grid according to their coordinates
 3. Segments can be placed adjacent to each other on a flat surface
 `}
-
-TIPS:
------
-- Print segments flat (socket side up)
-- Use same filament/settings for all pieces for best fit
-- If connectors are too tight, increase tolerance in settings
-- If connectors are loose, decrease tolerance
 
 Generated by Gridfinity Generator
 `;

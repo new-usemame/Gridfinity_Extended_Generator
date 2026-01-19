@@ -840,30 +840,78 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
             </div>
 
             <div className="mt-3 pt-3 border-t border-slate-700">
-              <h4 className="text-xs font-semibold text-slate-400 mb-2">CONNECTORS</h4>
+              <h4 className="text-xs font-semibold text-slate-400 mb-2">INTERLOCKING EDGES</h4>
               <ToggleInput
-                label="Enable Puzzle Connectors"
+                label="Enable Interlocking Edges"
                 value={config.connectorEnabled}
                 onChange={(v) => update('connectorEnabled', v)}
               />
               <p className="text-xs text-slate-500">
-                Add dovetail connectors between segments for secure, flush joining.
+                Add male/female interlocking edges between segments - snaps together without separate connectors.
               </p>
               
               {config.connectorEnabled && (
-                <SliderInput
-                  label="Connector Tolerance"
-                  value={config.connectorTolerance}
-                  min={0.1}
-                  max={0.6}
-                  step={0.05}
-                  unit="mm"
-                  onChange={(v) => update('connectorTolerance', v)}
-                />
+                <>
+                  <SelectInput
+                    label="Edge Pattern"
+                    value={config.edgePattern}
+                    options={[
+                      { value: 'dovetail', label: '1. Dovetail (Trapezoidal)' },
+                      { value: 'rectangular', label: '2. Rectangular (Square)' },
+                      { value: 'triangular', label: '3. Triangular (Sawtooth)' },
+                      { value: 'puzzle', label: '4. Puzzle (Jigsaw Bulb)' },
+                      { value: 'tslot', label: '5. T-Slot (T-Hook)' }
+                    ]}
+                    onChange={(v) => update('edgePattern', v as BaseplateConfig['edgePattern'])}
+                  />
+                  <div className="p-2 bg-slate-700/50 rounded text-xs text-slate-400">
+                    {config.edgePattern === 'dovetail' && '▷ Trapezoidal teeth - wider at tip than base (classic woodworking style)'}
+                    {config.edgePattern === 'rectangular' && '▷ Simple square blocks that interlock'}
+                    {config.edgePattern === 'triangular' && '▷ Pointed zigzag pattern (sawtooth)'}
+                    {config.edgePattern === 'puzzle' && '▷ Round bulbous tabs like jigsaw puzzle pieces'}
+                    {config.edgePattern === 'tslot' && '▷ T-shaped hooks that lock in place'}
+                  </div>
+                  
+                  <SliderInput
+                    label="Tooth Depth"
+                    value={config.toothDepth}
+                    min={2}
+                    max={6}
+                    step={0.5}
+                    unit="mm"
+                    onChange={(v) => update('toothDepth', v)}
+                  />
+                  <p className="text-xs text-slate-500">
+                    How far teeth extend into adjacent segment.
+                  </p>
+                  
+                  <SliderInput
+                    label="Tooth Width"
+                    value={config.toothWidth}
+                    min={4}
+                    max={12}
+                    step={0.5}
+                    unit="mm"
+                    onChange={(v) => update('toothWidth', v)}
+                  />
+                  <p className="text-xs text-slate-500">
+                    Width of each tooth at the base.
+                  </p>
+                  
+                  <SliderInput
+                    label="Fit Tolerance"
+                    value={config.connectorTolerance}
+                    min={0.1}
+                    max={0.6}
+                    step={0.05}
+                    unit="mm"
+                    onChange={(v) => update('connectorTolerance', v)}
+                  />
+                  <p className="text-xs text-slate-500">
+                    Typical FDM tolerance: 0.3mm. Increase if fit is too tight.
+                  </p>
+                </>
               )}
-              <p className="text-xs text-slate-500">
-                Typical FDM tolerance: 0.3mm. Increase if connectors are too tight.
-              </p>
             </div>
 
             {/* Split Calculation Preview */}

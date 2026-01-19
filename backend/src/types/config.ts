@@ -118,8 +118,13 @@ export interface BaseplateConfig {
   splitEnabled: boolean;
   printerBedWidth: number;      // Printer bed width in mm
   printerBedDepth: number;      // Printer bed depth in mm
-  connectorEnabled: boolean;    // Add puzzle-piece connectors between segments
+  connectorEnabled: boolean;    // Add interlocking edges between segments
   connectorTolerance: number;   // Clearance for connector fit (default 0.3mm for FDM)
+  
+  // Edge pattern for interlocking segments (male/female teeth extruded vertically)
+  edgePattern: 'dovetail' | 'rectangular' | 'triangular' | 'puzzle' | 'tslot';
+  toothDepth: number;           // How far teeth extend into adjacent segment (mm)
+  toothWidth: number;           // Width of each tooth at base (mm)
 }
 
 // Default configurations
@@ -187,8 +192,11 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   splitEnabled: false,
   printerBedWidth: 220,        // Common printer bed size (Ender 3, Prusa, etc.)
   printerBedDepth: 220,
-  connectorEnabled: true,      // Enable connectors by default when splitting
-  connectorTolerance: 0.3      // Standard FDM tolerance
+  connectorEnabled: true,      // Enable interlocking edges by default when splitting
+  connectorTolerance: 0.3,     // Standard FDM tolerance
+  edgePattern: 'dovetail',     // Default to classic dovetail pattern
+  toothDepth: 3,               // 3mm tooth depth
+  toothWidth: 6                // 6mm tooth width at base
 };
 
 // Segment info for split baseplates
