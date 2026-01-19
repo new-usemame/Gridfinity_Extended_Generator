@@ -205,6 +205,11 @@ export interface SegmentedGenerationResult {
   isSegmented: true;
 }
 
+// Type guard to check if result is segmented
+export function isSegmentedResult(result: GenerationResult | SegmentedGenerationResult | null): result is SegmentedGenerationResult {
+  return result !== null && 'isSegmented' in result && result.isSegmented === true;
+}
+
 // Grid calculation result for fill_area_mm mode
 export interface GridCalculation {
   // Grid units (can be fractional like 2.5 for half cells)

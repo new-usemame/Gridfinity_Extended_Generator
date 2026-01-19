@@ -274,7 +274,7 @@ function App() {
             ) : (
               <PreviewCanvas
                 stlUrl={
-                  generatorType === 'baseplate' && baseplateResult && 'isSegmented' in baseplateResult && baseplateResult.isSegmented
+                  generatorType === 'baseplate' && isSegmentedResult(baseplateResult)
                     ? baseplateResult.segments[0]?.stlUrl || null
                     : (generatorType === 'box' ? boxResult : baseplateResult)?.stlUrl || null
                 }
