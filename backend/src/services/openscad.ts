@@ -775,7 +775,6 @@ module tslot_smooth_female_2d() {
 // Combines wine glass stem (concave hourglass) with semicircle top
 // The stem smoothly flows into a rounded bulb with no sharp corners
 // tooth_depth controls overall height, concave_depth controls stem curvature
-// Uses hull() approach for true smooth curves from base to bulb
 
 module wineglass_male_2d() {
     bulb_r = tooth_width * 0.45;
@@ -783,75 +782,55 @@ module wineglass_male_2d() {
     stem_len = tooth_depth * stem_ratio;
     bulb_center_y = stem_len + bulb_r * 0.8;
     
-    // Base and waist widths
     base_hw = tooth_width * 0.4;
-    waist_hw = tooth_width * (0.25 - 0.18 * concave_depth);
+    min_waist = 0.08;  // Minimum waist width ratio
+    waist_hw = tooth_width * max(min_waist, (0.25 - 0.18 * concave_depth));
     waist_y = stem_len * 0.45;
     
-    // Concave curve radius (for the inward swoop)
     concave_r = base_hw * (0.3 + 0.7 * concave_depth);
     
-    union() {
-        // Lower stem: base to waist (concave inward curve using hull)
-        // Create the hourglass by hulling circles at key points
-        hull() {
-            // Base corners (small circles for smooth edge)
-            translate([base_hw - 0.2, 0.2])
-            circle(r = 0.2, $fn = 16);
-            translate([-base_hw + 0.2, 0.2])
-            circle(r = 0.2, $fn = 16);
-            
-            // Waist (narrowest point)
-            translate([waist_hw, waist_y])
-            circle(r = 0.15, $fn = 16);
-            translate([-waist_hw, waist_y])
-            circle(r = 0.15, $fn = 16);
-        }
-        
-        // If concave_depth > 0, subtract circles to create inward curves
-        if (concave_depth > 0.1) {
-            difference() {
-                // Fill in the hull area
-                hull() {
-                    translate([base_hw - 0.2, 0.2])
-                    circle(r = 0.2, $fn = 16);
-                    translate([-base_hw + 0.2, 0.2])
-                    circle(r = 0.2, $fn = 16);
-                    translate([waist_hw, waist_y])
-                    circle(r = 0.15, $fn = 16);
-                    translate([-waist_hw, waist_y])
-                    circle(r = 0.15, $fn = 16);
-                }
-                
-                // Carve concave on right - positioned to touch base
-                translate([base_hw + concave_r * 0.7, waist_y * 0.5])
-                scale([1, 1.5])
-                circle(r = concave_r, $fn = 48);
-                
-                // Carve concave on left
-                translate([-(base_hw + concave_r * 0.7), waist_y * 0.5])
-                scale([1, 1.5])
-                circle(r = concave_r, $fn = 48);
+    // Use difference to carve concave, or just hull if no concave
+    difference() {
+        union() {
+            // Lower stem: base to waist
+            hull() {
+                translate([base_hw - 0.15, 0.15])
+                circle(r = 0.15, $fn = 16);
+                translate([-base_hw + 0.15, 0.15])
+                circle(r = 0.15, $fn = 16);
+                translate([waist_hw, waist_y])
+                circle(r = 0.1, $fn = 16);
+                translate([-waist_hw, waist_y])
+                circle(r = 0.1, $fn = 16);
             }
-        }
-        
-        // Upper stem: waist swoops out to bulb
-        hull() {
-            translate([waist_hw, waist_y])
-            circle(r = 0.15, $fn = 16);
-            translate([-waist_hw, waist_y])
-            circle(r = 0.15, $fn = 16);
             
-            // Connect to bulb sides
-            translate([bulb_r * 0.7, stem_len])
-            circle(r = bulb_r * 0.25, $fn = 24);
-            translate([-bulb_r * 0.7, stem_len])
-            circle(r = bulb_r * 0.25, $fn = 24);
+            // Upper stem: waist to bulb connection
+            hull() {
+                translate([waist_hw, waist_y])
+                circle(r = 0.1, $fn = 16);
+                translate([-waist_hw, waist_y])
+                circle(r = 0.1, $fn = 16);
+                translate([bulb_r * 0.65, stem_len])
+                circle(r = bulb_r * 0.2, $fn = 24);
+                translate([-bulb_r * 0.65, stem_len])
+                circle(r = bulb_r * 0.2, $fn = 24);
+            }
+            
+            // Bulb (rounded top)
+            translate([0, bulb_center_y])
+            circle(r = bulb_r, $fn = 48);
         }
         
-        // Bulb (rounded top)
-        translate([0, bulb_center_y])
-        circle(r = bulb_r, $fn = 48);
+        // Carve concave curves if depth > 10%
+        if (concave_depth > 0.1) {
+            translate([base_hw + concave_r * 0.65, waist_y * 0.5])
+            scale([1, 1.4])
+            circle(r = concave_r, $fn = 48);
+            
+            translate([-(base_hw + concave_r * 0.65), waist_y * 0.5])
+            scale([1, 1.4])
+            circle(r = concave_r, $fn = 48);
+        }
     }
 }
 
@@ -862,58 +841,48 @@ module wineglass_female_2d() {
     bulb_center_y = stem_len + (tooth_width * 0.45) * 0.8;
     
     base_hw = tooth_width * 0.4 + edge_tolerance;
-    waist_hw = tooth_width * (0.25 - 0.18 * concave_depth) + edge_tolerance;
+    min_waist = 0.08;
+    waist_hw = tooth_width * max(min_waist, (0.25 - 0.18 * concave_depth)) + edge_tolerance;
     waist_y = stem_len * 0.45;
     concave_r = (tooth_width * 0.4) * (0.3 + 0.7 * concave_depth);
     
-    union() {
-        hull() {
-            translate([base_hw - 0.2, -edge_tolerance + 0.2])
-            circle(r = 0.2, $fn = 16);
-            translate([-base_hw + 0.2, -edge_tolerance + 0.2])
-            circle(r = 0.2, $fn = 16);
-            translate([waist_hw, waist_y])
-            circle(r = 0.15, $fn = 16);
-            translate([-waist_hw, waist_y])
-            circle(r = 0.15, $fn = 16);
+    difference() {
+        union() {
+            hull() {
+                translate([base_hw - 0.15, -edge_tolerance + 0.15])
+                circle(r = 0.15, $fn = 16);
+                translate([-base_hw + 0.15, -edge_tolerance + 0.15])
+                circle(r = 0.15, $fn = 16);
+                translate([waist_hw, waist_y])
+                circle(r = 0.1, $fn = 16);
+                translate([-waist_hw, waist_y])
+                circle(r = 0.1, $fn = 16);
+            }
+            
+            hull() {
+                translate([waist_hw, waist_y])
+                circle(r = 0.1, $fn = 16);
+                translate([-waist_hw, waist_y])
+                circle(r = 0.1, $fn = 16);
+                translate([bulb_r * 0.65, stem_len])
+                circle(r = bulb_r * 0.2, $fn = 24);
+                translate([-bulb_r * 0.65, stem_len])
+                circle(r = bulb_r * 0.2, $fn = 24);
+            }
+            
+            translate([0, bulb_center_y])
+            circle(r = bulb_r, $fn = 48);
         }
         
         if (concave_depth > 0.1) {
-            difference() {
-                hull() {
-                    translate([base_hw - 0.2, -edge_tolerance + 0.2])
-                    circle(r = 0.2, $fn = 16);
-                    translate([-base_hw + 0.2, -edge_tolerance + 0.2])
-                    circle(r = 0.2, $fn = 16);
-                    translate([waist_hw, waist_y])
-                    circle(r = 0.15, $fn = 16);
-                    translate([-waist_hw, waist_y])
-                    circle(r = 0.15, $fn = 16);
-                }
-                
-                translate([base_hw + concave_r * 0.7 - edge_tolerance * 0.3, waist_y * 0.5])
-                scale([1, 1.5])
-                circle(r = concave_r - edge_tolerance * 0.5, $fn = 48);
-                
-                translate([-(base_hw + concave_r * 0.7 - edge_tolerance * 0.3), waist_y * 0.5])
-                scale([1, 1.5])
-                circle(r = concave_r - edge_tolerance * 0.5, $fn = 48);
-            }
+            translate([base_hw + concave_r * 0.65 - edge_tolerance * 0.3, waist_y * 0.5])
+            scale([1, 1.4])
+            circle(r = max(0.1, concave_r - edge_tolerance * 0.5), $fn = 48);
+            
+            translate([-(base_hw + concave_r * 0.65 - edge_tolerance * 0.3), waist_y * 0.5])
+            scale([1, 1.4])
+            circle(r = max(0.1, concave_r - edge_tolerance * 0.5), $fn = 48);
         }
-        
-        hull() {
-            translate([waist_hw, waist_y])
-            circle(r = 0.15, $fn = 16);
-            translate([-waist_hw, waist_y])
-            circle(r = 0.15, $fn = 16);
-            translate([bulb_r * 0.7, stem_len])
-            circle(r = bulb_r * 0.25, $fn = 24);
-            translate([-bulb_r * 0.7, stem_len])
-            circle(r = bulb_r * 0.25, $fn = 24);
-        }
-        
-        translate([0, bulb_center_y])
-        circle(r = bulb_r, $fn = 48);
     }
 }
 
