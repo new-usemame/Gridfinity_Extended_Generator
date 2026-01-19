@@ -856,16 +856,24 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                     label="Edge Pattern"
                     value={config.edgePattern}
                     options={[
-                      { value: 'dovetail', label: '1. Dovetail (Trapezoidal)' },
-                      { value: 'rectangular', label: '2. Rectangular (Square)' },
-                      { value: 'triangular', label: '3. Triangular (Sawtooth)' },
-                      { value: 'puzzle', label: '4. Puzzle (Jigsaw Bulb)' },
-                      { value: 'tslot', label: '5. T-Slot (T-Hook)' },
-                      { value: 'puzzle_smooth', label: '6. Puzzle Smooth (Concave)' },
-                      { value: 'tslot_smooth', label: '7. T-Slot Smooth (Concave)' },
-                      { value: 'wineglass', label: '8. Wine Glass (Swoopy Bulb)' }
+                      { value: 'wineglass', label: '1. Wine Glass (Swoopy Bulb)' },
+                      { value: 'dovetail', label: '2. Dovetail (Trapezoidal)' },
+                      { value: 'rectangular', label: '3. Rectangular (Square)' },
+                      { value: 'triangular', label: '4. Triangular (Sawtooth)' },
+                      { value: 'puzzle', label: '5. Puzzle (Jigsaw Bulb)' },
+                      { value: 'tslot', label: '6. T-Slot (T-Hook)' },
+                      { value: 'puzzle_smooth', label: '7. Puzzle Smooth (Concave)' },
+                      { value: 'tslot_smooth', label: '8. T-Slot Smooth (Concave)' }
                     ]}
-                    onChange={(v) => update('edgePattern', v as BaseplateConfig['edgePattern'])}
+                    onChange={(v) => {
+                      const pattern = v as BaseplateConfig['edgePattern'];
+                      const updates: Partial<BaseplateConfig> = { edgePattern: pattern };
+                      // Set default tooth depth to 6mm for wineglass
+                      if (pattern === 'wineglass') {
+                        updates.toothDepth = 6;
+                      }
+                      onChange({ ...config, ...updates });
+                    }}
                   />
                   <div className="p-2 bg-slate-700/50 rounded text-xs text-slate-400">
                     {config.edgePattern === 'dovetail' && '▷ Trapezoidal teeth - wider at tip than base (classic woodworking style)'}
