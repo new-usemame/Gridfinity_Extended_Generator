@@ -122,7 +122,9 @@ export interface BaseplateConfig {
   connectorTolerance: number;   // Clearance for connector fit (default 0.3mm for FDM)
   
   // Edge pattern for interlocking segments (male/female teeth extruded vertically)
-  edgePattern: 'dovetail' | 'rectangular' | 'triangular' | 'puzzle' | 'tslot';
+  // Standard patterns: dovetail, rectangular, triangular, puzzle, tslot
+  // Smooth patterns (3D-print friendly with filleted corners): puzzle_smooth, tslot_smooth
+  edgePattern: 'dovetail' | 'rectangular' | 'triangular' | 'puzzle' | 'tslot' | 'puzzle_smooth' | 'tslot_smooth';
   toothDepth: number;           // How far teeth extend into adjacent segment (mm)
   toothWidth: number;           // Width of each tooth at base (mm)
   

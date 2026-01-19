@@ -860,7 +860,9 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                       { value: 'rectangular', label: '2. Rectangular (Square)' },
                       { value: 'triangular', label: '3. Triangular (Sawtooth)' },
                       { value: 'puzzle', label: '4. Puzzle (Jigsaw Bulb)' },
-                      { value: 'tslot', label: '5. T-Slot (T-Hook)' }
+                      { value: 'tslot', label: '5. T-Slot (T-Hook)' },
+                      { value: 'puzzle_smooth', label: '6. Puzzle Smooth (Filleted)' },
+                      { value: 'tslot_smooth', label: '7. T-Slot Smooth (Filleted)' }
                     ]}
                     onChange={(v) => update('edgePattern', v as BaseplateConfig['edgePattern'])}
                   />

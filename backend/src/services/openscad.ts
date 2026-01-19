@@ -523,6 +523,136 @@ module tslot_female_2d() {
     square([head_width, head_depth + edge_tolerance]);
 }
 
+// --- PATTERN 6: PUZZLE SMOOTH (Jigsaw with filleted base) ---
+// Same bulb locking mechanism but with smooth curved transition at base
+// Prevents corner lift during 3D printing by allowing printhead to flow smoothly
+module puzzle_smooth_male_2d() {
+    neck_width = tooth_width * 0.5;
+    bulb_radius = tooth_width * 0.4;
+    neck_length = tooth_depth - bulb_radius;
+    fillet_r = min(neck_width * 0.4, 1.5);  // Base fillet radius
+    
+    // Use hull to create smooth transition from base to neck
+    union() {
+        // Filleted base transition using hull of circles
+        hull() {
+            // Base circles at corners
+            translate([-neck_width/2 + fillet_r, fillet_r]) circle(r = fillet_r, $fn = 16);
+            translate([neck_width/2 - fillet_r, fillet_r]) circle(r = fillet_r, $fn = 16);
+            // Slightly up the neck for smooth flow
+            translate([-neck_width/2 + fillet_r, fillet_r * 2]) circle(r = fillet_r, $fn = 16);
+            translate([neck_width/2 - fillet_r, fillet_r * 2]) circle(r = fillet_r, $fn = 16);
+        }
+        
+        // Main neck (straight section)
+        translate([-neck_width/2, fillet_r])
+        square([neck_width, neck_length - fillet_r]);
+        
+        // Bulb (locking feature)
+        translate([0, neck_length])
+        circle(r = bulb_radius, $fn = 32);
+    }
+}
+
+module puzzle_smooth_female_2d() {
+    neck_width = tooth_width * 0.5 + edge_tolerance * 2;
+    bulb_radius = tooth_width * 0.4 + edge_tolerance;
+    neck_length = tooth_depth - (tooth_width * 0.4);
+    fillet_r = min((tooth_width * 0.5) * 0.4, 1.5) + edge_tolerance * 0.5;
+    
+    // Smooth cavity with filleted entrance
+    union() {
+        // Filleted entrance for smooth printhead flow
+        hull() {
+            translate([-neck_width/2 + fillet_r, -edge_tolerance + fillet_r]) circle(r = fillet_r, $fn = 16);
+            translate([neck_width/2 - fillet_r, -edge_tolerance + fillet_r]) circle(r = fillet_r, $fn = 16);
+            translate([-neck_width/2 + fillet_r, fillet_r * 2]) circle(r = fillet_r, $fn = 16);
+            translate([neck_width/2 - fillet_r, fillet_r * 2]) circle(r = fillet_r, $fn = 16);
+        }
+        
+        // Neck slot
+        translate([-neck_width/2, fillet_r])
+        square([neck_width, neck_length - fillet_r + edge_tolerance]);
+        
+        // Bulb cavity
+        translate([0, neck_length])
+        circle(r = bulb_radius, $fn = 32);
+    }
+}
+
+// --- PATTERN 7: T-SLOT SMOOTH (T-shape with filleted base) ---
+// Same T-head locking mechanism but with smooth curved transitions
+// Eliminates sharp corners for better print quality and adhesion
+module tslot_smooth_male_2d() {
+    stem_width = tooth_width * 0.4;
+    head_width = tooth_width;
+    head_depth = tooth_depth * 0.35;
+    stem_depth = tooth_depth - head_depth;
+    base_fillet = min(stem_width * 0.35, 1.2);   // Fillet at base where stem meets plate
+    head_fillet = min(stem_width * 0.25, 0.8);   // Fillet at T-head junction
+    
+    union() {
+        // Filleted base transition
+        hull() {
+            translate([-stem_width/2 + base_fillet, base_fillet]) circle(r = base_fillet, $fn = 16);
+            translate([stem_width/2 - base_fillet, base_fillet]) circle(r = base_fillet, $fn = 16);
+            translate([-stem_width/2 + base_fillet, base_fillet * 2]) circle(r = base_fillet, $fn = 16);
+            translate([stem_width/2 - base_fillet, base_fillet * 2]) circle(r = base_fillet, $fn = 16);
+        }
+        
+        // Main stem
+        translate([-stem_width/2, base_fillet])
+        square([stem_width, stem_depth - base_fillet - head_fillet]);
+        
+        // Filleted junction to T-head (inside corners)
+        hull() {
+            translate([-stem_width/2 + head_fillet, stem_depth - head_fillet]) circle(r = head_fillet, $fn = 16);
+            translate([stem_width/2 - head_fillet, stem_depth - head_fillet]) circle(r = head_fillet, $fn = 16);
+            translate([-head_width/2 + head_fillet, stem_depth + head_fillet]) circle(r = head_fillet, $fn = 16);
+            translate([head_width/2 - head_fillet, stem_depth + head_fillet]) circle(r = head_fillet, $fn = 16);
+        }
+        
+        // T-head with rounded outer corners
+        hull() {
+            translate([-head_width/2 + head_fillet, stem_depth + head_fillet]) circle(r = head_fillet, $fn = 16);
+            translate([head_width/2 - head_fillet, stem_depth + head_fillet]) circle(r = head_fillet, $fn = 16);
+            translate([-head_width/2 + head_fillet, stem_depth + head_depth - head_fillet]) circle(r = head_fillet, $fn = 16);
+            translate([head_width/2 - head_fillet, stem_depth + head_depth - head_fillet]) circle(r = head_fillet, $fn = 16);
+        }
+    }
+}
+
+module tslot_smooth_female_2d() {
+    stem_width = tooth_width * 0.4 + edge_tolerance * 2;
+    head_width = tooth_width + edge_tolerance * 2;
+    head_depth = tooth_depth * 0.35 + edge_tolerance;
+    stem_depth = tooth_depth - (tooth_depth * 0.35);
+    base_fillet = min((tooth_width * 0.4) * 0.35, 1.2) + edge_tolerance * 0.5;
+    head_fillet = min((tooth_width * 0.4) * 0.25, 0.8) + edge_tolerance * 0.5;
+    
+    union() {
+        // Filleted entrance
+        hull() {
+            translate([-stem_width/2 + base_fillet, -edge_tolerance + base_fillet]) circle(r = base_fillet, $fn = 16);
+            translate([stem_width/2 - base_fillet, -edge_tolerance + base_fillet]) circle(r = base_fillet, $fn = 16);
+            translate([-stem_width/2 + base_fillet, base_fillet * 2]) circle(r = base_fillet, $fn = 16);
+            translate([stem_width/2 - base_fillet, base_fillet * 2]) circle(r = base_fillet, $fn = 16);
+        }
+        
+        // Stem slot
+        translate([-stem_width/2, base_fillet])
+        square([stem_width, stem_depth - base_fillet]);
+        
+        // T-head cavity (with rounded corners for better fit)
+        hull() {
+            translate([-head_width/2 + head_fillet, stem_depth + head_fillet]) circle(r = head_fillet, $fn = 16);
+            translate([head_width/2 - head_fillet, stem_depth + head_fillet]) circle(r = head_fillet, $fn = 16);
+            translate([-head_width/2 + head_fillet, stem_depth + head_depth - head_fillet]) circle(r = head_fillet, $fn = 16);
+            translate([head_width/2 - head_fillet, stem_depth + head_depth - head_fillet]) circle(r = head_fillet, $fn = 16);
+        }
+    }
+}
+
 // ===========================================
 // PATTERN SELECTOR MODULES
 // ===========================================
@@ -534,6 +664,8 @@ module edge_tooth_male(pattern) {
     else if (pattern == "triangular") triangular_male_2d();
     else if (pattern == "puzzle") puzzle_male_2d();
     else if (pattern == "tslot") tslot_male_2d();
+    else if (pattern == "puzzle_smooth") puzzle_smooth_male_2d();
+    else if (pattern == "tslot_smooth") tslot_smooth_male_2d();
     else dovetail_male_2d(); // default
 }
 
@@ -544,6 +676,8 @@ module edge_tooth_female(pattern) {
     else if (pattern == "triangular") triangular_female_2d();
     else if (pattern == "puzzle") puzzle_female_2d();
     else if (pattern == "tslot") tslot_female_2d();
+    else if (pattern == "puzzle_smooth") puzzle_smooth_female_2d();
+    else if (pattern == "tslot_smooth") tslot_smooth_female_2d();
     else dovetail_female_2d(); // default
 }
 
