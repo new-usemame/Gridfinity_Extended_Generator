@@ -123,10 +123,11 @@ export interface BaseplateConfig {
   
   // Edge pattern for interlocking segments (male/female teeth extruded vertically)
   // Standard patterns: dovetail, rectangular, triangular, puzzle, tslot
-  // Smooth patterns (3D-print friendly with filleted corners): puzzle_smooth, tslot_smooth
-  edgePattern: 'dovetail' | 'rectangular' | 'triangular' | 'puzzle' | 'tslot' | 'puzzle_smooth' | 'tslot_smooth';
-  toothDepth: number;           // How far teeth extend into adjacent segment (mm)
+  // Smooth patterns (3D-print friendly with filleted corners): puzzle_smooth, tslot_smooth, wineglass
+  edgePattern: 'dovetail' | 'rectangular' | 'triangular' | 'puzzle' | 'tslot' | 'puzzle_smooth' | 'tslot_smooth' | 'wineglass';
+  toothDepth: number;           // Overall height of the tooth (mm) - stretches/compresses the shape
   toothWidth: number;           // Width of each tooth at base (mm)
+  concaveDepth: number;         // How deep the concave swoop curves inward (0-100%, default 50%)
   
   // Custom edge overrides (optional - overrides automatic male/female assignment)
   edgeOverrides: SegmentEdgeOverride[];
@@ -202,6 +203,7 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   edgePattern: 'dovetail',     // Default to classic dovetail pattern
   toothDepth: 3,               // 3mm tooth depth
   toothWidth: 6,               // 6mm tooth width at base
+  concaveDepth: 50,            // 50% concave swoop depth (0=shallow, 100=deep)
   edgeOverrides: []            // Empty - use automatic male/female assignment
 };
 

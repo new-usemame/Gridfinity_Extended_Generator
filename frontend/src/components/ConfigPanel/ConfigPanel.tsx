@@ -861,8 +861,9 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                       { value: 'triangular', label: '3. Triangular (Sawtooth)' },
                       { value: 'puzzle', label: '4. Puzzle (Jigsaw Bulb)' },
                       { value: 'tslot', label: '5. T-Slot (T-Hook)' },
-                      { value: 'puzzle_smooth', label: '6. Puzzle Smooth (Filleted)' },
-                      { value: 'tslot_smooth', label: '7. T-Slot Smooth (Filleted)' }
+                      { value: 'puzzle_smooth', label: '6. Puzzle Smooth (Concave)' },
+                      { value: 'tslot_smooth', label: '7. T-Slot Smooth (Concave)' },
+                      { value: 'wineglass', label: '8. Wine Glass (Swoopy Bulb)' }
                     ]}
                     onChange={(v) => update('edgePattern', v as BaseplateConfig['edgePattern'])}
                   />
@@ -872,6 +873,9 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                     {config.edgePattern === 'triangular' && '▷ Pointed zigzag pattern (sawtooth)'}
                     {config.edgePattern === 'puzzle' && '▷ Round bulbous tabs like jigsaw puzzle pieces'}
                     {config.edgePattern === 'tslot' && '▷ T-shaped hooks that lock in place'}
+                    {config.edgePattern === 'puzzle_smooth' && '▷ Puzzle bulb with concave hourglass stem - smooth for 3D printing'}
+                    {config.edgePattern === 'tslot_smooth' && '▷ T-slot with concave stem - no sharp corners'}
+                    {config.edgePattern === 'wineglass' && '▷ Wine glass shape - concave stem flowing into rounded bulb top'}
                   </div>
                   
                   <SliderInput
@@ -899,6 +903,26 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                   <p className="text-xs text-slate-500">
                     Width of each tooth at the base.
                   </p>
+                  
+                  {/* Show concave depth slider only for smooth patterns */}
+                  {(config.edgePattern === 'puzzle_smooth' || 
+                    config.edgePattern === 'tslot_smooth' || 
+                    config.edgePattern === 'wineglass') && (
+                    <>
+                      <SliderInput
+                        label="Concave Depth"
+                        value={config.concaveDepth ?? 50}
+                        min={0}
+                        max={100}
+                        step={5}
+                        unit="%"
+                        onChange={(v) => update('concaveDepth', v)}
+                      />
+                      <p className="text-xs text-slate-500">
+                        How deep the inward swoop curves. 0% = nearly straight, 100% = deep hourglass.
+                      </p>
+                    </>
+                  )}
                   
                   <SliderInput
                     label="Fit Tolerance"

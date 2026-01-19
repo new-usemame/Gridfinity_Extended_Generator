@@ -15,5 +15,11 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  optimizeDeps: {
+    exclude: ['openscad-wasm']
+  },
+  build: {
+    target: 'esnext'
   }
 })

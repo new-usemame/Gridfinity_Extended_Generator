@@ -392,11 +392,12 @@ module grid_socket() {
     return this.renderScad(scadContent, `segment_${segmentX}_${segmentY}`);
   }
 
-  // Generate OpenSCAD modules for edge patterns (5 patterns, male + female)
+  // Generate OpenSCAD modules for edge patterns (8 patterns, male + female)
   generateEdgePatternModules(config: BaseplateConfig): string {
     const tolerance = config.connectorTolerance;
     const toothDepth = config.toothDepth;
     const toothWidth = config.toothWidth;
+    const concaveDepth = config.concaveDepth ?? 50; // 0-100% depth of concave swoop
     
     return `
 // ===========================================
@@ -407,6 +408,7 @@ module grid_socket() {
 tooth_depth = ${toothDepth};
 tooth_width = ${toothWidth};
 edge_tolerance = ${tolerance};
+concave_depth = ${concaveDepth / 100}; // 0.0 to 1.0 (how deep the concave swoop is)
 
 // --- PATTERN 1: DOVETAIL (Trapezoidal) ---
 // Classic woodworking dovetail - wider at tip than base
@@ -523,49 +525,45 @@ module tslot_female_2d() {
     square([head_width, head_depth + edge_tolerance]);
 }
 
-// --- PATTERN 6: PUZZLE SMOOTH (Jigsaw with concave swoop) ---
+// --- PATTERN 6: PUZZLE SMOOTH (Jigsaw with adjustable concave swoop) ---
 // Classic puzzle bulb but with concave hourglass neck - no sharp corners
 // The neck curves INWARD (concave) before swooping out to the bulb
-// Allows printhead to trace smooth continuous curves
-
-// Helper function to generate concave curve X position
-function concave_x(t, wide, narrow) = wide - (wide - narrow) * sin(t * 90);
+// concave_depth controls how pronounced the inward swoop is (0=straight, 1=deep)
 
 module puzzle_smooth_male_2d() {
     bulb_r = tooth_width * 0.4;
     neck_len = tooth_depth - bulb_r;
-    base_hw = tooth_width * 0.4;  // half-width at base
-    waist_hw = tooth_width * 0.2; // half-width at waist (narrowest)
+    base_hw = tooth_width * 0.4;
+    // Waist width varies based on concave_depth (more depth = narrower waist)
+    waist_hw = tooth_width * (0.35 - 0.25 * concave_depth);
     waist_y = neck_len * 0.5;
+    // Carve radius scales with concave_depth
+    carve_r = (base_hw - waist_hw) * (0.8 + 0.8 * concave_depth);
+    carve_offset = base_hw + (base_hw - waist_hw) * (0.3 + 0.5 * concave_depth);
     
-    // Create the hourglass neck with concave curves using hull of circles
-    // This creates smooth S-curve transitions
     union() {
-        // Lower concave section: base to waist
-        // Use difference to carve out the concave shape
+        // Lower concave section
         difference() {
-            // Outer envelope
             translate([-base_hw, 0])
             square([base_hw * 2, waist_y]);
             
-            // Carve concave curve on right side
-            translate([base_hw + (base_hw - waist_hw) * 0.6, waist_y * 0.5])
-            scale([1, 2])
-            circle(r = (base_hw - waist_hw) * 1.2, $fn = 32);
-            
-            // Carve concave curve on left side
-            translate([-(base_hw + (base_hw - waist_hw) * 0.6), waist_y * 0.5])
-            scale([1, 2])
-            circle(r = (base_hw - waist_hw) * 1.2, $fn = 32);
+            // Carve concave curves (size based on concave_depth)
+            if (concave_depth > 0.05) {
+                translate([carve_offset, waist_y * 0.5])
+                scale([1, 2])
+                circle(r = carve_r, $fn = 32);
+                
+                translate([-carve_offset, waist_y * 0.5])
+                scale([1, 2])
+                circle(r = carve_r, $fn = 32);
+            }
         }
         
         // Upper section: waist swoops out to bulb
         hull() {
-            // Waist point
             translate([0, waist_y])
             square([waist_hw * 2, 0.01], center = true);
             
-            // Transition to bulb
             translate([0, neck_len - bulb_r * 0.3])
             circle(r = bulb_r * 0.7, $fn = 32);
         }
@@ -580,25 +578,27 @@ module puzzle_smooth_female_2d() {
     bulb_r = tooth_width * 0.4 + edge_tolerance;
     neck_len = tooth_depth - (tooth_width * 0.4);
     base_hw = tooth_width * 0.4 + edge_tolerance;
-    waist_hw = tooth_width * 0.2 + edge_tolerance;
+    waist_hw = tooth_width * (0.35 - 0.25 * concave_depth) + edge_tolerance;
     waist_y = neck_len * 0.5;
+    carve_r = (base_hw - waist_hw) * (0.8 + 0.8 * concave_depth) - edge_tolerance * 0.5;
+    carve_offset = base_hw + (base_hw - waist_hw) * (0.3 + 0.5 * concave_depth);
     
     union() {
-        // Lower concave section
         difference() {
             translate([-base_hw, -edge_tolerance])
             square([base_hw * 2, waist_y + edge_tolerance]);
             
-            translate([base_hw + (base_hw - waist_hw) * 0.6, waist_y * 0.5])
-            scale([1, 2])
-            circle(r = (base_hw - waist_hw) * 1.2 - edge_tolerance * 0.5, $fn = 32);
-            
-            translate([-(base_hw + (base_hw - waist_hw) * 0.6), waist_y * 0.5])
-            scale([1, 2])
-            circle(r = (base_hw - waist_hw) * 1.2 - edge_tolerance * 0.5, $fn = 32);
+            if (concave_depth > 0.05) {
+                translate([carve_offset, waist_y * 0.5])
+                scale([1, 2])
+                circle(r = carve_r, $fn = 32);
+                
+                translate([-carve_offset, waist_y * 0.5])
+                scale([1, 2])
+                circle(r = carve_r, $fn = 32);
+            }
         }
         
-        // Upper section to bulb
         hull() {
             translate([0, waist_y])
             square([waist_hw * 2, 0.01], center = true);
@@ -607,41 +607,41 @@ module puzzle_smooth_female_2d() {
             circle(r = bulb_r * 0.7, $fn = 32);
         }
         
-        // Bulb cavity
         translate([0, neck_len])
         circle(r = bulb_r, $fn = 32);
     }
 }
 
-// --- PATTERN 7: T-SLOT SMOOTH (T-shape with concave stem) ---
-// T-head locking but with concave hourglass stem - no harsh direction changes
-// Stem curves inward (concave) creating smooth flow for printhead
+// --- PATTERN 7: T-SLOT SMOOTH (T-shape with adjustable concave stem) ---
+// T-head locking but with concave hourglass stem
+// concave_depth controls how pronounced the inward swoop is
+
 module tslot_smooth_male_2d() {
     head_w = tooth_width;
     head_h = tooth_depth * 0.3;
     stem_len = tooth_depth - head_h;
     base_hw = tooth_width * 0.3;
-    waist_hw = tooth_width * 0.15;
+    waist_hw = tooth_width * (0.25 - 0.15 * concave_depth);
     waist_y = stem_len * 0.6;
+    carve_r = (base_hw - waist_hw) * (0.7 + 0.7 * concave_depth);
+    carve_offset = base_hw + (base_hw - waist_hw) * (0.2 + 0.5 * concave_depth);
     
     union() {
-        // Lower concave stem section
         difference() {
             translate([-base_hw, 0])
             square([base_hw * 2, waist_y]);
             
-            // Carve right concave
-            translate([base_hw + (base_hw - waist_hw) * 0.5, waist_y * 0.5])
-            scale([1, 1.8])
-            circle(r = (base_hw - waist_hw) * 1.1, $fn = 32);
-            
-            // Carve left concave
-            translate([-(base_hw + (base_hw - waist_hw) * 0.5), waist_y * 0.5])
-            scale([1, 1.8])
-            circle(r = (base_hw - waist_hw) * 1.1, $fn = 32);
+            if (concave_depth > 0.05) {
+                translate([carve_offset, waist_y * 0.5])
+                scale([1, 1.8])
+                circle(r = carve_r, $fn = 32);
+                
+                translate([-carve_offset, waist_y * 0.5])
+                scale([1, 1.8])
+                circle(r = carve_r, $fn = 32);
+            }
         }
         
-        // Upper stem section: waist swoops out to T-head
         hull() {
             translate([0, waist_y])
             square([waist_hw * 2, 0.01], center = true);
@@ -650,7 +650,6 @@ module tslot_smooth_male_2d() {
             square([head_w, 0.02], center = true);
         }
         
-        // T-head
         translate([-head_w/2, stem_len])
         square([head_w, head_h]);
     }
@@ -661,25 +660,27 @@ module tslot_smooth_female_2d() {
     head_h = tooth_depth * 0.3 + edge_tolerance;
     stem_len = tooth_depth - (tooth_depth * 0.3);
     base_hw = tooth_width * 0.3 + edge_tolerance;
-    waist_hw = tooth_width * 0.15 + edge_tolerance;
+    waist_hw = tooth_width * (0.25 - 0.15 * concave_depth) + edge_tolerance;
     waist_y = stem_len * 0.6;
+    carve_r = (base_hw - waist_hw) * (0.7 + 0.7 * concave_depth) - edge_tolerance * 0.3;
+    carve_offset = base_hw + (base_hw - waist_hw) * (0.2 + 0.5 * concave_depth);
     
     union() {
-        // Lower concave stem
         difference() {
             translate([-base_hw, -edge_tolerance])
             square([base_hw * 2, waist_y + edge_tolerance]);
             
-            translate([base_hw + (base_hw - waist_hw) * 0.5, waist_y * 0.5])
-            scale([1, 1.8])
-            circle(r = (base_hw - waist_hw) * 1.1 - edge_tolerance * 0.3, $fn = 32);
-            
-            translate([-(base_hw + (base_hw - waist_hw) * 0.5), waist_y * 0.5])
-            scale([1, 1.8])
-            circle(r = (base_hw - waist_hw) * 1.1 - edge_tolerance * 0.3, $fn = 32);
+            if (concave_depth > 0.05) {
+                translate([carve_offset, waist_y * 0.5])
+                scale([1, 1.8])
+                circle(r = carve_r, $fn = 32);
+                
+                translate([-carve_offset, waist_y * 0.5])
+                scale([1, 1.8])
+                circle(r = carve_r, $fn = 32);
+            }
         }
         
-        // Upper stem to T-head
         hull() {
             translate([0, waist_y])
             square([waist_hw * 2, 0.01], center = true);
@@ -688,9 +689,115 @@ module tslot_smooth_female_2d() {
             square([head_w, 0.02], center = true);
         }
         
-        // T-head cavity
         translate([-head_w/2, stem_len])
         square([head_w, head_h]);
+    }
+}
+
+// --- PATTERN 8: WINE GLASS (Swoopy bulbous - stem + rounded top) ---
+// Combines wine glass stem (concave hourglass) with semicircle top
+// The stem smoothly flows into a rounded bulb with no sharp corners
+// tooth_depth controls overall height, concave_depth controls stem curvature
+
+module wineglass_male_2d() {
+    // Calculate proportions based on tooth_depth
+    bulb_r = tooth_width * 0.45;            // Semicircle radius at top
+    stem_ratio = 0.6;                        // 60% stem, 40% bulb
+    stem_len = tooth_depth * stem_ratio;
+    bulb_center_y = stem_len + bulb_r * 0.7; // Where bulb center sits
+    
+    // Stem dimensions with adjustable concave
+    base_hw = tooth_width * 0.4;
+    waist_hw = tooth_width * (0.3 - 0.2 * concave_depth);
+    waist_y = stem_len * 0.5;
+    
+    carve_r = (base_hw - waist_hw) * (0.8 + 0.8 * concave_depth);
+    carve_offset = base_hw + (base_hw - waist_hw) * (0.3 + 0.5 * concave_depth);
+    
+    // Fillet radius for smooth stem-to-bulb transition
+    fillet_r = min(bulb_r * 0.3, tooth_width * 0.15);
+    
+    union() {
+        // Wine glass stem with concave sides
+        difference() {
+            translate([-base_hw, 0])
+            square([base_hw * 2, waist_y]);
+            
+            if (concave_depth > 0.05) {
+                translate([carve_offset, waist_y * 0.5])
+                scale([1, 2])
+                circle(r = carve_r, $fn = 32);
+                
+                translate([-carve_offset, waist_y * 0.5])
+                scale([1, 2])
+                circle(r = carve_r, $fn = 32);
+            }
+        }
+        
+        // Smooth transition from waist to bulb using hull
+        hull() {
+            // Waist
+            translate([0, waist_y])
+            square([waist_hw * 2, 0.01], center = true);
+            
+            // Points on bulb circle where stem connects (with fillets)
+            translate([bulb_r * 0.6, stem_len + fillet_r])
+            circle(r = fillet_r, $fn = 24);
+            
+            translate([-bulb_r * 0.6, stem_len + fillet_r])
+            circle(r = fillet_r, $fn = 24);
+        }
+        
+        // Rounded bulb top (semicircle with smooth connection)
+        translate([0, bulb_center_y])
+        circle(r = bulb_r, $fn = 48);
+    }
+}
+
+module wineglass_female_2d() {
+    bulb_r = tooth_width * 0.45 + edge_tolerance;
+    stem_ratio = 0.6;
+    stem_len = tooth_depth * stem_ratio;
+    bulb_center_y = stem_len + (tooth_width * 0.45) * 0.7;
+    
+    base_hw = tooth_width * 0.4 + edge_tolerance;
+    waist_hw = tooth_width * (0.3 - 0.2 * concave_depth) + edge_tolerance;
+    waist_y = stem_len * 0.5;
+    
+    carve_r = (base_hw - waist_hw) * (0.8 + 0.8 * concave_depth) - edge_tolerance * 0.5;
+    carve_offset = base_hw + (base_hw - waist_hw) * (0.3 + 0.5 * concave_depth);
+    
+    fillet_r = min(bulb_r * 0.3, tooth_width * 0.15) + edge_tolerance * 0.5;
+    
+    union() {
+        difference() {
+            translate([-base_hw, -edge_tolerance])
+            square([base_hw * 2, waist_y + edge_tolerance]);
+            
+            if (concave_depth > 0.05) {
+                translate([carve_offset, waist_y * 0.5])
+                scale([1, 2])
+                circle(r = carve_r, $fn = 32);
+                
+                translate([-carve_offset, waist_y * 0.5])
+                scale([1, 2])
+                circle(r = carve_r, $fn = 32);
+            }
+        }
+        
+        hull() {
+            translate([0, waist_y])
+            square([waist_hw * 2, 0.01], center = true);
+            
+            translate([bulb_r * 0.6, stem_len + fillet_r])
+            circle(r = fillet_r, $fn = 24);
+            
+            translate([-bulb_r * 0.6, stem_len + fillet_r])
+            circle(r = fillet_r, $fn = 24);
+        }
+        
+        translate([0, bulb_center_y])
+        circle(r = bulb_r, $fn = 48);
     }
 }
 
@@ -707,6 +814,7 @@ module edge_tooth_male(pattern) {
     else if (pattern == "tslot") tslot_male_2d();
     else if (pattern == "puzzle_smooth") puzzle_smooth_male_2d();
     else if (pattern == "tslot_smooth") tslot_smooth_male_2d();
+    else if (pattern == "wineglass") wineglass_male_2d();
     else dovetail_male_2d(); // default
 }
 
@@ -719,6 +827,7 @@ module edge_tooth_female(pattern) {
     else if (pattern == "tslot") tslot_female_2d();
     else if (pattern == "puzzle_smooth") puzzle_smooth_female_2d();
     else if (pattern == "tslot_smooth") tslot_smooth_female_2d();
+    else if (pattern == "wineglass") wineglass_female_2d();
     else dovetail_female_2d(); // default
 }
 
