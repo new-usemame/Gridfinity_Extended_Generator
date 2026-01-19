@@ -788,10 +788,11 @@ module wineglass_male_2d() {
     
     union() {
         // Lower stem: base to waist using hull
+        // Base starts at y=0 (flush with baseplate edge)
         hull() {
-            // Base - wide
-            translate([-base_hw + 0.1, 0.1]) circle(r = 0.1, $fn = 12);
-            translate([base_hw - 0.1, 0.1]) circle(r = 0.1, $fn = 12);
+            // Base - wide, at y=0
+            translate([-base_hw, 0]) square([0.01, 0.01]);
+            translate([base_hw, 0]) square([0.01, 0.01]);
             // Waist - narrow
             translate([-waist_hw, waist_y]) circle(r = 0.08, $fn = 12);
             translate([waist_hw, waist_y]) circle(r = 0.08, $fn = 12);
@@ -822,10 +823,10 @@ module wineglass_female_2d() {
     waist_y = stem_len * 0.5;
     
     union() {
-        // Lower stem
+        // Lower stem - base at y=-edge_tolerance (flush)
         hull() {
-            translate([-base_hw + 0.1, -edge_tolerance + 0.1]) circle(r = 0.1, $fn = 12);
-            translate([base_hw - 0.1, -edge_tolerance + 0.1]) circle(r = 0.1, $fn = 12);
+            translate([-base_hw, -edge_tolerance]) square([0.01, 0.01]);
+            translate([base_hw, -edge_tolerance]) square([0.01, 0.01]);
             translate([-waist_hw, waist_y]) circle(r = 0.08, $fn = 12);
             translate([waist_hw, waist_y]) circle(r = 0.08, $fn = 12);
         }

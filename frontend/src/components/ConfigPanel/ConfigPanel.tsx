@@ -882,13 +882,13 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                     label="Tooth Depth"
                     value={config.toothDepth}
                     min={2}
-                    max={6}
+                    max={12}
                     step={0.5}
                     unit="mm"
                     onChange={(v) => update('toothDepth', v)}
                   />
                   <p className="text-xs text-slate-500">
-                    How far teeth extend into adjacent segment.
+                    Overall height of the connector shape.
                   </p>
                   
                   <SliderInput
