@@ -776,14 +776,15 @@ module tslot_smooth_female_2d() {
 // Simple version without conditionals for better OpenSCAD compatibility
 
 module wineglass_male_2d() {
-    bulb_r = tooth_width * 0.45;
-    stem_len = tooth_depth * 0.55;
-    bulb_center_y = stem_len + bulb_r * 0.8;
+    bulb_r = tooth_width * 0.42;
+    stem_len = tooth_depth * 0.5;
+    // Position bulb center so it overlaps with the upper stem flare
+    bulb_center_y = stem_len + bulb_r * 0.35;
     
-    base_hw = tooth_width * 0.4;
+    base_hw = tooth_width * 0.38;
     // Waist narrows based on concave_depth (0=wide, 1=narrow)
-    waist_hw = tooth_width * 0.28 * (1 - concave_depth * 0.6);
-    waist_y = stem_len * 0.45;
+    waist_hw = tooth_width * 0.25 * (1 - concave_depth * 0.65);
+    waist_y = stem_len * 0.5;
     
     union() {
         // Lower stem: base to waist using hull
@@ -796,28 +797,29 @@ module wineglass_male_2d() {
             translate([waist_hw, waist_y]) circle(r = 0.08, $fn = 12);
         }
         
-        // Upper stem: waist flares out to bulb
+        // Upper stem: waist flares out and connects INTO the bulb
         hull() {
             translate([-waist_hw, waist_y]) circle(r = 0.08, $fn = 12);
             translate([waist_hw, waist_y]) circle(r = 0.08, $fn = 12);
-            translate([-bulb_r * 0.6, stem_len]) circle(r = bulb_r * 0.18, $fn = 16);
-            translate([bulb_r * 0.6, stem_len]) circle(r = bulb_r * 0.18, $fn = 16);
+            // Connect to points on the bulb circle itself
+            translate([-bulb_r * 0.7, bulb_center_y - bulb_r * 0.5]) circle(r = 0.15, $fn = 12);
+            translate([bulb_r * 0.7, bulb_center_y - bulb_r * 0.5]) circle(r = 0.15, $fn = 12);
         }
         
-        // Bulb (rounded top)
+        // Bulb (rounded top) - positioned to overlap with upper stem
         translate([0, bulb_center_y])
         circle(r = bulb_r, $fn = 32);
     }
 }
 
 module wineglass_female_2d() {
-    bulb_r = tooth_width * 0.45 + edge_tolerance;
-    stem_len = tooth_depth * 0.55;
-    bulb_center_y = stem_len + (tooth_width * 0.45) * 0.8;
+    bulb_r = tooth_width * 0.42 + edge_tolerance;
+    stem_len = tooth_depth * 0.5;
+    bulb_center_y = stem_len + (tooth_width * 0.42) * 0.35;
     
-    base_hw = tooth_width * 0.4 + edge_tolerance;
-    waist_hw = tooth_width * 0.28 * (1 - concave_depth * 0.6) + edge_tolerance;
-    waist_y = stem_len * 0.45;
+    base_hw = tooth_width * 0.38 + edge_tolerance;
+    waist_hw = tooth_width * 0.25 * (1 - concave_depth * 0.65) + edge_tolerance;
+    waist_y = stem_len * 0.5;
     
     union() {
         // Lower stem
@@ -828,12 +830,12 @@ module wineglass_female_2d() {
             translate([waist_hw, waist_y]) circle(r = 0.08, $fn = 12);
         }
         
-        // Upper stem
+        // Upper stem connects into bulb
         hull() {
             translate([-waist_hw, waist_y]) circle(r = 0.08, $fn = 12);
             translate([waist_hw, waist_y]) circle(r = 0.08, $fn = 12);
-            translate([-bulb_r * 0.6, stem_len]) circle(r = bulb_r * 0.18, $fn = 16);
-            translate([bulb_r * 0.6, stem_len]) circle(r = bulb_r * 0.18, $fn = 16);
+            translate([-bulb_r * 0.7, bulb_center_y - bulb_r * 0.5]) circle(r = 0.15, $fn = 12);
+            translate([bulb_r * 0.7, bulb_center_y - bulb_r * 0.5]) circle(r = 0.15, $fn = 12);
         }
         
         // Bulb cavity
