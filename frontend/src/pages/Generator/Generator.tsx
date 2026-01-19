@@ -292,29 +292,35 @@ export function Generator() {
 
           {/* Right side: Auth, Save, User Dropdown and Controls */}
           <div className="flex items-center gap-3">
-            {/* Auth UI and Save Button */}
+            {/* Auth UI - Leftmost on right side */}
             {!user ? (
-              <button
-                onClick={() => setIsAuthModalOpen(true)}
-                className="px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Sign In
-              </button>
+              <>
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2 border border-slate-700 shadow-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Sign In
+                </button>
+                <div className="h-6 w-px bg-slate-700"></div>
+              </>
             ) : (
-              <UserDropdown
-                onLoadPreference={handleLoadPreference}
-                currentBoxConfig={boxConfig}
-                currentBaseplateConfig={baseplateConfig}
-              />
+              <>
+                <UserDropdown
+                  onLoadPreference={handleLoadPreference}
+                  currentBoxConfig={boxConfig}
+                  currentBaseplateConfig={baseplateConfig}
+                />
+                <div className="h-6 w-px bg-slate-700"></div>
+              </>
             )}
 
             {/* Save Button */}
             <button
               onClick={handleSaveClick}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2 border border-slate-700"
               title={user ? 'Save current configuration' : 'Sign in to save configurations'}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -322,6 +328,9 @@ export function Generator() {
               </svg>
               Save
             </button>
+
+            {/* Visual Separator */}
+            <div className="h-6 w-px bg-slate-700"></div>
 
             {/* Generation Mode Toggle */}
             <div className="flex items-center gap-2">

@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, Grid, Text, Billboard } from '@react-three/drei';
 import { STLLoader } from 'three-stdlib';
@@ -29,6 +29,8 @@ export function PreviewCanvas({
   baseplateConfig
 }: PreviewCanvasProps) {
   const [boxZOffset, setBoxZOffset] = useState(0); // mm offset for box position
+  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Reset offset when switching views
   useEffect(() => {
@@ -37,12 +39,55 @@ export function PreviewCanvas({
     }
   }, [isCombinedView]);
 
+  // Handle window resize to reposition Position Control
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const hasModel = isCombinedView 
     ? (boxStlUrl && baseplateStlUrl)
     : stlUrl;
 
+  // Calculate Position Control position based on window size
+  // Position it in the top-right, but move it if there's not enough space
+  const positionControlStyle: React.CSSProperties = {};
+  const controlWidth = 256; // w-64 = 16rem = 256px
+  const controlHeight = 150; // Approximate height
+  const padding = 16; // 1rem = 16px
+  const sidebarWidth = 384; // w-96 = 24rem = 384px
+  const exportButtonsHeight = 200; // Approximate height of export buttons area at bottom
+  
+  // Check if there's enough space on the right side
+  // Account for sidebar and padding
+  const availableWidth = windowSize.width - sidebarWidth - padding * 2;
+  // Account for header, export buttons, and padding
+  const availableHeight = windowSize.height - exportButtonsHeight - padding * 2;
+  
+  if (availableWidth < controlWidth + padding * 2) {
+    // Not enough horizontal space, position on left side instead
+    positionControlStyle.right = 'auto';
+    positionControlStyle.left = `${padding}px`;
+  } else {
+    positionControlStyle.right = `${padding}px`;
+    positionControlStyle.left = 'auto';
+  }
+  
+  if (availableHeight < controlHeight + padding * 2) {
+    // Not enough vertical space, move down (but above export buttons)
+    positionControlStyle.top = 'auto';
+    positionControlStyle.bottom = `${exportButtonsHeight + padding}px`;
+  } else {
+    positionControlStyle.top = `${padding}px`;
+    positionControlStyle.bottom = 'auto';
+  }
+
   return (
-    <div className="w-full h-full bg-gradient-to-b from-slate-900 to-slate-950 relative">
+    <div ref={containerRef} className="w-full h-full bg-gradient-to-b from-slate-900 to-slate-950 relative">
       {/* Loading Overlay */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm z-10">
@@ -94,7 +139,10 @@ export function PreviewCanvas({
 
       {/* Combined View Controls */}
       {isCombinedView && hasModel && (
-        <div className="absolute right-4 top-4 w-64 bg-slate-900/90 backdrop-blur-sm rounded-xl border border-slate-700 p-4 z-10">
+        <div 
+          className="absolute w-64 bg-slate-900/90 backdrop-blur-sm rounded-xl border border-slate-700 p-4 z-10"
+          style={positionControlStyle}
+        >
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-slate-300">Position Control</h3>
             <button
