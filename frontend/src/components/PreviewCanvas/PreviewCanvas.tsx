@@ -191,22 +191,25 @@ function CombinedSceneContent({
         loadedGeometry.computeVertexNormals();
         
         // Apply coordinate transformation
+        // OpenSCAD: X=right, Y=back, Z=up
+        // Three.js: X=right, Y=up, Z=front
+        // We want: SCAD +Y → Three.js +Z (so high Y values go to positive Z / right side)
         const matrix = new THREE.Matrix4();
         matrix.set(
           1, 0, 0, 0,
           0, 0, 1, 0,
-          0, -1, 0, 0,
+          0, 1, 0, 0,   // Z = Y (not negated, so high SCAD Y → high Three.js Z)
           0, 0, 0, 1
         );
         loadedGeometry.applyMatrix4(matrix);
         
-        // Position box to align with grid corner (bottom-left)
+        // Position box to align with grid corner
         // Gridfinity clearance is 0.25mm on each side
         loadedGeometry.computeBoundingBox();
         const box = loadedGeometry.boundingBox!;
         const clearance = 0.25; // Standard Gridfinity clearance
         
-        // Move box so its bottom-left corner (in XZ plane) is at (clearance, 0, clearance)
+        // Move box so its corner is at (clearance, 0, clearance)
         // This aligns it with the first grid position on the baseplate
         loadedGeometry.translate(-box.min.x + clearance, -box.min.y, -box.min.z + clearance);
         
@@ -238,16 +241,19 @@ function CombinedSceneContent({
         loadedGeometry.computeVertexNormals();
         
         // Apply coordinate transformation
+        // OpenSCAD: X=right, Y=back, Z=up
+        // Three.js: X=right, Y=up, Z=front
+        // We want: SCAD +Y → Three.js +Z (so high Y values go to positive Z / right side)
         const matrix = new THREE.Matrix4();
         matrix.set(
           1, 0, 0, 0,
           0, 0, 1, 0,
-          0, -1, 0, 0,
+          0, 1, 0, 0,   // Z = Y (not negated, so high SCAD Y → high Three.js Z)
           0, 0, 0, 1
         );
         loadedGeometry.applyMatrix4(matrix);
         
-        // Position baseplate so its bottom-left corner is at (0, 0, 0)
+        // Position baseplate so its corner is at (0, 0, 0)
         // This aligns it with the grid origin
         loadedGeometry.computeBoundingBox();
         const box = loadedGeometry.boundingBox!;
@@ -428,13 +434,13 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
         // OpenSCAD uses Z-up, Three.js uses Y-up
         // Apply rotation matrix to convert coordinate systems:
         // - OpenSCAD +X → Three.js +X (unchanged)
-        // - OpenSCAD +Y → Three.js -Z (forward becomes back)  
+        // - OpenSCAD +Y → Three.js +Z (depth axis)  
         // - OpenSCAD +Z → Three.js +Y (up stays up)
         const matrix = new THREE.Matrix4();
         matrix.set(
           1, 0, 0, 0,
           0, 0, 1, 0,
-          0, -1, 0, 0,
+          0, 1, 0, 0,   // Z = Y (not negated)
           0, 0, 0, 1
         );
         loadedGeometry.applyMatrix4(matrix);

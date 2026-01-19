@@ -577,9 +577,14 @@ grid_depth = depth_units * grid_unit;
 plate_width = use_fill_mode ? outer_width_mm : grid_width;
 plate_depth = use_fill_mode ? outer_depth_mm : grid_depth;
 
-// CRITICAL: Grid cells start at origin (0,0) so box can sit on full cells
-// Padding extends the plate, but grid always starts at (0,0)
-// Half cells are placed at FAR positions (high X, high Y) which is far Z in preview
+// Grid offset (where the grid starts within the plate)
+// CRITICAL: Full cells must start at origin (0,0) so box can sit on them in preview
+// When padding is "center", we still want full cells at origin, so we ignore near padding
+// and put all padding on the far side. This ensures box alignment.
+// For "near" and "far" padding modes, we can respect them, but for box alignment,
+// we'll always start grid at origin and put padding on far side.
+grid_offset_x = 0;  // Always start at origin for proper box alignment
+grid_offset_y = 0;  // Always start at origin for proper box alignment
 
 // Main module
 gridfinity_baseplate();
@@ -604,61 +609,52 @@ module rounded_rect_plate(width, depth, height, radius) {
 }
 
 module gridfinity_baseplate() {
+    // Position the plate so grid starts at origin
+    // If there's padding on near side, translate plate to compensate
+    plate_offset_x = use_fill_mode ? -padding_near_x : 0;
+    plate_offset_y = use_fill_mode ? -padding_near_y : 0;
+    
+    translate([plate_offset_x, plate_offset_y, 0])
     difference() {
         // Main plate body with rounded corners (full size including padding)
-        // Position plate so grid starts at origin: if there's near padding, extend plate into negative space
-        plate_start_x = use_fill_mode ? -padding_near_x : 0;
-        plate_start_y = use_fill_mode ? -padding_near_y : 0;
-        
-        translate([plate_start_x, plate_start_y, 0])
         rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
         
         // Socket cutouts for each grid unit
-        // CRITICAL: Grid cells start at (0,0) so box sits on full cells at origin
-        // Half cells go on FAR edge (high X, high Y) which is far Z in preview
+        // Handle both full and half cells
+        // Half cells go on the FAR edge (right/back) so full cells start at origin where box sits
         full_cells_x = floor(width_units);
         full_cells_y = floor(depth_units);
         has_half_x = width_units - full_cells_x >= 0.5;
         has_half_y = depth_units - full_cells_y >= 0.5;
         half_cell_size = grid_unit / 2;
         
-        // Calculate maximum positions for half cells (FAR side, not at origin)
-        // Half cells must be at the maximum X and Y positions, after all full cells
-        max_x_pos = full_cells_x * grid_unit;  // Position after all full cells in X
-        max_y_pos = full_cells_y * grid_unit;  // Position after all full cells in Y (far Z in preview)
-        
-        // Full grid cells - MUST start at origin (0,0) so box can sit on them
-        // These are at positions: (0,0), (42,0), (0,42), (42,42), etc.
+        // Full grid cells - start at origin (0,0) so box can sit on them
         for (gx = [0:full_cells_x-1]) {
             for (gy = [0:full_cells_y-1]) {
-                translate([gx * grid_unit, gy * grid_unit, 0])
+                translate([grid_offset_x + gx * grid_unit, grid_offset_y + gy * grid_unit, 0])
                 grid_socket(grid_unit, grid_unit);
             }
         }
         
-        // Half cells on X edge (far/right side) - at MAXIMUM X position, FAR from origin
-        // MUST be at max_x_pos (after full cells), NOT at 0
+        // Half cells on X edge (far/right side) - AFTER full cells, at high X values
         if (has_half_x) {
             for (gy = [0:full_cells_y-1]) {
-                translate([max_x_pos, gy * grid_unit, 0])
+                translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + gy * grid_unit, 0])
                 grid_socket(half_cell_size, grid_unit);
             }
         }
         
-        // Half cells on Y edge (far/back side) - at MAXIMUM Y position, FAR from origin
-        // MUST be at max_y_pos (after full cells), NOT at 0
-        // This is the far back position (far Z in preview)
+        // Half cells on Y edge (far/back side) - AFTER full cells, at high Y values
         if (has_half_y) {
             for (gx = [0:full_cells_x-1]) {
-                translate([gx * grid_unit, max_y_pos, 0])
+                translate([grid_offset_x + gx * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
                 grid_socket(grid_unit, half_cell_size);
             }
         }
         
-        // Corner half cell (if both X and Y have half cells) - far corner at MAXIMUM X, MAXIMUM Y
-        // This is the back-right corner (far Z, far X in preview), NOT at (0,0)
+        // Corner half cell (if both X and Y have half cells) - far corner at high X, high Y
         if (has_half_x && has_half_y) {
-            translate([max_x_pos, max_y_pos, 0])
+            translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
             grid_socket(half_cell_size, half_cell_size);
         }
     }
