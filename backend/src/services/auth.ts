@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_SECRET = (process.env.JWT_SECRET || 'your-secret-key-change-in-production') as string;
+const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '7d') as string;
 
 export interface AuthTokenPayload {
   userId: number;
@@ -21,7 +21,7 @@ export const authService = {
 
   generateToken: (userId: number, email: string): string => {
     const payload: AuthTokenPayload = { userId, email };
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as SignOptions);
   },
 
   verifyToken: (token: string): AuthTokenPayload | null => {
