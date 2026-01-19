@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 interface NumberInputProps {
   label: string;
   value: number;
@@ -9,9 +11,53 @@ interface NumberInputProps {
 }
 
 export function NumberInput({ label, value, min, max, step, unit, onChange }: NumberInputProps) {
+  // Local state for the input text while typing
+  const [inputValue, setInputValue] = useState(value.toString());
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Update local state when external value changes (but not while focused/typing)
+  useEffect(() => {
+    if (!isFocused) {
+      setInputValue(value.toString());
+    }
+  }, [value, isFocused]);
+
   const handleChange = (newValue: number) => {
     const clampedValue = Math.min(max, Math.max(min, newValue));
     onChange(clampedValue);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Allow the user to type freely - including empty string
+    setInputValue(e.target.value);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    const trimmed = inputValue.trim();
+    
+    // If empty or invalid, reset to current value
+    if (trimmed === '' || trimmed === '-' || trimmed === '.') {
+      setInputValue(value.toString());
+      return;
+    }
+    
+    // Parse and clamp the value when the user finishes typing
+    const parsed = parseFloat(trimmed);
+    if (!isNaN(parsed) && isFinite(parsed)) {
+      const clampedValue = Math.min(max, Math.max(min, parsed));
+      onChange(clampedValue);
+      setInputValue(clampedValue.toString());
+    } else {
+      // Reset to current value if invalid
+      setInputValue(value.toString());
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
+    }
   };
 
   return (
@@ -32,11 +78,14 @@ export function NumberInput({ label, value, min, max, step, unit, onChange }: Nu
         <div className="flex-1 relative">
           <input
             type="number"
-            value={value}
+            value={inputValue}
             min={min}
             max={max}
             step={step}
-            onChange={(e) => handleChange(parseFloat(e.target.value) || min)}
+            onChange={handleInputChange}
+            onFocus={() => setIsFocused(true)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
             className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-center text-white font-mono focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
           {unit && (

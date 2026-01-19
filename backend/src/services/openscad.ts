@@ -610,12 +610,14 @@ module gridfinity_baseplate() {
         
         // Socket cutouts for each grid unit (offset by padding)
         // Handle both full and half cells
+        // Half cells go on the FAR edge (right/back) so full cells start at origin where box sits
         full_cells_x = floor(width_units);
         full_cells_y = floor(depth_units);
         has_half_x = width_units - full_cells_x >= 0.5;
         has_half_y = depth_units - full_cells_y >= 0.5;
+        half_cell_size = grid_unit / 2;
         
-        // Full grid cells
+        // Full grid cells - start at origin so box can sit on them
         for (gx = [0:full_cells_x-1]) {
             for (gy = [0:full_cells_y-1]) {
                 translate([grid_offset_x + gx * grid_unit, grid_offset_y + gy * grid_unit, 0])
@@ -623,26 +625,26 @@ module gridfinity_baseplate() {
             }
         }
         
-        // Half cells on X edge (if any)
+        // Half cells on X edge (far/right side) - AFTER full cells
         if (has_half_x) {
             for (gy = [0:full_cells_y-1]) {
                 translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + gy * grid_unit, 0])
-                grid_socket(grid_unit / 2, grid_unit);
+                grid_socket(half_cell_size, grid_unit);
             }
         }
         
-        // Half cells on Y edge (if any)
+        // Half cells on Y edge (far/back side) - AFTER full cells
         if (has_half_y) {
             for (gx = [0:full_cells_x-1]) {
                 translate([grid_offset_x + gx * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
-                grid_socket(grid_unit, grid_unit / 2);
+                grid_socket(grid_unit, half_cell_size);
             }
         }
         
-        // Corner half cell (if both X and Y have half cells)
+        // Corner half cell (if both X and Y have half cells) - far corner
         if (has_half_x && has_half_y) {
             translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
-            grid_socket(grid_unit / 2, grid_unit / 2);
+            grid_socket(half_cell_size, half_cell_size);
         }
     }
 }

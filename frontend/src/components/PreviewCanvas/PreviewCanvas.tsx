@@ -362,6 +362,9 @@ function CombinedSceneContent({
         position={[0, -0.1, 0]}
       />
 
+      {/* Axis Indicator at origin */}
+      <AxisIndicator size={30} />
+
       {/* Baseplate Model */}
       {baseplateGeometry && (
         <mesh geometry={baseplateGeometry} castShadow receiveShadow>
@@ -481,6 +484,9 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
         position={[0, -0.1, 0]}
       />
 
+      {/* Axis Indicator at origin */}
+      <AxisIndicator size={30} />
+
       {/* Model */}
       {geometry && <ModelMesh geometry={geometry} />}
 
@@ -577,4 +583,58 @@ function CameraFit({ geometry }: { geometry: THREE.BufferGeometry }) {
   }, [geometry, camera]);
 
   return null;
+}
+
+// 3D Axis indicator at origin
+function AxisIndicator({ size = 30 }: { size?: number }) {
+  const axisLength = size;
+  const axisRadius = size * 0.02;
+  const coneHeight = size * 0.15;
+  const coneRadius = size * 0.05;
+
+  return (
+    <group position={[0, 0, 0]}>
+      {/* X Axis - Red */}
+      <group>
+        <mesh position={[axisLength / 2, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
+          <cylinderGeometry args={[axisRadius, axisRadius, axisLength, 8]} />
+          <meshBasicMaterial color="#ef4444" />
+        </mesh>
+        <mesh position={[axisLength, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
+          <coneGeometry args={[coneRadius, coneHeight, 8]} />
+          <meshBasicMaterial color="#ef4444" />
+        </mesh>
+      </group>
+
+      {/* Y Axis - Green */}
+      <group>
+        <mesh position={[0, axisLength / 2, 0]}>
+          <cylinderGeometry args={[axisRadius, axisRadius, axisLength, 8]} />
+          <meshBasicMaterial color="#22c55e" />
+        </mesh>
+        <mesh position={[0, axisLength, 0]}>
+          <coneGeometry args={[coneRadius, coneHeight, 8]} />
+          <meshBasicMaterial color="#22c55e" />
+        </mesh>
+      </group>
+
+      {/* Z Axis - Blue */}
+      <group>
+        <mesh position={[0, 0, axisLength / 2]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[axisRadius, axisRadius, axisLength, 8]} />
+          <meshBasicMaterial color="#3b82f6" />
+        </mesh>
+        <mesh position={[0, 0, axisLength]} rotation={[Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[coneRadius, coneHeight, 8]} />
+          <meshBasicMaterial color="#3b82f6" />
+        </mesh>
+      </group>
+
+      {/* Origin sphere */}
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[axisRadius * 2, 16, 16]} />
+        <meshBasicMaterial color="#ffffff" />
+      </mesh>
+    </group>
+  );
 }
