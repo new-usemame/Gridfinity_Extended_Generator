@@ -266,6 +266,24 @@ export function Generator() {
     }
   };
 
+  // Handle downloading configuration
+  const handleDownloadConfig = () => {
+    const config = {
+      boxConfig,
+      baseplateConfig,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `gridfinity-config-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Check WASM support
   const wasmSupported = isWasmSupported();
 
@@ -321,12 +339,24 @@ export function Generator() {
             <button
               onClick={handleSaveClick}
               className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2 border border-slate-700"
-              title={user ? 'Save current configuration' : 'Sign in to save configurations'}
+              title={user ? 'Save current configuration to your account' : 'Sign in to save configurations'}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
               </svg>
               Save
+            </button>
+
+            {/* Download Configuration Button */}
+            <button
+              onClick={handleDownloadConfig}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2 border border-slate-700"
+              title="Download configuration as JSON file"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Download Config
             </button>
 
             {/* Visual Separator */}

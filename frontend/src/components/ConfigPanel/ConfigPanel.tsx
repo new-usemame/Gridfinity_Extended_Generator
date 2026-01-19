@@ -620,187 +620,6 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
         </p>
       </CollapsibleSection>
 
-      {/* Style Section */}
-      <CollapsibleSection title="Plate Style" icon="🎨" defaultOpen>
-        <SelectInput
-          label="Socket Style"
-          value={config.style}
-          options={[
-            { value: 'default', label: 'Default (Open Sockets)' },
-            { value: 'magnet', label: 'With Magnets' },
-            { value: 'weighted', label: 'Weighted (Weight Cavity)' },
-            { value: 'screw', label: 'With Screw Holes' }
-          ]}
-          onChange={(v) => update('style', v as BaseplateConfig['style'])}
-        />
-        <SelectInput
-          label="Plate Type"
-          value={config.plateStyle}
-          options={[
-            { value: 'default', label: 'Standard 3D Print' },
-            { value: 'cnclaser', label: 'CNC / Laser Cut' }
-          ]}
-          onChange={(v) => update('plateStyle', v as BaseplateConfig['plateStyle'])}
-        />
-        <ToggleInput
-          label="Remove Bottom Taper"
-          value={config.removeBottomTaper}
-          onChange={(v) => update('removeBottomTaper', v)}
-        />
-        <p className="text-xs text-slate-500">
-          Removing bottom taper creates flat socket bottoms for CNC/laser cutting.
-        </p>
-      </CollapsibleSection>
-
-      {/* Magnets Section */}
-      {(config.style === 'magnet' || config.style === 'default') && (
-        <CollapsibleSection title="Magnets" icon="🧲">
-          <NumberInput
-            label="Magnet Diameter"
-            value={config.magnetDiameter}
-            min={3}
-            max={10}
-            step={0.1}
-            unit="mm"
-            onChange={(v) => update('magnetDiameter', v)}
-          />
-          <NumberInput
-            label="Magnet Depth"
-            value={config.magnetDepth}
-            min={1}
-            max={5}
-            step={0.1}
-            unit="mm"
-            onChange={(v) => update('magnetDepth', v)}
-          />
-          <NumberInput
-            label="Z Offset (Raise Magnet)"
-            value={config.magnetZOffset}
-            min={0}
-            max={3}
-            step={0.1}
-            unit="mm"
-            onChange={(v) => update('magnetZOffset', v)}
-          />
-          <NumberInput
-            label="Top Cover (Capture)"
-            value={config.magnetTopCover}
-            min={0}
-            max={2}
-            step={0.1}
-            unit="mm"
-            onChange={(v) => update('magnetTopCover', v)}
-          />
-          <p className="text-xs text-slate-500">
-            Z Offset raises magnets for glue-in. Top Cover creates ceiling to capture magnets.
-          </p>
-        </CollapsibleSection>
-      )}
-
-      {/* Screws Section */}
-      {(config.style === 'screw' || config.style === 'default') && (
-        <CollapsibleSection title="Screw Holes" icon="🔩">
-          <NumberInput
-            label="Screw Diameter"
-            value={config.screwDiameter}
-            min={2}
-            max={6}
-            step={0.5}
-            unit="mm"
-            onChange={(v) => update('screwDiameter', v)}
-          />
-          <ToggleInput
-            label="Center Screw Hole"
-            value={config.centerScrew}
-            onChange={(v) => update('centerScrew', v)}
-          />
-          <p className="text-xs text-slate-500">
-            Center screw allows mounting baseplate to surface.
-          </p>
-        </CollapsibleSection>
-      )}
-
-      {/* Weight Cavity Section */}
-      <CollapsibleSection title="Weight Cavity" icon="⚖️">
-        <ToggleInput
-          label="Enable Weight Cavity"
-          value={config.weightCavity}
-          onChange={(v) => update('weightCavity', v)}
-        />
-        <p className="text-xs text-slate-500">
-          Creates hollow space to add weights (lead, steel balls) for stability.
-        </p>
-      </CollapsibleSection>
-
-      {/* Corner Rounding Section */}
-      <CollapsibleSection title="Corner Rounding" icon="⭕">
-        <SliderInput
-          label="Corner Radius"
-          value={config.cornerRadius}
-          min={0}
-          max={5}
-          step={0.25}
-          unit="mm"
-          onChange={(v) => update('cornerRadius', v)}
-        />
-        <SliderInput
-          label="Corner Segments"
-          value={config.cornerSegments}
-          min={8}
-          max={64}
-          step={4}
-          onChange={(v) => update('cornerSegments', v)}
-        />
-        <p className="text-xs text-slate-500">
-          Higher segments = smoother curves but larger file size.
-        </p>
-      </CollapsibleSection>
-
-      {/* Socket Chamfer Section */}
-      <CollapsibleSection title="Socket Chamfer" icon="📐">
-        <ToggleInput
-          label="Sync with Foot Chamfer"
-          value={config.syncSocketWithFoot}
-          onChange={(v) => update('syncSocketWithFoot', v)}
-        />
-        <p className="text-xs text-slate-500">
-          When enabled, socket chamfer automatically matches foot chamfer for proper fit.
-        </p>
-        {!config.syncSocketWithFoot && (
-          <div className="mt-2 p-2 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
-            <p className="text-xs text-yellow-400">
-              ⚠️ Socket angle & height must match foot for proper fit!
-            </p>
-          </div>
-        )}
-        <div className={config.syncSocketWithFoot ? 'opacity-50 pointer-events-none' : ''}>
-          <SliderInput
-            label="Chamfer Angle"
-            value={config.socketChamferAngle}
-            min={30}
-            max={75}
-            step={1}
-            unit="°"
-            onChange={(v) => update('socketChamferAngle', v)}
-          />
-          <p className="text-xs text-slate-500">
-            Should match foot chamfer angle. 45° = standard.
-          </p>
-          <SliderInput
-            label="Chamfer Height"
-            value={config.socketChamferHeight}
-            min={2}
-            max={8}
-            step={0.25}
-            unit="mm"
-            onChange={(v) => update('socketChamferHeight', v)}
-          />
-          <p className="text-xs text-slate-500">
-            Should match foot chamfer height. Standard: 4.75mm.
-          </p>
-        </div>
-      </CollapsibleSection>
-
       {/* Printer Bed Splitting Section */}
       <CollapsibleSection title="Printer Bed Splitting" icon="✂️">
         <ToggleInput
@@ -1022,6 +841,187 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
             )}
           </>
         )}
+      </CollapsibleSection>
+
+      {/* Style Section */}
+      <CollapsibleSection title="Plate Style" icon="🎨" defaultOpen>
+        <SelectInput
+          label="Socket Style"
+          value={config.style}
+          options={[
+            { value: 'default', label: 'Default (Open Sockets)' },
+            { value: 'magnet', label: 'With Magnets' },
+            { value: 'weighted', label: 'Weighted (Weight Cavity)' },
+            { value: 'screw', label: 'With Screw Holes' }
+          ]}
+          onChange={(v) => update('style', v as BaseplateConfig['style'])}
+        />
+        <SelectInput
+          label="Plate Type"
+          value={config.plateStyle}
+          options={[
+            { value: 'default', label: 'Standard 3D Print' },
+            { value: 'cnclaser', label: 'CNC / Laser Cut' }
+          ]}
+          onChange={(v) => update('plateStyle', v as BaseplateConfig['plateStyle'])}
+        />
+        <ToggleInput
+          label="Remove Bottom Taper"
+          value={config.removeBottomTaper}
+          onChange={(v) => update('removeBottomTaper', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Removing bottom taper creates flat socket bottoms for CNC/laser cutting.
+        </p>
+      </CollapsibleSection>
+
+      {/* Magnets Section */}
+      {(config.style === 'magnet' || config.style === 'default') && (
+        <CollapsibleSection title="Magnets" icon="🧲">
+          <NumberInput
+            label="Magnet Diameter"
+            value={config.magnetDiameter}
+            min={3}
+            max={10}
+            step={0.1}
+            unit="mm"
+            onChange={(v) => update('magnetDiameter', v)}
+          />
+          <NumberInput
+            label="Magnet Depth"
+            value={config.magnetDepth}
+            min={1}
+            max={5}
+            step={0.1}
+            unit="mm"
+            onChange={(v) => update('magnetDepth', v)}
+          />
+          <NumberInput
+            label="Z Offset (Raise Magnet)"
+            value={config.magnetZOffset}
+            min={0}
+            max={3}
+            step={0.1}
+            unit="mm"
+            onChange={(v) => update('magnetZOffset', v)}
+          />
+          <NumberInput
+            label="Top Cover (Capture)"
+            value={config.magnetTopCover}
+            min={0}
+            max={2}
+            step={0.1}
+            unit="mm"
+            onChange={(v) => update('magnetTopCover', v)}
+          />
+          <p className="text-xs text-slate-500">
+            Z Offset raises magnets for glue-in. Top Cover creates ceiling to capture magnets.
+          </p>
+        </CollapsibleSection>
+      )}
+
+      {/* Screws Section */}
+      {(config.style === 'screw' || config.style === 'default') && (
+        <CollapsibleSection title="Screw Holes" icon="🔩">
+          <NumberInput
+            label="Screw Diameter"
+            value={config.screwDiameter}
+            min={2}
+            max={6}
+            step={0.5}
+            unit="mm"
+            onChange={(v) => update('screwDiameter', v)}
+          />
+          <ToggleInput
+            label="Center Screw Hole"
+            value={config.centerScrew}
+            onChange={(v) => update('centerScrew', v)}
+          />
+          <p className="text-xs text-slate-500">
+            Center screw allows mounting baseplate to surface.
+          </p>
+        </CollapsibleSection>
+      )}
+
+      {/* Weight Cavity Section */}
+      <CollapsibleSection title="Weight Cavity" icon="⚖️">
+        <ToggleInput
+          label="Enable Weight Cavity"
+          value={config.weightCavity}
+          onChange={(v) => update('weightCavity', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Creates hollow space to add weights (lead, steel balls) for stability.
+        </p>
+      </CollapsibleSection>
+
+      {/* Corner Rounding Section */}
+      <CollapsibleSection title="Corner Rounding" icon="⭕">
+        <SliderInput
+          label="Corner Radius"
+          value={config.cornerRadius}
+          min={0}
+          max={5}
+          step={0.25}
+          unit="mm"
+          onChange={(v) => update('cornerRadius', v)}
+        />
+        <SliderInput
+          label="Corner Segments"
+          value={config.cornerSegments}
+          min={8}
+          max={64}
+          step={4}
+          onChange={(v) => update('cornerSegments', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Higher segments = smoother curves but larger file size.
+        </p>
+      </CollapsibleSection>
+
+      {/* Socket Chamfer Section */}
+      <CollapsibleSection title="Socket Chamfer" icon="📐">
+        <ToggleInput
+          label="Sync with Foot Chamfer"
+          value={config.syncSocketWithFoot}
+          onChange={(v) => update('syncSocketWithFoot', v)}
+        />
+        <p className="text-xs text-slate-500">
+          When enabled, socket chamfer automatically matches foot chamfer for proper fit.
+        </p>
+        {!config.syncSocketWithFoot && (
+          <div className="mt-2 p-2 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+            <p className="text-xs text-yellow-400">
+              ⚠️ Socket angle & height must match foot for proper fit!
+            </p>
+          </div>
+        )}
+        <div className={config.syncSocketWithFoot ? 'opacity-50 pointer-events-none' : ''}>
+          <SliderInput
+            label="Chamfer Angle"
+            value={config.socketChamferAngle}
+            min={30}
+            max={75}
+            step={1}
+            unit="°"
+            onChange={(v) => update('socketChamferAngle', v)}
+          />
+          <p className="text-xs text-slate-500">
+            Should match foot chamfer angle. 45° = standard.
+          </p>
+          <SliderInput
+            label="Chamfer Height"
+            value={config.socketChamferHeight}
+            min={2}
+            max={8}
+            step={0.25}
+            unit="mm"
+            onChange={(v) => update('socketChamferHeight', v)}
+          />
+          <p className="text-xs text-slate-500">
+            Should match foot chamfer height. Standard: 4.75mm.
+          </p>
+        </div>
       </CollapsibleSection>
     </div>
   );
