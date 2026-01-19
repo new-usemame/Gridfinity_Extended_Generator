@@ -5,53 +5,73 @@
 
 import type { OpenSCADInstance } from 'openscad-wasm';
 
-// Lazy-loaded WASM instance
-let wasmInstance: OpenSCADInstance | null = null;
-let loadingPromise: Promise<OpenSCADInstance> | null = null;
+// Cache the createOpenSCAD function after first import
+let createOpenSCADFn: ((options?: Record<string, unknown>) => Promise<OpenSCADInstance>) | null = null;
+let importPromise: Promise<void> | null = null;
+
+// Track if WASM has been loaded at least once
+let wasmEverLoaded = false;
 
 /**
- * Get or create the OpenSCAD WASM instance (lazy loading)
+ * Ensure the openscad-wasm module is imported
  */
-async function getWasmInstance(): Promise<OpenSCADInstance> {
-  // Return existing instance if available
-  if (wasmInstance) {
-    return wasmInstance;
+async function ensureModuleLoaded(): Promise<void> {
+  if (createOpenSCADFn) return;
+  
+  if (importPromise) {
+    await importPromise;
+    return;
   }
 
-  // If already loading, wait for it
-  if (loadingPromise) {
-    return loadingPromise;
-  }
-
-  // Start loading
-  loadingPromise = (async () => {
-    try {
-      // Dynamic import of openscad-wasm
-      const { createOpenSCAD } = await import('openscad-wasm');
-      
-      // Initialize the module
-      const instance = await createOpenSCAD({
-        noInitialRun: true,
-        print: (text: string) => console.log('[OpenSCAD]', text),
-        printErr: (text: string) => console.warn('[OpenSCAD Error]', text),
-      });
-
-      wasmInstance = instance;
-      return instance;
-    } catch (error) {
-      loadingPromise = null;
-      throw error;
-    }
+  importPromise = (async () => {
+    const module = await import('openscad-wasm');
+    createOpenSCADFn = module.createOpenSCAD;
+    wasmEverLoaded = true;
   })();
 
-  return loadingPromise;
+  await importPromise;
 }
 
 /**
- * Check if OpenSCAD WASM is loaded
+ * Create a fresh OpenSCAD instance for rendering
+ * We create a new instance each time to avoid state issues with the WASM module
+ */
+async function createFreshInstance(): Promise<OpenSCADInstance> {
+  await ensureModuleLoaded();
+  
+  if (!createOpenSCADFn) {
+    throw new Error('Failed to load openscad-wasm module');
+  }
+
+  console.log('[OpenSCAD] Creating fresh WASM instance...');
+  
+  const instance = await createOpenSCADFn({
+    noInitialRun: true,
+    print: (text: string) => console.log('[OpenSCAD]', text),
+    printErr: (text: string) => console.warn('[OpenSCAD Error]', text),
+  });
+
+  return instance;
+}
+
+// Keep a reference for compatibility with existing code
+let wasmInstance: OpenSCADInstance | null = null;
+
+/**
+ * Get the cached WASM instance (for preloading check)
+ */
+async function getWasmInstance(): Promise<OpenSCADInstance> {
+  if (!wasmInstance) {
+    wasmInstance = await createFreshInstance();
+  }
+  return wasmInstance;
+}
+
+/**
+ * Check if OpenSCAD WASM module has been loaded at least once
  */
 export function isWasmLoaded(): boolean {
-  return wasmInstance !== null;
+  return wasmEverLoaded;
 }
 
 /**
@@ -62,66 +82,76 @@ export async function preloadWasm(): Promise<void> {
 }
 
 /**
- * Render SCAD code to STL using the low-level API for better error handling
+ * Render SCAD code to STL using the low-level API for maximum control
+ * Creates a fresh instance each time to avoid WASM state issues
  * @param scadContent - The OpenSCAD source code
  * @returns A Blob containing the STL file data
  */
 export async function renderScadToStl(scadContent: string): Promise<Blob> {
-  const wasmInstance = await getWasmInstance();
-  const openscad = wasmInstance.getInstance();
-
   console.log('[OpenSCAD] Starting render...');
   console.log('[OpenSCAD] SCAD content length:', scadContent.length);
 
+  // Create a fresh instance for this render
+  const instance = await createFreshInstance();
+  const openscad = instance.getInstance();
+
   // Write the SCAD code to a virtual file
   openscad.FS.writeFile('/input.scad', scadContent);
-  console.log('[OpenSCAD] Wrote input.scad');
+  console.log('[OpenSCAD] Wrote input.scad to virtual FS');
 
-  // Run OpenSCAD to generate the STL
-  // Note: callMain may throw with an exit code or other value in WASM
-  let exitCode: number;
+  let stlString: string | null = null;
+
+  // Run OpenSCAD - it may throw an exit status
   try {
-    exitCode = openscad.callMain(['/input.scad', '-o', '/output.stl']);
-    console.log('[OpenSCAD] callMain exit code:', exitCode);
-  } catch (callMainError) {
-    // WASM sometimes throws the exit code or other values
-    console.log('[OpenSCAD] callMain threw:', callMainError, typeof callMainError);
-    // If it threw but rendering might have succeeded, try to read the file anyway
-    exitCode = typeof callMainError === 'number' ? callMainError : -1;
+    const exitCode = openscad.callMain(['/input.scad', '-o', '/output.stl']);
+    console.log('[OpenSCAD] callMain returned:', exitCode);
+  } catch (exitError: unknown) {
+    // Emscripten throws when the program calls exit()
+    // This is expected behavior, not an error
+    console.log('[OpenSCAD] callMain threw (expected for exit):', typeof exitError, exitError);
   }
 
-  // Try to read the output file regardless of exit code
-  // (OpenSCAD sometimes returns non-zero but still produces valid output)
-  let stlString: string;
+  // Now try to read the output file
   try {
     stlString = openscad.FS.readFile('/output.stl', { encoding: 'utf8' }) as string;
     console.log('[OpenSCAD] Read output.stl, length:', stlString?.length || 0);
   } catch (readError) {
-    console.error('[OpenSCAD] Failed to read output.stl:', readError);
-    // Clean up input file before throwing
-    try { openscad.FS.unlink('/input.scad'); } catch { /* ignore */ }
-    throw new Error(`Failed to read generated STL file (exit code: ${exitCode})`);
+    console.error('[OpenSCAD] Failed to read /output.stl:', readError);
+    
+    // List files to debug (readdir may not be in type definitions)
+    try {
+      console.log('[OpenSCAD] Listing root directory...');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const files = (openscad.FS as any).readdir('/');
+      console.log('[OpenSCAD] Files in /:', files);
+    } catch (listError) {
+      console.error('[OpenSCAD] Could not list directory:', listError);
+    }
+    
+    throw new Error('OpenSCAD did not create output file. Check browser console for details.');
   }
 
-  // Clean up virtual files
+  // Clean up virtual files (best effort)
   try {
     openscad.FS.unlink('/input.scad');
     openscad.FS.unlink('/output.stl');
-  } catch (cleanupError) {
-    console.warn('[OpenSCAD] Cleanup warning:', cleanupError);
+  } catch {
+    // Ignore cleanup errors
   }
 
   if (!stlString || stlString.length === 0) {
     throw new Error('OpenSCAD returned empty STL output');
   }
 
-  // Validate STL format (should start with "solid")
-  const trimmedStart = stlString.trim().substring(0, 100).toLowerCase();
+  // Validate STL format
+  const trimmedStart = stlString.trim().substring(0, 50).toLowerCase();
+  console.log('[OpenSCAD] STL starts with:', trimmedStart);
+
   if (!trimmedStart.startsWith('solid')) {
-    console.warn('[OpenSCAD] Warning: STL may be in binary format, starts with:', trimmedStart.substring(0, 20));
+    console.warn('[OpenSCAD] Warning: Output may not be valid ASCII STL');
   }
 
-  console.log('[OpenSCAD] Render complete, STL length:', stlString.length);
+  console.log('[OpenSCAD] Render complete! STL size:', stlString.length, 'bytes');
 
   // Convert string to Blob
   return new Blob([stlString], { type: 'application/octet-stream' });
