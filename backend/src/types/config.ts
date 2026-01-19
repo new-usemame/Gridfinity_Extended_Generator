@@ -125,6 +125,9 @@ export interface BaseplateConfig {
   edgePattern: 'dovetail' | 'rectangular' | 'triangular' | 'puzzle' | 'tslot';
   toothDepth: number;           // How far teeth extend into adjacent segment (mm)
   toothWidth: number;           // Width of each tooth at base (mm)
+  
+  // Custom edge overrides (optional - overrides automatic male/female assignment)
+  edgeOverrides: SegmentEdgeOverride[];
 }
 
 // Default configurations
@@ -196,8 +199,12 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   connectorTolerance: 0.3,     // Standard FDM tolerance
   edgePattern: 'dovetail',     // Default to classic dovetail pattern
   toothDepth: 3,               // 3mm tooth depth
-  toothWidth: 6                // 6mm tooth width at base
+  toothWidth: 6,               // 6mm tooth width at base
+  edgeOverrides: []            // Empty - use automatic male/female assignment
 };
+
+// Edge type for interlocking
+export type EdgeType = 'none' | 'male' | 'female';
 
 // Segment info for split baseplates
 export interface SegmentInfo {
@@ -209,6 +216,16 @@ export interface SegmentInfo {
   hasConnectorRight: boolean;    // Connector on right edge
   hasConnectorFront: boolean;    // Connector on front edge
   hasConnectorBack: boolean;     // Connector on back edge
+}
+
+// Custom edge settings for a segment (overrides automatic male/female assignment)
+export interface SegmentEdgeOverride {
+  segmentX: number;
+  segmentY: number;
+  leftEdge: EdgeType;           // Left edge: none, male, or female
+  rightEdge: EdgeType;          // Right edge: none, male, or female
+  frontEdge: EdgeType;          // Front edge: none, male, or female
+  backEdge: EdgeType;           // Back edge: none, male, or female
 }
 
 // Split result containing all segments and connector info

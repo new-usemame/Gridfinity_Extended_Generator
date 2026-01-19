@@ -3,8 +3,8 @@ import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { BoxConfig, BaseplateConfig, calculateGridFromMm, splitBaseplateForPrinter, SegmentInfo, SplitResult } from '../types/config.js';
-export { SplitResult, SegmentInfo } from '../types/config.js';
+import { BoxConfig, BaseplateConfig, calculateGridFromMm, splitBaseplateForPrinter, SegmentInfo, SplitResult, EdgeType, SegmentEdgeOverride } from '../types/config.js';
+export { SplitResult, SegmentInfo, EdgeType, SegmentEdgeOverride } from '../types/config.js';
 
 const execAsync = promisify(exec);
 
@@ -104,11 +104,18 @@ export class OpenSCADService {
     const edgePattern = config.edgePattern;
     
     let segmentPlacements = '';
+    const edgeOverrides = config.edgeOverrides || [];
     
-    // Generate each segment placement
+    // Generate each segment placement with edge types
     for (let sy = 0; sy < splitInfo.segmentsY; sy++) {
       for (let sx = 0; sx < splitInfo.segmentsX; sx++) {
         const segment = splitInfo.segments[sy][sx];
+        
+        // Get edge types (with override support)
+        const leftEdge = this.getEdgeType(segment, 'left', edgeOverrides);
+        const rightEdge = this.getEdgeType(segment, 'right', edgeOverrides);
+        const frontEdge = this.getEdgeType(segment, 'front', edgeOverrides);
+        const backEdge = this.getEdgeType(segment, 'back', edgeOverrides);
         
         // Calculate position with gap
         let posX = 0;
@@ -124,7 +131,7 @@ export class OpenSCADService {
         segmentPlacements += `
     // Segment [${sx}, ${sy}]
     translate([${posX}, ${posY}, 0])
-    segment_base(${segment.gridUnitsX}, ${segment.gridUnitsY}, ${segment.hasConnectorLeft}, ${segment.hasConnectorRight}, ${segment.hasConnectorFront}, ${segment.hasConnectorBack});
+    segment_base(${segment.gridUnitsX}, ${segment.gridUnitsY}, "${leftEdge}", "${rightEdge}", "${frontEdge}", "${backEdge}");
 `;
       }
     }
@@ -162,7 +169,8 @@ ${edgePatternModules}
 ${segmentPlacements}
 
 // Parametric segment module with male/female interlocking edges
-module segment_base(width_units, depth_units, female_left, male_right, female_front, male_back) {
+// Edge types: "none", "male", "female"
+module segment_base(width_units, depth_units, left_edge, right_edge, front_edge, back_edge) {
     plate_width = width_units * grid_unit;
     plate_depth = depth_units * grid_unit;
     
@@ -171,28 +179,54 @@ module segment_base(width_units, depth_units, female_left, male_right, female_fr
             // Main plate body
             rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
             
-            // Male teeth on right edge
-            if (male_right) {
+            // Right edge teeth (male or female depending on type)
+            if (right_edge == "male") {
                 for (i = [1 : max(1, depth_units) - 1]) {
                     translate([plate_width, i * grid_unit, 0])
-                    rotate([0, 0, 90])
+                    rotate([0, 0, -90])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
                 if (depth_units == 1) {
                     translate([plate_width, 0.5 * grid_unit, 0])
-                    rotate([0, 0, 90])
+                    rotate([0, 0, -90])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
             }
             
-            // Male teeth on back edge
-            if (male_back) {
+            // Back edge teeth
+            if (back_edge == "male") {
                 for (i = [1 : max(1, width_units) - 1]) {
                     translate([i * grid_unit, plate_depth, 0])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
                 if (width_units == 1) {
                     translate([0.5 * grid_unit, plate_depth, 0])
+                    male_tooth_3d(edge_pattern, plate_height);
+                }
+            }
+            
+            // Left edge male teeth (if overridden to male)
+            if (left_edge == "male") {
+                for (i = [1 : max(1, depth_units) - 1]) {
+                    translate([0, i * grid_unit, 0])
+                    rotate([0, 0, -90])
+                    male_tooth_3d(edge_pattern, plate_height);
+                }
+                if (depth_units == 1) {
+                    translate([0, 0.5 * grid_unit, 0])
+                    rotate([0, 0, -90])
+                    male_tooth_3d(edge_pattern, plate_height);
+                }
+            }
+            
+            // Front edge male teeth (if overridden to male)
+            if (front_edge == "male") {
+                for (i = [1 : max(1, width_units) - 1]) {
+                    translate([i * grid_unit, 0, 0])
+                    male_tooth_3d(edge_pattern, plate_height);
+                }
+                if (width_units == 1) {
+                    translate([0.5 * grid_unit, 0, 0])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
             }
@@ -206,8 +240,8 @@ module segment_base(width_units, depth_units, female_left, male_right, female_fr
             }
         }
         
-        // Female cavities on left edge
-        if (female_left) {
+        // Left edge cavities
+        if (left_edge == "female") {
             for (i = [1 : max(1, depth_units) - 1]) {
                 translate([0, i * grid_unit, 0])
                 rotate([0, 0, -90])
@@ -220,16 +254,40 @@ module segment_base(width_units, depth_units, female_left, male_right, female_fr
             }
         }
         
-        // Female cavities on front edge
-        if (female_front) {
+        // Front edge cavities
+        if (front_edge == "female") {
             for (i = [1 : max(1, width_units) - 1]) {
                 translate([i * grid_unit, 0, 0])
-                rotate([0, 0, 180])
                 female_cavity_3d(edge_pattern, plate_height);
             }
             if (width_units == 1) {
                 translate([0.5 * grid_unit, 0, 0])
-                rotate([0, 0, 180])
+                female_cavity_3d(edge_pattern, plate_height);
+            }
+        }
+        
+        // Right edge cavities (if overridden to female)
+        if (right_edge == "female") {
+            for (i = [1 : max(1, depth_units) - 1]) {
+                translate([plate_width, i * grid_unit, 0])
+                rotate([0, 0, -90])
+                female_cavity_3d(edge_pattern, plate_height);
+            }
+            if (depth_units == 1) {
+                translate([plate_width, 0.5 * grid_unit, 0])
+                rotate([0, 0, -90])
+                female_cavity_3d(edge_pattern, plate_height);
+            }
+        }
+        
+        // Back edge cavities (if overridden to female)
+        if (back_edge == "female") {
+            for (i = [1 : max(1, width_units) - 1]) {
+                translate([i * grid_unit, plate_depth, 0])
+                female_cavity_3d(edge_pattern, plate_height);
+            }
+            if (width_units == 1) {
+                translate([0.5 * grid_unit, plate_depth, 0])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
@@ -516,8 +574,8 @@ module female_cavity_3d(pattern, height) {
     // Generate edge pattern modules
     const edgePatternModules = this.generateEdgePatternModules(config);
     
-    // Generate male/female edge code
-    const edgeCode = this.generateEdgeCode(segment, gridSize, plateHeight, edgePattern);
+    // Generate male/female edge code (with override support)
+    const edgeCode = this.generateEdgeCode(segment, gridSize, plateHeight, edgePattern, config.edgeOverrides || []);
     
     return `// Gridfinity Baseplate Segment [${segment.segmentX}, ${segment.segmentY}]
 // Part of a split baseplate system with interlocking male/female edges
@@ -727,8 +785,37 @@ module screw_holes() {
 `;
   }
 
+  // Get edge type for a segment (with override support)
+  private getEdgeType(
+    segment: SegmentInfo, 
+    edge: 'left' | 'right' | 'front' | 'back', 
+    edgeOverrides: SegmentEdgeOverride[]
+  ): EdgeType {
+    // Check for override
+    const override = edgeOverrides.find(o => o.segmentX === segment.segmentX && o.segmentY === segment.segmentY);
+    if (override) {
+      if (edge === 'left') return override.leftEdge;
+      if (edge === 'right') return override.rightEdge;
+      if (edge === 'front') return override.frontEdge;
+      if (edge === 'back') return override.backEdge;
+    }
+    
+    // Default automatic assignment
+    if (edge === 'right') return segment.hasConnectorRight ? 'male' : 'none';
+    if (edge === 'back') return segment.hasConnectorBack ? 'male' : 'none';
+    if (edge === 'left') return segment.hasConnectorLeft ? 'female' : 'none';
+    if (edge === 'front') return segment.hasConnectorFront ? 'female' : 'none';
+    return 'none';
+  }
+
   // Generate edge code for male teeth and female cavities
-  private generateEdgeCode(segment: SegmentInfo, gridSize: number, plateHeight: number, edgePattern: string): { maleTeeth: string; femaleCavities: string } {
+  private generateEdgeCode(
+    segment: SegmentInfo, 
+    gridSize: number, 
+    plateHeight: number, 
+    edgePattern: string,
+    edgeOverrides: SegmentEdgeOverride[] = []
+  ): { maleTeeth: string; femaleCavities: string } {
     const maleTeeth: string[] = [];
     const femaleCavities: string[] = [];
     
@@ -746,21 +833,36 @@ module screw_holes() {
       }
       return positions;
     };
+
+    // Get edge types (with override support)
+    const rightEdgeType = this.getEdgeType(segment, 'right', edgeOverrides);
+    const backEdgeType = this.getEdgeType(segment, 'back', edgeOverrides);
+    const leftEdgeType = this.getEdgeType(segment, 'left', edgeOverrides);
+    const frontEdgeType = this.getEdgeType(segment, 'front', edgeOverrides);
     
-    // RIGHT EDGE - Male teeth (protrude right toward neighbor)
-    if (segment.hasConnectorRight) {
+    // RIGHT EDGE
+    if (rightEdgeType === 'male') {
       const positions = getPositions(segment.gridUnitsY, true);
       for (const y of positions) {
         maleTeeth.push(`
             // Right edge male tooth at Y=${y}
             translate([plate_width, ${y}, 0])
-            rotate([0, 0, 90])
+            rotate([0, 0, -90])
             male_tooth_3d("${edgePattern}", plate_height);`);
+      }
+    } else if (rightEdgeType === 'female') {
+      const positions = getPositions(segment.gridUnitsY, true);
+      for (const y of positions) {
+        femaleCavities.push(`
+        // Right edge female cavity at Y=${y}
+        translate([plate_width, ${y}, 0])
+        rotate([0, 0, -90])
+        female_cavity_3d("${edgePattern}", plate_height);`);
       }
     }
     
-    // BACK EDGE - Male teeth (protrude backward toward neighbor)
-    if (segment.hasConnectorBack) {
+    // BACK EDGE
+    if (backEdgeType === 'male') {
       const positions = getPositions(segment.gridUnitsX, true);
       for (const x of positions) {
         maleTeeth.push(`
@@ -769,10 +871,19 @@ module screw_holes() {
             rotate([0, 0, 0])
             male_tooth_3d("${edgePattern}", plate_height);`);
       }
+    } else if (backEdgeType === 'female') {
+      const positions = getPositions(segment.gridUnitsX, true);
+      for (const x of positions) {
+        femaleCavities.push(`
+        // Back edge female cavity at X=${x}
+        translate([${x}, plate_depth, 0])
+        rotate([0, 0, 0])
+        female_cavity_3d("${edgePattern}", plate_height);`);
+      }
     }
     
-    // LEFT EDGE - Female cavities (receive neighbor's right edge male teeth)
-    if (segment.hasConnectorLeft) {
+    // LEFT EDGE
+    if (leftEdgeType === 'female') {
       const positions = getPositions(segment.gridUnitsY, true);
       for (const y of positions) {
         femaleCavities.push(`
@@ -781,17 +892,35 @@ module screw_holes() {
         rotate([0, 0, -90])
         female_cavity_3d("${edgePattern}", plate_height);`);
       }
+    } else if (leftEdgeType === 'male') {
+      const positions = getPositions(segment.gridUnitsY, true);
+      for (const y of positions) {
+        maleTeeth.push(`
+            // Left edge male tooth at Y=${y}
+            translate([0, ${y}, 0])
+            rotate([0, 0, -90])
+            male_tooth_3d("${edgePattern}", plate_height);`);
+      }
     }
     
-    // FRONT EDGE - Female cavities (receive neighbor's back edge male teeth)
-    if (segment.hasConnectorFront) {
+    // FRONT EDGE
+    if (frontEdgeType === 'female') {
       const positions = getPositions(segment.gridUnitsX, true);
       for (const x of positions) {
         femaleCavities.push(`
         // Front edge female cavity at X=${x}
         translate([${x}, 0, 0])
-        rotate([0, 0, 180])
+        rotate([0, 0, 0])
         female_cavity_3d("${edgePattern}", plate_height);`);
+      }
+    } else if (frontEdgeType === 'male') {
+      const positions = getPositions(segment.gridUnitsX, true);
+      for (const x of positions) {
+        maleTeeth.push(`
+            // Front edge male tooth at X=${x}
+            translate([${x}, 0, 0])
+            rotate([0, 0, 0])
+            male_tooth_3d("${edgePattern}", plate_height);`);
       }
     }
     

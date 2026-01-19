@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { BoxConfig, BaseplateConfig, calculateGridFromMm, splitBaseplateForPrinter } from '../../types/config';
+import { useState, useMemo, useCallback } from 'react';
+import { BoxConfig, BaseplateConfig, calculateGridFromMm, splitBaseplateForPrinter, SplitResult, EdgeType, SegmentEdgeOverride } from '../../types/config';
 import { SliderInput } from './SliderInput';
 import { ToggleInput } from './ToggleInput';
 import { SelectInput } from './SelectInput';
@@ -942,30 +942,41 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                       </p>
                       {config.connectorEnabled && (
                         <p className="text-emerald-400 mt-2">
-                          Connectors will join segments together
+                          Interlocking edges enabled - click edges below to customize
                         </p>
                       )}
                       
-                      {/* Visual grid preview */}
-                      <div className="mt-3 p-2 bg-slate-800 rounded">
-                        <p className="text-slate-500 text-[10px] mb-1">Segment Layout:</p>
-                        <div 
-                          className="grid gap-1" 
-                          style={{ 
-                            gridTemplateColumns: `repeat(${splitCalc.segmentsX}, 1fr)`,
-                            maxWidth: '150px'
-                          }}
-                        >
-                          {splitCalc.segments.flat().map((seg, i) => (
-                            <div 
-                              key={i}
-                              className="bg-cyan-600/30 border border-cyan-500/50 rounded text-[8px] text-center py-1 text-cyan-300"
-                            >
-                              {seg.gridUnitsX}x{seg.gridUnitsY}
-                            </div>
-                          ))}
+                      {/* Interactive segment edge editor */}
+                      {config.connectorEnabled && (
+                        <SegmentEdgeEditor 
+                          splitInfo={splitCalc}
+                          config={config}
+                          onChange={onChange}
+                        />
+                      )}
+                      
+                      {/* Simple grid preview when connectors disabled */}
+                      {!config.connectorEnabled && (
+                        <div className="mt-3 p-2 bg-slate-800 rounded">
+                          <p className="text-slate-500 text-[10px] mb-1">Segment Layout:</p>
+                          <div 
+                            className="grid gap-1" 
+                            style={{ 
+                              gridTemplateColumns: `repeat(${splitCalc.segmentsX}, 1fr)`,
+                              maxWidth: '150px'
+                            }}
+                          >
+                            {splitCalc.segments.flat().map((seg, i) => (
+                              <div 
+                                key={i}
+                                className="bg-cyan-600/30 border border-cyan-500/50 rounded text-[8px] text-center py-1 text-cyan-300"
+                              >
+                                {seg.gridUnitsX}x{seg.gridUnitsY}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </>
                   ) : (
                     <p className="text-emerald-400">
@@ -978,6 +989,182 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
           </>
         )}
       </CollapsibleSection>
+    </div>
+  );
+}
+
+// Interactive segment edge editor
+function SegmentEdgeEditor({ 
+  splitInfo, 
+  config, 
+  onChange 
+}: { 
+  splitInfo: SplitResult; 
+  config: BaseplateConfig; 
+  onChange: (config: BaseplateConfig) => void;
+}) {
+  // Get edge type for a specific segment and edge
+  const getEdgeType = useCallback((segX: number, segY: number, edge: 'left' | 'right' | 'front' | 'back'): EdgeType => {
+    // Check for override
+    const override = config.edgeOverrides.find(o => o.segmentX === segX && o.segmentY === segY);
+    if (override) {
+      if (edge === 'left') return override.leftEdge;
+      if (edge === 'right') return override.rightEdge;
+      if (edge === 'front') return override.frontEdge;
+      if (edge === 'back') return override.backEdge;
+    }
+    
+    // Default automatic assignment
+    const segment = splitInfo.segments[segY]?.[segX];
+    if (!segment) return 'none';
+    
+    // Default: right/back = male, left/front = female
+    if (edge === 'right') return segment.hasConnectorRight ? 'male' : 'none';
+    if (edge === 'back') return segment.hasConnectorBack ? 'male' : 'none';
+    if (edge === 'left') return segment.hasConnectorLeft ? 'female' : 'none';
+    if (edge === 'front') return segment.hasConnectorFront ? 'female' : 'none';
+    return 'none';
+  }, [config.edgeOverrides, splitInfo.segments]);
+
+  // Cycle edge type: none -> male -> female -> none
+  const cycleEdge = useCallback((segX: number, segY: number, edge: 'left' | 'right' | 'front' | 'back') => {
+    const current = getEdgeType(segX, segY, edge);
+    const next: EdgeType = current === 'none' ? 'male' : current === 'male' ? 'female' : 'none';
+    
+    // Find or create override for this segment
+    const existingOverride = config.edgeOverrides.find(o => o.segmentX === segX && o.segmentY === segY);
+    const segment = splitInfo.segments[segY]?.[segX];
+    
+    if (existingOverride) {
+      // Update existing override
+      const newOverrides = config.edgeOverrides.map(o => {
+        if (o.segmentX === segX && o.segmentY === segY) {
+          return { ...o, [`${edge}Edge`]: next };
+        }
+        return o;
+      });
+      onChange({ ...config, edgeOverrides: newOverrides });
+    } else if (segment) {
+      // Create new override with defaults + change
+      const newOverride: SegmentEdgeOverride = {
+        segmentX: segX,
+        segmentY: segY,
+        leftEdge: segment.hasConnectorLeft ? 'female' : 'none',
+        rightEdge: segment.hasConnectorRight ? 'male' : 'none',
+        frontEdge: segment.hasConnectorFront ? 'female' : 'none',
+        backEdge: segment.hasConnectorBack ? 'male' : 'none',
+        [`${edge}Edge`]: next
+      } as SegmentEdgeOverride;
+      onChange({ ...config, edgeOverrides: [...config.edgeOverrides, newOverride] });
+    }
+  }, [config, splitInfo.segments, getEdgeType, onChange]);
+
+  // Reset all overrides to defaults
+  const resetToDefaults = () => {
+    onChange({ ...config, edgeOverrides: [] });
+  };
+
+  // Edge indicator colors
+  const edgeColor = (type: EdgeType) => {
+    if (type === 'male') return 'bg-blue-500';
+    if (type === 'female') return 'bg-pink-500';
+    return 'bg-slate-600';
+  };
+
+  const edgeLabel = (type: EdgeType) => {
+    if (type === 'male') return 'M';
+    if (type === 'female') return 'F';
+    return '—';
+  };
+
+  return (
+    <div className="mt-3 p-3 bg-slate-800 rounded-lg">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-slate-400 text-[10px]">Click edges to change (M=male, F=female)</p>
+        {config.edgeOverrides.length > 0 && (
+          <button 
+            onClick={resetToDefaults}
+            className="text-[10px] text-amber-400 hover:text-amber-300"
+          >
+            Reset
+          </button>
+        )}
+      </div>
+      
+      {/* Legend */}
+      <div className="flex gap-3 mb-2 text-[9px]">
+        <span className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded bg-blue-500"></span>Male
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded bg-pink-500"></span>Female
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded bg-slate-600"></span>None
+        </span>
+      </div>
+      
+      {/* Segment grid with clickable edges */}
+      <div 
+        className="grid gap-2" 
+        style={{ 
+          gridTemplateColumns: `repeat(${splitInfo.segmentsX}, 1fr)`,
+          maxWidth: `${Math.min(splitInfo.segmentsX * 80, 300)}px`
+        }}
+      >
+        {splitInfo.segments.flat().map((seg) => (
+          <div 
+            key={`${seg.segmentX}-${seg.segmentY}`}
+            className="relative bg-slate-700/50 border border-slate-600 rounded p-2"
+            style={{ aspectRatio: '1' }}
+          >
+            {/* Segment label */}
+            <div className="absolute inset-0 flex items-center justify-center text-[9px] text-slate-400">
+              [{seg.segmentX},{seg.segmentY}]
+            </div>
+            
+            {/* Top edge (back) */}
+            <button
+              onClick={() => cycleEdge(seg.segmentX, seg.segmentY, 'back')}
+              className={`absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-3 rounded-sm text-[8px] text-white font-bold ${edgeColor(getEdgeType(seg.segmentX, seg.segmentY, 'back'))} hover:opacity-80 transition-opacity`}
+              title={`Back edge: ${getEdgeType(seg.segmentX, seg.segmentY, 'back')}`}
+            >
+              {edgeLabel(getEdgeType(seg.segmentX, seg.segmentY, 'back'))}
+            </button>
+            
+            {/* Bottom edge (front) */}
+            <button
+              onClick={() => cycleEdge(seg.segmentX, seg.segmentY, 'front')}
+              className={`absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-6 h-3 rounded-sm text-[8px] text-white font-bold ${edgeColor(getEdgeType(seg.segmentX, seg.segmentY, 'front'))} hover:opacity-80 transition-opacity`}
+              title={`Front edge: ${getEdgeType(seg.segmentX, seg.segmentY, 'front')}`}
+            >
+              {edgeLabel(getEdgeType(seg.segmentX, seg.segmentY, 'front'))}
+            </button>
+            
+            {/* Left edge */}
+            <button
+              onClick={() => cycleEdge(seg.segmentX, seg.segmentY, 'left')}
+              className={`absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-6 rounded-sm text-[8px] text-white font-bold ${edgeColor(getEdgeType(seg.segmentX, seg.segmentY, 'left'))} hover:opacity-80 transition-opacity flex items-center justify-center`}
+              title={`Left edge: ${getEdgeType(seg.segmentX, seg.segmentY, 'left')}`}
+            >
+              {edgeLabel(getEdgeType(seg.segmentX, seg.segmentY, 'left'))}
+            </button>
+            
+            {/* Right edge */}
+            <button
+              onClick={() => cycleEdge(seg.segmentX, seg.segmentY, 'right')}
+              className={`absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 w-3 h-6 rounded-sm text-[8px] text-white font-bold ${edgeColor(getEdgeType(seg.segmentX, seg.segmentY, 'right'))} hover:opacity-80 transition-opacity flex items-center justify-center`}
+              title={`Right edge: ${getEdgeType(seg.segmentX, seg.segmentY, 'right')}`}
+            >
+              {edgeLabel(getEdgeType(seg.segmentX, seg.segmentY, 'right'))}
+            </button>
+          </div>
+        ))}
+      </div>
+      
+      <p className="text-[9px] text-slate-500 mt-2">
+        Tip: Adjacent edges should be M+F pairs to interlock
+      </p>
     </div>
   );
 }
