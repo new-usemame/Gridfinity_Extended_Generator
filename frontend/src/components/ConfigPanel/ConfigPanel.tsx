@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { BoxConfig, BaseplateConfig, calculateGridFromMm, calculateSegmentation } from '../../types/config';
+import { BoxConfig, BaseplateConfig, calculateGridFromMm, calculateSplitting } from '../../types/config';
 import { SliderInput } from './SliderInput';
 import { ToggleInput } from './ToggleInput';
 import { SelectInput } from './SelectInput';
@@ -773,95 +773,103 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
         </div>
       </CollapsibleSection>
 
-      {/* Segmentation Section */}
-      <CollapsibleSection title="Segmentation" icon="🧩">
+      {/* Printer Bed Splitting Section */}
+      <CollapsibleSection title="Printer Bed Splitting" icon="✂️">
         <ToggleInput
-          label="Enable Segmentation"
-          value={config.enableSegmentation}
-          onChange={(v) => update('enableSegmentation', v)}
+          label="Enable Splitting"
+          value={config.enableSplitting}
+          onChange={(v) => update('enableSplitting', v)}
         />
         <p className="text-xs text-slate-500">
-          Split baseplate into smaller segments that fit on your 3D printer plate.
+          Split large baseplates into segments that fit on your printer bed. Segments connect with puzzle-piece connectors.
         </p>
         
-        {config.enableSegmentation && (
+        {config.enableSplitting && (
           <>
             <NumberInput
-              label="Printer Plate Width"
-              value={config.printerPlateWidth}
+              label="Printer Bed Width"
+              value={config.printerBedWidth}
               min={100}
               max={500}
               step={5}
               unit="mm"
-              onChange={(v) => update('printerPlateWidth', v)}
+              onChange={(v) => update('printerBedWidth', v)}
             />
             <NumberInput
-              label="Printer Plate Depth"
-              value={config.printerPlateDepth}
+              label="Printer Bed Depth"
+              value={config.printerBedDepth}
               min={100}
               max={500}
               step={5}
               unit="mm"
-              onChange={(v) => update('printerPlateDepth', v)}
+              onChange={(v) => update('printerBedDepth', v)}
+            />
+            <SliderInput
+              label="Connector Tolerance"
+              value={config.connectorTolerance}
+              min={0.1}
+              max={0.5}
+              step={0.05}
+              unit="mm"
+              onChange={(v) => update('connectorTolerance', v)}
             />
             <p className="text-xs text-slate-500">
-              Enter your 3D printer's build plate dimensions. Segments will be automatically calculated to fit.
+              Clearance between puzzle connectors. Lower = tighter fit. Default: 0.2mm.
             </p>
             
-            {/* Segmentation Preview */}
+            {/* Splitting Preview */}
             {(() => {
-              let totalWidthUnits: number;
-              let totalDepthUnits: number;
+              const widthUnits = config.sizingMode === 'fill_area_mm' 
+                ? Math.floor(calculateGridFromMm(config.targetWidthMm, config.targetDepthMm, config.gridSize, config.allowHalfCellsX, config.allowHalfCellsY, config.paddingAlignment).gridUnitsX)
+                : Math.floor(config.width);
+              const depthUnits = config.sizingMode === 'fill_area_mm'
+                ? Math.floor(calculateGridFromMm(config.targetWidthMm, config.targetDepthMm, config.gridSize, config.allowHalfCellsX, config.allowHalfCellsY, config.paddingAlignment).gridUnitsY)
+                : Math.floor(config.depth);
               
-              if (config.sizingMode === 'grid_units') {
-                totalWidthUnits = config.width;
-                totalDepthUnits = config.depth;
-              } else {
-                const gridCalc = calculateGridFromMm(
-                  config.targetWidthMm,
-                  config.targetDepthMm,
-                  config.gridSize,
-                  config.allowHalfCellsX,
-                  config.allowHalfCellsY,
-                  config.paddingAlignment
-                );
-                totalWidthUnits = gridCalc.gridUnitsX;
-                totalDepthUnits = gridCalc.gridUnitsY;
-              }
-              
-              const segResult = calculateSegmentation(
-                totalWidthUnits,
-                totalDepthUnits,
+              const splitting = calculateSplitting(
+                widthUnits,
+                depthUnits,
                 config.gridSize,
-                config.printerPlateWidth,
-                config.printerPlateDepth
+                config.printerBedWidth,
+                config.printerBedDepth
               );
               
-              return (
-                <div className="mt-3 p-3 bg-slate-700/50 rounded-lg border border-slate-600">
-                  <h4 className="text-xs font-semibold text-emerald-400 mb-2">SEGMENTATION PREVIEW</h4>
-                  <div className="space-y-1 text-xs">
-                    <p className="text-slate-300">
-                      <span className="text-slate-500">Segments:</span>{' '}
-                      <span className="font-mono text-emerald-300">
-                        {segResult.segmentsX} x {segResult.segmentsY} = {segResult.totalSegments} total
-                      </span>
-                    </p>
-                    <p className="text-slate-300">
-                      <span className="text-slate-500">Max per segment:</span>{' '}
-                      <span className="font-mono">
-                        {Math.floor((config.printerPlateWidth - 10) / config.gridSize)} x {Math.floor((config.printerPlateDepth - 10) / config.gridSize)} units
-                      </span>
-                    </p>
-                    <p className="text-slate-300 text-xs mt-2">
-                      <span className="text-slate-500">Connectors:</span>{' '}
-                      <span className="text-amber-300">
-                        Puzzle piece connectors will be added at borders and corners
-                      </span>
+              if (splitting.needsSplitting) {
+                return (
+                  <div className="mt-3 p-3 bg-slate-700/50 rounded-lg border border-slate-600">
+                    <h4 className="text-xs font-semibold text-emerald-400 mb-2">SPLITTING PREVIEW</h4>
+                    <div className="space-y-1 text-xs">
+                      <p className="text-slate-300">
+                        <span className="text-slate-500">Segments:</span>{' '}
+                        <span className="font-mono text-emerald-300">
+                          {splitting.segmentsX} × {splitting.segmentsY}
+                        </span>{' '}
+                        ({splitting.segments.length} total)
+                      </p>
+                      <p className="text-slate-300">
+                        <span className="text-slate-500">Largest segment:</span>{' '}
+                        <span className="font-mono">
+                          {Math.max(...splitting.segments.map(s => s.widthMm)).toFixed(0)}mm × {Math.max(...splitting.segments.map(s => s.depthMm)).toFixed(0)}mm
+                        </span>
+                      </p>
+                      <p className="text-slate-300">
+                        <span className="text-slate-500">Connectors:</span>{' '}
+                        <span className="text-emerald-300">
+                          Puzzle-piece style (male/female tabs)
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                    <p className="text-xs text-blue-400">
+                      ✓ Baseplate fits on printer bed. No splitting needed.
                     </p>
                   </div>
-                </div>
-              );
+                );
+              }
             })()}
           </>
         )}

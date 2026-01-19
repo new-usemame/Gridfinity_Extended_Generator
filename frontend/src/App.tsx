@@ -37,6 +37,7 @@ function App() {
   }, [boxConfig]);
   const [boxResult, setBoxResult] = useState<GenerationResult | null>(null);
   const [baseplateResult, setBaseplateResult] = useState<GenerationResult | null>(null);
+  const [baseplateSegments, setBaseplateSegments] = useState<Array<GenerationResult & { segmentIndex: number }> | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeEditor, setActiveEditor] = useState<'box' | 'baseplate'>('box');
@@ -67,9 +68,17 @@ function App() {
         }
 
         const boxResult: GenerationResult = await boxResponse.json();
-        const baseplateResult: GenerationResult = await baseplateResponse.json();
+        const baseplateResponseData = await baseplateResponse.json();
         setBoxResult(boxResult);
-        setBaseplateResult(baseplateResult);
+        
+        // Handle both single baseplate and multiple segments
+        if (baseplateResponseData.type === 'segments') {
+          setBaseplateResult(null);
+          setBaseplateSegments(baseplateResponseData.segments);
+        } else {
+          setBaseplateSegments(null);
+          setBaseplateResult(baseplateResponseData);
+        }
       } else {
         // Generate single item
         const config = generatorType === 'box' ? boxConfig : baseplateConfig;
@@ -84,11 +93,18 @@ function App() {
           throw new Error(errorData.message || 'Failed to generate STL');
         }
 
-        const result: GenerationResult = await response.json();
+        const result = await response.json();
         if (generatorType === 'box') {
           setBoxResult(result);
         } else {
-          setBaseplateResult(result);
+          // Handle both single baseplate and multiple segments
+          if (result.type === 'segments') {
+            setBaseplateResult(null);
+            setBaseplateSegments(result.segments);
+          } else {
+            setBaseplateSegments(null);
+            setBaseplateResult(result);
+          }
         }
       }
     } catch (err) {
@@ -261,11 +277,7 @@ function App() {
             {generatorType === 'combined' ? (
               <PreviewCanvas
                 boxStlUrl={boxResult?.stlUrl || null}
-                baseplateStlUrl={
-                  baseplateResult && 'isSegmented' in baseplateResult && baseplateResult.isSegmented
-                    ? baseplateResult.segments[0]?.stlUrl || null
-                    : baseplateResult?.stlUrl || null
-                }
+                baseplateStlUrl={baseplateResult?.stlUrl || null}
                 isLoading={isGenerating}
                 isCombinedView={true}
                 boxConfig={boxConfig}
@@ -273,11 +285,7 @@ function App() {
               />
             ) : (
               <PreviewCanvas
-                stlUrl={
-                  generatorType === 'baseplate' && isSegmentedResult(baseplateResult)
-                    ? baseplateResult.segments[0]?.stlUrl || null
-                    : (generatorType === 'box' ? boxResult : baseplateResult)?.stlUrl || null
-                }
+                stlUrl={(generatorType === 'box' ? boxResult : baseplateResult)?.stlUrl || null}
                 isLoading={isGenerating}
                 isCombinedView={false}
               />
@@ -286,7 +294,7 @@ function App() {
 
           {/* Export Buttons */}
           {generatorType === 'combined' ? (
-            <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4 flex gap-2">
+            <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4 flex flex-col gap-4">
               {boxResult && (
                 <ExportButtons
                   stlUrl={boxResult.stlUrl}
@@ -301,17 +309,55 @@ function App() {
                   filename={baseplateResult.filename}
                 />
               )}
+              {baseplateSegments && (
+                <div className="space-y-2">
+                  <p className="text-sm text-slate-400 mb-2">
+                    Baseplate split into {baseplateSegments.length} segments:
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {baseplateSegments.map((segment) => (
+                      <ExportButtons
+                        key={segment.segmentIndex}
+                        stlUrl={segment.stlUrl}
+                        scadContent={segment.scadContent}
+                        filename={segment.filename}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
-            (generatorType === 'box' ? boxResult : baseplateResult) && (
-              <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4">
-                <ExportButtons
-                  stlUrl={(generatorType === 'box' ? boxResult : baseplateResult)!.stlUrl}
-                  scadContent={(generatorType === 'box' ? boxResult : baseplateResult)!.scadContent}
-                  filename={(generatorType === 'box' ? boxResult : baseplateResult)!.filename}
-                />
-              </div>
-            )
+            <>
+              {(generatorType === 'box' ? boxResult : baseplateResult) && (
+                <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4">
+                  <ExportButtons
+                    stlUrl={(generatorType === 'box' ? boxResult : baseplateResult)!.stlUrl}
+                    scadContent={(generatorType === 'box' ? boxResult : baseplateResult)!.scadContent}
+                    filename={(generatorType === 'box' ? boxResult : baseplateResult)!.filename}
+                  />
+                </div>
+              )}
+              {generatorType === 'baseplate' && baseplateSegments && (
+                <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4">
+                  <div className="space-y-2">
+                    <p className="text-sm text-slate-400 mb-2">
+                      Baseplate split into {baseplateSegments.length} segments with puzzle-piece connectors:
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {baseplateSegments.map((segment) => (
+                        <ExportButtons
+                          key={segment.segmentIndex}
+                          stlUrl={segment.stlUrl}
+                          scadContent={segment.scadContent}
+                          filename={segment.filename}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>
