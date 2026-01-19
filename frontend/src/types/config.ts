@@ -113,6 +113,13 @@ export interface BaseplateConfig {
   socketChamferAngle: number;   // Angle in degrees (should match footChamferAngle)
   socketChamferHeight: number;  // Total height of socket in mm (should match footChamferHeight)
   syncSocketWithFoot: boolean;  // Auto-sync socket dimensions with foot dimensions
+  
+  // Printer bed splitting - split large baseplates into printable segments
+  splitEnabled: boolean;
+  printerBedWidth: number;      // Printer bed width in mm
+  printerBedDepth: number;      // Printer bed depth in mm
+  connectorEnabled: boolean;    // Add puzzle-piece connectors between segments
+  connectorTolerance: number;   // Clearance for connector fit (default 0.3mm for FDM)
 }
 
 // Default configurations
@@ -176,7 +183,12 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   gridSize: 42,
   socketChamferAngle: 45,      // Should match footChamferAngle for proper fit
   socketChamferHeight: 4.75,   // Should match footChamferHeight for proper fit
-  syncSocketWithFoot: true     // Auto-sync with foot by default
+  syncSocketWithFoot: true,    // Auto-sync with foot by default
+  splitEnabled: false,
+  printerBedWidth: 220,        // Common printer bed size (Ender 3, Prusa, etc.)
+  printerBedDepth: 220,
+  connectorEnabled: true,      // Enable connectors by default when splitting
+  connectorTolerance: 0.3      // Standard FDM tolerance
 };
 
 // Generation result type
@@ -184,6 +196,42 @@ export interface GenerationResult {
   stlUrl: string;
   scadContent: string;
   filename: string;
+}
+
+// Segment info for split baseplates
+export interface SegmentInfo {
+  segmentX: number;              // Segment position in X (0-indexed)
+  segmentY: number;              // Segment position in Y (0-indexed)
+  gridUnitsX: number;            // Number of grid units in this segment (X)
+  gridUnitsY: number;            // Number of grid units in this segment (Y)
+  hasConnectorLeft: boolean;     // Connector on left edge
+  hasConnectorRight: boolean;    // Connector on right edge
+  hasConnectorFront: boolean;    // Connector on front edge
+  hasConnectorBack: boolean;     // Connector on back edge
+}
+
+// Split result containing all segments and connector info
+export interface SplitResult {
+  segments: SegmentInfo[][];     // 2D array of segments [y][x]
+  segmentsX: number;             // Number of segments in X direction
+  segmentsY: number;             // Number of segments in Y direction
+  totalSegments: number;         // Total number of segments
+  maxSegmentUnitsX: number;      // Max grid units per segment in X
+  maxSegmentUnitsY: number;      // Max grid units per segment in Y
+  needsSplit: boolean;           // Whether splitting is needed
+}
+
+// Segment generation result (extends GenerationResult with position info)
+export interface SegmentGenerationResult extends GenerationResult {
+  segmentX: number;
+  segmentY: number;
+}
+
+// Multi-segment generation result
+export interface MultiSegmentResult {
+  segments: SegmentGenerationResult[];
+  connector: GenerationResult | null;
+  splitInfo: SplitResult;
 }
 
 // Grid calculation result for fill_area_mm mode
@@ -209,6 +257,75 @@ export interface GridCalculation {
   paddingFarX: number;   // right
   paddingNearY: number;  // front
   paddingFarY: number;   // back
+}
+
+/**
+ * Calculate how to split a baseplate into printable segments based on printer bed size.
+ * Splits only at grid cell boundaries to maintain compatibility.
+ */
+export function splitBaseplateForPrinter(
+  totalGridUnitsX: number,
+  totalGridUnitsY: number,
+  printerBedWidth: number,
+  printerBedDepth: number,
+  gridSize: number,
+  connectorEnabled: boolean
+): SplitResult {
+  // Calculate max grid units that fit on the printer bed
+  const maxSegmentUnitsX = Math.floor(printerBedWidth / gridSize);
+  const maxSegmentUnitsY = Math.floor(printerBedDepth / gridSize);
+  
+  // Calculate number of segments needed
+  const segmentsX = Math.ceil(totalGridUnitsX / maxSegmentUnitsX);
+  const segmentsY = Math.ceil(totalGridUnitsY / maxSegmentUnitsY);
+  
+  // Check if splitting is needed
+  const needsSplit = segmentsX > 1 || segmentsY > 1;
+  
+  // Generate segment info
+  const segments: SegmentInfo[][] = [];
+  
+  for (let sy = 0; sy < segmentsY; sy++) {
+    const row: SegmentInfo[] = [];
+    for (let sx = 0; sx < segmentsX; sx++) {
+      // Calculate grid units for this segment
+      const startX = sx * maxSegmentUnitsX;
+      const startY = sy * maxSegmentUnitsY;
+      const endX = Math.min(startX + maxSegmentUnitsX, totalGridUnitsX);
+      const endY = Math.min(startY + maxSegmentUnitsY, totalGridUnitsY);
+      
+      const gridUnitsX = endX - startX;
+      const gridUnitsY = endY - startY;
+      
+      // Determine connector positions (only on internal edges between segments)
+      const hasConnectorLeft = connectorEnabled && sx > 0;
+      const hasConnectorRight = connectorEnabled && sx < segmentsX - 1;
+      const hasConnectorFront = connectorEnabled && sy > 0;
+      const hasConnectorBack = connectorEnabled && sy < segmentsY - 1;
+      
+      row.push({
+        segmentX: sx,
+        segmentY: sy,
+        gridUnitsX,
+        gridUnitsY,
+        hasConnectorLeft,
+        hasConnectorRight,
+        hasConnectorFront,
+        hasConnectorBack
+      });
+    }
+    segments.push(row);
+  }
+  
+  return {
+    segments,
+    segmentsX,
+    segmentsY,
+    totalSegments: segmentsX * segmentsY,
+    maxSegmentUnitsX,
+    maxSegmentUnitsY,
+    needsSplit
+  };
 }
 
 /**

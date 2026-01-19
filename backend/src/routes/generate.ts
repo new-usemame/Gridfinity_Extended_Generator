@@ -19,7 +19,14 @@ router.post('/', async (req: Request, res: Response) => {
     if (type === 'box') {
       result = await openscadService.generateBox(config as BoxConfig);
     } else if (type === 'baseplate') {
-      result = await openscadService.generateBaseplate(config as BaseplateConfig);
+      const baseplateConfig = config as BaseplateConfig;
+      // Check if splitting is enabled and needed
+      if (baseplateConfig.splitEnabled) {
+        // Use segment generation for split baseplates
+        result = await openscadService.generateBaseplateSegments(baseplateConfig);
+      } else {
+        result = await openscadService.generateBaseplate(baseplateConfig);
+      }
     } else {
       return res.status(400).json({ error: 'Invalid type. Must be "box" or "baseplate"' });
     }
@@ -29,6 +36,26 @@ router.post('/', async (req: Request, res: Response) => {
     console.error('Generation error:', error);
     res.status(500).json({ 
       error: 'Failed to generate STL',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Generate multi-segment baseplate with connectors
+router.post('/segments', async (req: Request, res: Response) => {
+  try {
+    const { config } = req.body;
+
+    if (!config) {
+      return res.status(400).json({ error: 'Missing config in request body' });
+    }
+
+    const result = await openscadService.generateBaseplateSegments(config as BaseplateConfig);
+    res.json(result);
+  } catch (error) {
+    console.error('Segment generation error:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate segments',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }

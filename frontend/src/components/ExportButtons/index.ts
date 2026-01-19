@@ -1,1 +1,1 @@
-export { ExportButtons } from './ExportButtons';
+export { ExportButtons, MultiSegmentExportButtons } from './ExportButtons';

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { BoxConfig, BaseplateConfig, calculateGridFromMm } from '../../types/config';
+import { BoxConfig, BaseplateConfig, calculateGridFromMm, splitBaseplateForPrinter } from '../../types/config';
 import { SliderInput } from './SliderInput';
 import { ToggleInput } from './ToggleInput';
 import { SelectInput } from './SelectInput';
@@ -447,6 +447,34 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
   }, [config.sizingMode, config.targetWidthMm, config.targetDepthMm, config.gridSize, 
       config.allowHalfCellsX, config.allowHalfCellsY, config.paddingAlignment]);
 
+  // Calculate split preview
+  const splitCalc = useMemo(() => {
+    if (!config.splitEnabled) return null;
+    
+    // Get total grid units based on sizing mode
+    let totalUnitsX: number;
+    let totalUnitsY: number;
+    
+    if (config.sizingMode === 'fill_area_mm' && gridCalc) {
+      totalUnitsX = Math.floor(gridCalc.gridUnitsX);
+      totalUnitsY = Math.floor(gridCalc.gridUnitsY);
+    } else {
+      totalUnitsX = Math.floor(config.width);
+      totalUnitsY = Math.floor(config.depth);
+    }
+    
+    return splitBaseplateForPrinter(
+      totalUnitsX,
+      totalUnitsY,
+      config.printerBedWidth,
+      config.printerBedDepth,
+      config.gridSize,
+      config.connectorEnabled
+    );
+  }, [config.splitEnabled, config.sizingMode, config.width, config.depth, 
+      config.printerBedWidth, config.printerBedDepth, config.gridSize, 
+      config.connectorEnabled, gridCalc]);
+
   return (
     <div className="p-4 space-y-3">
       {/* Sizing Mode Section */}
@@ -771,6 +799,136 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
             Should match foot chamfer height. Standard: 4.75mm.
           </p>
         </div>
+      </CollapsibleSection>
+
+      {/* Printer Bed Splitting Section */}
+      <CollapsibleSection title="Printer Bed Splitting" icon="✂️">
+        <ToggleInput
+          label="Enable Splitting"
+          value={config.splitEnabled}
+          onChange={(v) => update('splitEnabled', v)}
+        />
+        <p className="text-xs text-slate-500">
+          Split large baseplates into smaller segments that fit on your 3D printer bed.
+        </p>
+
+        {config.splitEnabled && (
+          <>
+            <div className="mt-3 pt-3 border-t border-slate-700">
+              <h4 className="text-xs font-semibold text-slate-400 mb-2">PRINTER BED SIZE</h4>
+              <NumberInput
+                label="Bed Width"
+                value={config.printerBedWidth}
+                min={100}
+                max={500}
+                step={5}
+                unit="mm"
+                onChange={(v) => update('printerBedWidth', v)}
+              />
+              <NumberInput
+                label="Bed Depth"
+                value={config.printerBedDepth}
+                min={100}
+                max={500}
+                step={5}
+                unit="mm"
+                onChange={(v) => update('printerBedDepth', v)}
+              />
+              <p className="text-xs text-slate-500">
+                Common sizes: Ender 3 (220x220), Prusa MK3 (250x210), Bambu X1 (256x256)
+              </p>
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-slate-700">
+              <h4 className="text-xs font-semibold text-slate-400 mb-2">CONNECTORS</h4>
+              <ToggleInput
+                label="Enable Puzzle Connectors"
+                value={config.connectorEnabled}
+                onChange={(v) => update('connectorEnabled', v)}
+              />
+              <p className="text-xs text-slate-500">
+                Add dovetail connectors between segments for secure, flush joining.
+              </p>
+              
+              {config.connectorEnabled && (
+                <SliderInput
+                  label="Connector Tolerance"
+                  value={config.connectorTolerance}
+                  min={0.1}
+                  max={0.6}
+                  step={0.05}
+                  unit="mm"
+                  onChange={(v) => update('connectorTolerance', v)}
+                />
+              )}
+              <p className="text-xs text-slate-500">
+                Typical FDM tolerance: 0.3mm. Increase if connectors are too tight.
+              </p>
+            </div>
+
+            {/* Split Calculation Preview */}
+            {splitCalc && (
+              <div className="mt-3 p-3 bg-slate-700/50 rounded-lg border border-slate-600">
+                <h4 className="text-xs font-semibold text-cyan-400 mb-2">SPLIT PREVIEW</h4>
+                <div className="space-y-1 text-xs">
+                  {splitCalc.needsSplit ? (
+                    <>
+                      <p className="text-slate-300">
+                        <span className="text-slate-500">Segments:</span>{' '}
+                        <span className="font-mono text-cyan-300">
+                          {splitCalc.segmentsX} x {splitCalc.segmentsY}
+                        </span>{' '}
+                        ({splitCalc.totalSegments} pieces)
+                      </p>
+                      <p className="text-slate-300">
+                        <span className="text-slate-500">Max segment size:</span>{' '}
+                        <span className="font-mono">
+                          {splitCalc.maxSegmentUnitsX} x {splitCalc.maxSegmentUnitsY} units
+                        </span>
+                      </p>
+                      <p className="text-slate-300">
+                        <span className="text-slate-500">Segment dimensions:</span>{' '}
+                        <span className="font-mono">
+                          {(splitCalc.maxSegmentUnitsX * config.gridSize).toFixed(0)}mm x {(splitCalc.maxSegmentUnitsY * config.gridSize).toFixed(0)}mm
+                        </span>
+                      </p>
+                      {config.connectorEnabled && (
+                        <p className="text-emerald-400 mt-2">
+                          Connectors will join segments together
+                        </p>
+                      )}
+                      
+                      {/* Visual grid preview */}
+                      <div className="mt-3 p-2 bg-slate-800 rounded">
+                        <p className="text-slate-500 text-[10px] mb-1">Segment Layout:</p>
+                        <div 
+                          className="grid gap-1" 
+                          style={{ 
+                            gridTemplateColumns: `repeat(${splitCalc.segmentsX}, 1fr)`,
+                            maxWidth: '150px'
+                          }}
+                        >
+                          {splitCalc.segments.flat().map((seg, i) => (
+                            <div 
+                              key={i}
+                              className="bg-cyan-600/30 border border-cyan-500/50 rounded text-[8px] text-center py-1 text-cyan-300"
+                            >
+                              {seg.gridUnitsX}x{seg.gridUnitsY}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-emerald-400">
+                      No splitting needed - baseplate fits on printer bed!
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </CollapsibleSection>
     </div>
   );

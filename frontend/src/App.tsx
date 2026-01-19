@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { ConfigPanel } from './components/ConfigPanel/ConfigPanel';
 import { PreviewCanvas } from './components/PreviewCanvas/PreviewCanvas';
-import { ExportButtons } from './components/ExportButtons/ExportButtons';
-import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, GenerationResult } from './types/config';
+import { ExportButtons, MultiSegmentExportButtons } from './components/ExportButtons/ExportButtons';
+import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, GenerationResult, MultiSegmentResult } from './types/config';
 
 type GeneratorType = 'box' | 'baseplate' | 'combined';
 
@@ -37,6 +37,7 @@ function App() {
   }, [boxConfig]);
   const [boxResult, setBoxResult] = useState<GenerationResult | null>(null);
   const [baseplateResult, setBaseplateResult] = useState<GenerationResult | null>(null);
+  const [multiSegmentResult, setMultiSegmentResult] = useState<MultiSegmentResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeEditor, setActiveEditor] = useState<'box' | 'baseplate'>('box');
@@ -44,6 +45,7 @@ function App() {
   const handleGenerate = useCallback(async () => {
     setIsGenerating(true);
     setError(null);
+    setMultiSegmentResult(null);
 
     try {
       if (generatorType === 'combined') {
@@ -67,9 +69,21 @@ function App() {
         }
 
         const boxResult: GenerationResult = await boxResponse.json();
-        const baseplateResult: GenerationResult = await baseplateResponse.json();
+        const baseplateResultData = await baseplateResponse.json();
+        
         setBoxResult(boxResult);
-        setBaseplateResult(baseplateResult);
+        
+        // Check if baseplate result is multi-segment or single
+        if (baseplateResultData.segments) {
+          // Multi-segment result
+          setMultiSegmentResult(baseplateResultData as MultiSegmentResult);
+          // Use first segment for preview
+          if (baseplateResultData.segments.length > 0) {
+            setBaseplateResult(baseplateResultData.segments[0]);
+          }
+        } else {
+          setBaseplateResult(baseplateResultData as GenerationResult);
+        }
       } else {
         // Generate single item
         const config = generatorType === 'box' ? boxConfig : baseplateConfig;
@@ -84,11 +98,22 @@ function App() {
           throw new Error(errorData.message || 'Failed to generate STL');
         }
 
-        const result: GenerationResult = await response.json();
+        const resultData = await response.json();
+        
         if (generatorType === 'box') {
-          setBoxResult(result);
+          setBoxResult(resultData as GenerationResult);
         } else {
-          setBaseplateResult(result);
+          // Check if baseplate result is multi-segment or single
+          if (resultData.segments) {
+            // Multi-segment result
+            setMultiSegmentResult(resultData as MultiSegmentResult);
+            // Use first segment for preview
+            if (resultData.segments.length > 0) {
+              setBaseplateResult(resultData.segments[0]);
+            }
+          } else {
+            setBaseplateResult(resultData as GenerationResult);
+          }
         }
       }
     } catch (err) {
@@ -278,31 +303,64 @@ function App() {
 
           {/* Export Buttons */}
           {generatorType === 'combined' ? (
-            <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4 flex gap-2">
+            <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4 space-y-4">
               {boxResult && (
-                <ExportButtons
-                  stlUrl={boxResult.stlUrl}
-                  scadContent={boxResult.scadContent}
-                  filename={boxResult.filename}
-                />
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-400 mb-2">BOX</h4>
+                  <ExportButtons
+                    stlUrl={boxResult.stlUrl}
+                    scadContent={boxResult.scadContent}
+                    filename={boxResult.filename}
+                  />
+                </div>
               )}
-              {baseplateResult && (
-                <ExportButtons
-                  stlUrl={baseplateResult.stlUrl}
-                  scadContent={baseplateResult.scadContent}
-                  filename={baseplateResult.filename}
-                />
+              {multiSegmentResult ? (
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-400 mb-2">BASEPLATE (SPLIT)</h4>
+                  <MultiSegmentExportButtons
+                    result={multiSegmentResult}
+                    splitInfo={multiSegmentResult.splitInfo}
+                  />
+                </div>
+              ) : baseplateResult && (
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-400 mb-2">BASEPLATE</h4>
+                  <ExportButtons
+                    stlUrl={baseplateResult.stlUrl}
+                    scadContent={baseplateResult.scadContent}
+                    filename={baseplateResult.filename}
+                  />
+                </div>
               )}
             </div>
           ) : (
-            (generatorType === 'box' ? boxResult : baseplateResult) && (
-              <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4">
-                <ExportButtons
-                  stlUrl={(generatorType === 'box' ? boxResult : baseplateResult)!.stlUrl}
-                  scadContent={(generatorType === 'box' ? boxResult : baseplateResult)!.scadContent}
-                  filename={(generatorType === 'box' ? boxResult : baseplateResult)!.filename}
-                />
-              </div>
+            generatorType === 'box' ? (
+              boxResult && (
+                <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4">
+                  <ExportButtons
+                    stlUrl={boxResult.stlUrl}
+                    scadContent={boxResult.scadContent}
+                    filename={boxResult.filename}
+                  />
+                </div>
+              )
+            ) : (
+              multiSegmentResult ? (
+                <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4">
+                  <MultiSegmentExportButtons
+                    result={multiSegmentResult}
+                    splitInfo={multiSegmentResult.splitInfo}
+                  />
+                </div>
+              ) : baseplateResult && (
+                <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4">
+                  <ExportButtons
+                    stlUrl={baseplateResult.stlUrl}
+                    scadContent={baseplateResult.scadContent}
+                    filename={baseplateResult.filename}
+                  />
+                </div>
+              )
             )
           )}
         </main>

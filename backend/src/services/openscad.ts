@@ -3,9 +3,16 @@ import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { BoxConfig, BaseplateConfig, calculateGridFromMm } from '../types/config.js';
+import { BoxConfig, BaseplateConfig, calculateGridFromMm, splitBaseplateForPrinter, SegmentInfo, SplitResult } from '../types/config.js';
 
 const execAsync = promisify(exec);
+
+// Result type for multi-segment generation
+export interface MultiSegmentResult {
+  segments: Array<{ stlUrl: string; scadContent: string; filename: string; segmentX: number; segmentY: number }>;
+  connector: { stlUrl: string; scadContent: string; filename: string } | null;
+  splitInfo: SplitResult;
+}
 
 export class OpenSCADService {
   private outputPath: string;
@@ -29,6 +36,407 @@ export class OpenSCADService {
   async generateBaseplate(config: BaseplateConfig): Promise<{ stlUrl: string; scadContent: string; filename: string }> {
     const scadContent = this.generateBaseplateScad(config);
     return this.renderScad(scadContent, 'baseplate');
+  }
+
+  // Generate multi-segment baseplate with connectors
+  async generateBaseplateSegments(config: BaseplateConfig): Promise<MultiSegmentResult> {
+    // Calculate total grid units based on sizing mode
+    let totalGridUnitsX: number;
+    let totalGridUnitsY: number;
+    
+    if (config.sizingMode === 'fill_area_mm') {
+      const calc = calculateGridFromMm(
+        config.targetWidthMm,
+        config.targetDepthMm,
+        config.gridSize,
+        config.allowHalfCellsX,
+        config.allowHalfCellsY,
+        config.paddingAlignment
+      );
+      totalGridUnitsX = Math.floor(calc.gridUnitsX); // Only use full cells for splitting
+      totalGridUnitsY = Math.floor(calc.gridUnitsY);
+    } else {
+      totalGridUnitsX = Math.floor(config.width);
+      totalGridUnitsY = Math.floor(config.depth);
+    }
+
+    // Calculate split
+    const splitInfo = splitBaseplateForPrinter(
+      totalGridUnitsX,
+      totalGridUnitsY,
+      config.printerBedWidth,
+      config.printerBedDepth,
+      config.gridSize,
+      config.connectorEnabled
+    );
+
+    // Generate each segment
+    const segments: Array<{ stlUrl: string; scadContent: string; filename: string; segmentX: number; segmentY: number }> = [];
+    
+    for (let sy = 0; sy < splitInfo.segmentsY; sy++) {
+      for (let sx = 0; sx < splitInfo.segmentsX; sx++) {
+        const segmentInfo = splitInfo.segments[sy][sx];
+        const scadContent = this.generateSegmentScad(config, segmentInfo);
+        const result = await this.renderScad(scadContent, `baseplate_${sx}_${sy}`);
+        segments.push({
+          ...result,
+          segmentX: sx,
+          segmentY: sy
+        });
+      }
+    }
+
+    // Generate connector piece if needed
+    let connector: { stlUrl: string; scadContent: string; filename: string } | null = null;
+    if (config.connectorEnabled && splitInfo.needsSplit) {
+      const connectorScad = this.generateConnectorScad(config);
+      connector = await this.renderScad(connectorScad, 'connector');
+    }
+
+    return { segments, connector, splitInfo };
+  }
+
+  // Generate connector piece SCAD
+  generateConnectorScad(config: BaseplateConfig): string {
+    const plateHeight = config.socketChamferHeight;
+    const tolerance = config.connectorTolerance;
+    
+    return `// Gridfinity Baseplate Connector Piece
+// Dovetail puzzle-piece connector for joining baseplate segments
+// Print multiple of these to connect your baseplate segments
+
+/* [Configuration] */
+plate_height = ${plateHeight};
+tolerance = ${tolerance};
+
+/* [Connector Dimensions] */
+// Dovetail profile dimensions
+base_width = 8;        // Width at narrow end (bottom)
+top_width = 10;        // Width at wide end (top) 
+depth = 3;             // How far connector extends into each plate
+tab_height = plate_height - 0.5;  // Slightly shorter than plate for flush fit
+
+$fn = 32;
+
+// Main connector - double-sided dovetail
+connector_piece();
+
+module connector_piece() {
+    // Two dovetails joined at their bases, creating a piece that
+    // fits into female cavities on adjacent baseplate segments
+    union() {
+        // First dovetail (extends in -Y direction)
+        dovetail_male(base_width, top_width, depth, tab_height);
+        
+        // Second dovetail (extends in +Y direction)  
+        mirror([0, 1, 0])
+        dovetail_male(base_width, top_width, depth, tab_height);
+        
+        // Central joining section
+        translate([-base_width/2 + tolerance/2, -0.5, 0])
+        cube([base_width - tolerance, 1, tab_height]);
+    }
+}
+
+// Male dovetail tab - trapezoidal profile
+module dovetail_male(base_w, top_w, d, h) {
+    // Dovetail shape: narrow at base, wider at top
+    // This creates a locking mechanism when inserted into female cavity
+    translate([0, -d, 0])
+    linear_extrude(height = h)
+    polygon(points = [
+        [-base_w/2 + tolerance/2, 0],
+        [base_w/2 - tolerance/2, 0],
+        [top_w/2 - tolerance/2, d],
+        [-top_w/2 + tolerance/2, d]
+    ]);
+}
+`;
+  }
+
+  // Generate segment SCAD with connector cavities
+  generateSegmentScad(config: BaseplateConfig, segment: SegmentInfo): string {
+    const widthUnits = segment.gridUnitsX;
+    const depthUnits = segment.gridUnitsY;
+    const plateHeight = config.socketChamferHeight;
+    const tolerance = config.connectorTolerance;
+    const gridSize = config.gridSize;
+    
+    // Calculate connector positions - one per grid unit boundary
+    const connectorCode = this.generateConnectorCavitiesCode(segment, gridSize, plateHeight, tolerance);
+    
+    return `// Gridfinity Baseplate Segment [${segment.segmentX}, ${segment.segmentY}]
+// Part of a split baseplate system with dovetail connectors
+// Socket profile matches bin foot for proper fit
+
+/* [Configuration] */
+width_units = ${widthUnits};
+depth_units = ${depthUnits};
+style = "${config.style}";
+plate_style = "${config.plateStyle}";
+magnet_diameter = ${config.magnetDiameter};
+magnet_depth = ${config.magnetDepth};
+magnet_z_offset = ${config.magnetZOffset};
+magnet_top_cover = ${config.magnetTopCover};
+screw_diameter = ${config.screwDiameter};
+center_screw = ${config.centerScrew};
+weight_cavity = ${config.weightCavity};
+remove_bottom_taper = ${config.removeBottomTaper};
+corner_radius = ${config.cornerRadius};
+grid_unit = ${gridSize};
+socket_chamfer_angle = ${config.socketChamferAngle};
+socket_chamfer_height = ${config.socketChamferHeight};
+
+/* [Connector Settings] */
+connector_tolerance = ${tolerance};
+has_connector_left = ${segment.hasConnectorLeft};
+has_connector_right = ${segment.hasConnectorRight};
+has_connector_front = ${segment.hasConnectorFront};
+has_connector_back = ${segment.hasConnectorBack};
+
+/* [Constants] */
+clearance = 0.25;
+socket_taper_height = socket_chamfer_height;
+socket_bottom_inset = socket_chamfer_height / tan(socket_chamfer_angle);
+socket_depth = socket_taper_height;
+plate_height = socket_depth;
+
+// Connector dimensions (must match connector_piece)
+connector_base_width = 8;
+connector_top_width = 10;
+connector_depth = 3;
+connector_height = plate_height - 0.5;
+
+$fn = 32;
+
+/* [Calculated] */
+plate_width = width_units * grid_unit;
+plate_depth = depth_units * grid_unit;
+
+// Main module
+gridfinity_segment();
+
+module gridfinity_segment() {
+    difference() {
+        // Main plate body
+        rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
+        
+        // Socket cutouts
+        for (gx = [0:width_units-1]) {
+            for (gy = [0:depth_units-1]) {
+                translate([gx * grid_unit, gy * grid_unit, 0])
+                grid_socket();
+            }
+        }
+        
+        // Connector cavities
+        ${connectorCode}
+    }
+}
+
+// Dovetail female cavity - cut into baseplate edge
+module dovetail_female(base_w, top_w, d, h) {
+    // Female cavity is slightly larger than male tab for clearance
+    extra = connector_tolerance;
+    translate([0, -d - extra/2, -0.1])
+    linear_extrude(height = h + 0.2)
+    polygon(points = [
+        [-base_w/2 - extra, 0],
+        [base_w/2 + extra, 0],
+        [top_w/2 + extra, d + extra],
+        [-top_w/2 - extra, d + extra]
+    ]);
+}
+
+// Rounded rectangle module for baseplate
+module rounded_rect_plate(width, depth, height, radius) {
+    if (radius <= 0) {
+        cube([width, depth, height]);
+    } else {
+        r = min(radius, min(width, depth) / 2 - 0.01);
+        hull() {
+            translate([r, r, 0])
+            cylinder(r = r, h = height);
+            translate([width - r, r, 0])
+            cylinder(r = r, h = height);
+            translate([r, depth - r, 0])
+            cylinder(r = r, h = height);
+            translate([width - r, depth - r, 0])
+            cylinder(r = r, h = height);
+        }
+    }
+}
+
+module socket_rounded_rect(width, depth, height, radius) {
+    if (radius <= 0) {
+        cube([width, depth, height]);
+    } else {
+        r = min(radius, min(width, depth) / 2 - 0.01);
+        hull() {
+            translate([r, r, 0])
+            cylinder(r = r, h = height);
+            translate([width - r, r, 0])
+            cylinder(r = r, h = height);
+            translate([r, depth - r, 0])
+            cylinder(r = r, h = height);
+            translate([width - r, depth - r, 0])
+            cylinder(r = r, h = height);
+        }
+    }
+}
+
+module grid_socket() {
+    socket_width = grid_unit - clearance * 2;
+    socket_depth_size = grid_unit - clearance * 2;
+    socket_corner_radius = 3.75;
+    
+    bottom_width = socket_width - socket_bottom_inset * 2;
+    bottom_depth = socket_depth_size - socket_bottom_inset * 2;
+    bottom_radius = max(0.5, socket_corner_radius - socket_bottom_inset);
+    
+    translate([clearance, clearance, -0.1]) {
+        hull() {
+            translate([0, 0, plate_height])
+            socket_rounded_rect(socket_width, socket_depth_size, 0.2, socket_corner_radius);
+            
+            if (!remove_bottom_taper) {
+                translate([socket_bottom_inset, socket_bottom_inset, 0])
+                socket_rounded_rect(bottom_width, bottom_depth, 0.2, bottom_radius);
+            } else {
+                translate([0, 0, 0])
+                socket_rounded_rect(socket_width, socket_depth_size, 0.2, socket_corner_radius);
+            }
+        }
+    }
+    
+    if (style == "magnet") {
+        magnet_holes();
+    }
+    
+    if (style == "screw") {
+        screw_holes();
+    }
+    
+    if (center_screw) {
+        center_screw_hole();
+    }
+    
+    if (weight_cavity || style == "weighted") {
+        weight_cavity_cutout();
+    }
+}
+
+module center_screw_hole() {
+    translate([grid_unit / 2, grid_unit / 2, -0.1])
+    union() {
+        cylinder(d = screw_diameter, h = plate_height + 0.2);
+        translate([0, 0, plate_height - 2.4])
+        cylinder(d1 = screw_diameter, d2 = screw_diameter * 2.5, h = 2.5);
+    }
+}
+
+module weight_cavity_cutout() {
+    cavity_size = 21.4;
+    cavity_depth = 4;
+    translate([(grid_unit - cavity_size) / 2, (grid_unit - cavity_size) / 2, -0.1])
+    cube([cavity_size, cavity_size, cavity_depth + 0.1]);
+}
+
+module magnet_holes() {
+    positions = [
+        [4.8, 4.8],
+        [4.8, grid_unit - 4.8],
+        [grid_unit - 4.8, 4.8],
+        [grid_unit - 4.8, grid_unit - 4.8]
+    ];
+    
+    magnet_z = magnet_z_offset > 0 ? magnet_z_offset : 
+               magnet_top_cover > 0 ? plate_height - magnet_depth - magnet_top_cover : 
+               plate_height - magnet_depth;
+    
+    for (pos = positions) {
+        translate([pos[0], pos[1], magnet_z])
+        cylinder(d = magnet_diameter, h = magnet_depth + 0.1);
+        
+        if (magnet_z_offset > 0) {
+            translate([pos[0], pos[1], -0.1])
+            cylinder(d = magnet_diameter * 0.6, h = magnet_z_offset + 0.1);
+        }
+    }
+}
+
+module screw_holes() {
+    positions = [
+        [4.8, 4.8],
+        [4.8, grid_unit - 4.8],
+        [grid_unit - 4.8, 4.8],
+        [grid_unit - 4.8, grid_unit - 4.8]
+    ];
+    
+    for (pos = positions) {
+        translate([pos[0], pos[1], -0.1])
+        union() {
+            cylinder(d = screw_diameter, h = plate_height + 0.2);
+            translate([0, 0, plate_height - 2.4])
+            cylinder(d1 = screw_diameter, d2 = screw_diameter * 2.5, h = 2.5);
+        }
+    }
+}
+`;
+  }
+
+  // Generate connector cavity placement code
+  private generateConnectorCavitiesCode(segment: SegmentInfo, gridSize: number, plateHeight: number, tolerance: number): string {
+    const cavities: string[] = [];
+    
+    // Left edge connectors (one per grid unit boundary)
+    if (segment.hasConnectorLeft) {
+      for (let i = 0; i < segment.gridUnitsY; i++) {
+        const y = (i + 0.5) * gridSize; // Center of each grid unit
+        cavities.push(`
+        // Left edge connector at grid unit ${i}
+        translate([0, ${y}, 0])
+        rotate([0, 0, 90])
+        dovetail_female(connector_base_width, connector_top_width, connector_depth, connector_height);`);
+      }
+    }
+    
+    // Right edge connectors
+    if (segment.hasConnectorRight) {
+      for (let i = 0; i < segment.gridUnitsY; i++) {
+        const y = (i + 0.5) * gridSize;
+        cavities.push(`
+        // Right edge connector at grid unit ${i}
+        translate([plate_width, ${y}, 0])
+        rotate([0, 0, -90])
+        dovetail_female(connector_base_width, connector_top_width, connector_depth, connector_height);`);
+      }
+    }
+    
+    // Front edge connectors
+    if (segment.hasConnectorFront) {
+      for (let i = 0; i < segment.gridUnitsX; i++) {
+        const x = (i + 0.5) * gridSize;
+        cavities.push(`
+        // Front edge connector at grid unit ${i}
+        translate([${x}, 0, 0])
+        rotate([0, 0, 180])
+        dovetail_female(connector_base_width, connector_top_width, connector_depth, connector_height);`);
+      }
+    }
+    
+    // Back edge connectors
+    if (segment.hasConnectorBack) {
+      for (let i = 0; i < segment.gridUnitsX; i++) {
+        const x = (i + 0.5) * gridSize;
+        cavities.push(`
+        // Back edge connector at grid unit ${i}
+        translate([${x}, plate_depth, 0])
+        dovetail_female(connector_base_width, connector_top_width, connector_depth, connector_height);`);
+      }
+    }
+    
+    return cavities.join('\n');
   }
 
   // Generate Box SCAD code - simplified version compatible with standard OpenSCAD
