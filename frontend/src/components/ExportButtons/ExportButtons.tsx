@@ -49,17 +49,17 @@ export function ExportButtons({ stlUrl, scadContent, filename }: ExportButtonsPr
   };
 
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-slate-400">Ready to export:</span>
-        <span className="text-sm font-mono text-green-400 bg-slate-800 px-2 py-1 rounded">{filename}</span>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 min-w-0">
+      <div className="flex items-center gap-2 min-w-0 flex-shrink">
+        <span className="text-sm text-slate-400 whitespace-nowrap">Ready to export:</span>
+        <span className="text-sm font-mono text-green-400 bg-slate-800 px-2 py-1 rounded truncate">{filename}</span>
       </div>
       
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
         {/* Download STL Button */}
         <button
           onClick={downloadSTL}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-green-600 to-green-500 text-white text-sm font-medium hover:from-green-500 hover:to-green-400 transition-all shadow-lg shadow-green-500/25"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-green-600 to-green-500 text-white text-sm font-medium hover:from-green-500 hover:to-green-400 transition-all shadow-lg shadow-green-500/25 flex-shrink-0"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -70,7 +70,7 @@ export function ExportButtons({ stlUrl, scadContent, filename }: ExportButtonsPr
         {/* Download SCAD Button */}
         <button
           onClick={downloadSCAD}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-700 text-white text-sm font-medium hover:bg-slate-600 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-700 text-white text-sm font-medium hover:bg-slate-600 transition-colors flex-shrink-0"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
@@ -81,7 +81,7 @@ export function ExportButtons({ stlUrl, scadContent, filename }: ExportButtonsPr
         {/* Copy SCAD Button */}
         <button
           onClick={copySCAD}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-sm font-medium hover:bg-slate-700 hover:text-white transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-sm font-medium hover:bg-slate-700 hover:text-white transition-colors flex-shrink-0"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -202,16 +202,16 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig, 
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       {/* Summary */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-400">Split baseplate:</span>
-          <span className="text-sm font-mono text-cyan-400 bg-slate-800 px-2 py-1 rounded">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          <span className="text-sm text-slate-400 whitespace-nowrap">Split baseplate:</span>
+          <span className="text-sm font-mono text-cyan-400 bg-slate-800 px-2 py-1 rounded whitespace-nowrap">
             {splitInfo.segmentsX} x {splitInfo.segmentsY} segments
           </span>
           {baseplateConfig.connectorEnabled && (
-            <span className="text-sm font-mono text-emerald-400 bg-slate-800 px-2 py-1 rounded">
+            <span className="text-sm font-mono text-emerald-400 bg-slate-800 px-2 py-1 rounded whitespace-nowrap">
               interlocking edges
             </span>
           )}
@@ -221,7 +221,7 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig, 
         <button
           onClick={downloadAllSequentially}
           disabled={isGenerating}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-medium transition-all shadow-lg ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-medium transition-all shadow-lg flex-shrink-0 ${
             isGenerating 
               ? 'bg-slate-600 cursor-wait' 
               : 'bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 shadow-cyan-500/25'
@@ -233,7 +233,7 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig, 
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Generating {generatingSegment === 'connector' ? 'connector' : `[${generatingSegment}]`}...
+              <span className="whitespace-nowrap">Generating {generatingSegment === 'connector' ? 'connector' : `[${generatingSegment}]`}...</span>
             </>
           ) : (
             <>
@@ -247,10 +247,10 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig, 
       </div>
 
       {/* Individual Downloads */}
-      <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+      <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700 min-w-0">
         <h4 className="text-xs font-semibold text-slate-400 mb-2">INDIVIDUAL DOWNLOADS</h4>
         
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 overflow-x-auto pb-1">
           {result.segments.map((segment: SegmentGenerationResult) => {
             const segKey = `${segment.segmentX},${segment.segmentY}`;
             const isThisGenerating = isGenerating && generatingSegment === segKey;

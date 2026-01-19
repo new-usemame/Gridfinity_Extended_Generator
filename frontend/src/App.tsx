@@ -464,7 +464,7 @@ function App() {
         </aside>
 
         {/* Preview Area */}
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col min-h-0">
           {/* Error Message */}
           {error && (
             <div className="m-4 p-4 bg-red-900/20 border border-red-500/30 rounded-xl text-red-400 text-sm">
@@ -499,7 +499,7 @@ function App() {
 
           {/* Export Buttons */}
           {generatorType === 'combined' ? (
-            <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4 space-y-4">
+            <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4 space-y-4 overflow-x-auto min-w-0">
               {boxResult && (
                 <div>
                   <h4 className="text-xs font-semibold text-slate-400 mb-2">BOX</h4>
@@ -531,38 +531,38 @@ function App() {
                 </div>
               )}
             </div>
-          ) : (
-            generatorType === 'box' ? (
-              boxResult && (
-                <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4">
-                  <ExportButtons
-                    stlUrl={boxResult.stlUrl}
-                    scadContent={boxResult.scadContent}
-                    filename={boxResult.filename}
-                  />
-                </div>
-              )
             ) : (
-              multiSegmentResult ? (
-                <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4">
-                  <MultiSegmentExportButtons
-                    result={multiSegmentResult}
-                    splitInfo={multiSegmentResult.splitInfo}
-                    baseplateConfig={baseplateConfig}
-                    generationMode={generationMode}
-                  />
-                </div>
-              ) : baseplateResult && (
-                <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4">
-                  <ExportButtons
-                    stlUrl={baseplateResult.stlUrl}
-                    scadContent={baseplateResult.scadContent}
-                    filename={baseplateResult.filename}
-                  />
-                </div>
+              generatorType === 'box' ? (
+                boxResult && (
+                  <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4 overflow-x-auto min-w-0">
+                    <ExportButtons
+                      stlUrl={boxResult.stlUrl}
+                      scadContent={boxResult.scadContent}
+                      filename={boxResult.filename}
+                    />
+                  </div>
+                )
+              ) : (
+                multiSegmentResult ? (
+                  <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4 overflow-x-auto min-w-0">
+                    <MultiSegmentExportButtons
+                      result={multiSegmentResult}
+                      splitInfo={multiSegmentResult.splitInfo}
+                      baseplateConfig={baseplateConfig}
+                      generationMode={generationMode}
+                    />
+                  </div>
+                ) : baseplateResult && (
+                  <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4 overflow-x-auto min-w-0">
+                    <ExportButtons
+                      stlUrl={baseplateResult.stlUrl}
+                      scadContent={baseplateResult.scadContent}
+                      filename={baseplateResult.filename}
+                    />
+                  </div>
+                )
               )
-            )
-          )}
+            )}
         </main>
       </div>
     </div>
