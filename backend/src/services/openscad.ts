@@ -527,187 +527,171 @@ module tslot_female_2d() {
 // Classic puzzle bulb but with concave hourglass neck - no sharp corners
 // The neck curves INWARD (concave) before swooping out to the bulb
 // Allows printhead to trace smooth continuous curves
+
+// Helper function to generate concave curve X position
+function concave_x(t, wide, narrow) = wide - (wide - narrow) * sin(t * 90);
+
 module puzzle_smooth_male_2d() {
-    bulb_radius = tooth_width * 0.4;
-    neck_length = tooth_depth - bulb_radius;
+    bulb_r = tooth_width * 0.4;
+    neck_len = tooth_depth - bulb_r;
+    base_hw = tooth_width * 0.4;  // half-width at base
+    waist_hw = tooth_width * 0.2; // half-width at waist (narrowest)
+    waist_y = neck_len * 0.5;
     
-    // Base width (where it meets plate) - wider for stability
-    base_half_width = tooth_width * 0.4;
-    // Narrowest point of the concave neck (waist)
-    waist_half_width = tooth_width * 0.2;
-    waist_y = neck_length * 0.5;  // Middle of neck
-    
-    // Create smooth concave curve using polygon points
-    // Generate points for the concave swoop on each side
-    steps = 12;
-    
-    // Build polygon with concave sides leading to bulb
-    points = concat(
-        // Right side: base to waist (concave inward curve)
-        [for (i = [0:steps]) 
-            let(t = i/steps,
-                // Sine curve creates smooth concave swoop
-                x = base_half_width - (base_half_width - waist_half_width) * sin(t * 90),
-                y = t * waist_y)
-            [x, y]
-        ],
-        // Right side: waist to bulb connection (concave outward to meet bulb)
-        [for (i = [1:steps])
-            let(t = i/steps,
-                // Curve back out to meet the bulb
-                x = waist_half_width + (bulb_radius - waist_half_width) * sin(t * 90),
-                y = waist_y + t * (neck_length - waist_y))
-            [x, y]
-        ],
-        // Bulb arc (top half of circle)
-        [for (a = [-90:10:270])
-            [bulb_radius * cos(a), neck_length + bulb_radius * sin(a)]
-        ],
-        // Left side: bulb connection back to waist
-        [for (i = [steps:-1:1])
-            let(t = i/steps,
-                x = -(waist_half_width + (bulb_radius - waist_half_width) * sin(t * 90)),
-                y = waist_y + t * (neck_length - waist_y))
-            [x, y]
-        ],
-        // Left side: waist back to base
-        [for (i = [steps:-1:0])
-            let(t = i/steps,
-                x = -(base_half_width - (base_half_width - waist_half_width) * sin(t * 90)),
-                y = t * waist_y)
-            [x, y]
-        ]
-    );
-    
-    polygon(points);
+    // Create the hourglass neck with concave curves using hull of circles
+    // This creates smooth S-curve transitions
+    union() {
+        // Lower concave section: base to waist
+        // Use difference to carve out the concave shape
+        difference() {
+            // Outer envelope
+            translate([-base_hw, 0])
+            square([base_hw * 2, waist_y]);
+            
+            // Carve concave curve on right side
+            translate([base_hw + (base_hw - waist_hw) * 0.6, waist_y * 0.5])
+            scale([1, 2])
+            circle(r = (base_hw - waist_hw) * 1.2, $fn = 32);
+            
+            // Carve concave curve on left side
+            translate([-(base_hw + (base_hw - waist_hw) * 0.6), waist_y * 0.5])
+            scale([1, 2])
+            circle(r = (base_hw - waist_hw) * 1.2, $fn = 32);
+        }
+        
+        // Upper section: waist swoops out to bulb
+        hull() {
+            // Waist point
+            translate([0, waist_y])
+            square([waist_hw * 2, 0.01], center = true);
+            
+            // Transition to bulb
+            translate([0, neck_len - bulb_r * 0.3])
+            circle(r = bulb_r * 0.7, $fn = 32);
+        }
+        
+        // The bulb (locking feature)
+        translate([0, neck_len])
+        circle(r = bulb_r, $fn = 32);
+    }
 }
 
 module puzzle_smooth_female_2d() {
-    bulb_radius = tooth_width * 0.4 + edge_tolerance;
-    neck_length = tooth_depth - (tooth_width * 0.4);
+    bulb_r = tooth_width * 0.4 + edge_tolerance;
+    neck_len = tooth_depth - (tooth_width * 0.4);
+    base_hw = tooth_width * 0.4 + edge_tolerance;
+    waist_hw = tooth_width * 0.2 + edge_tolerance;
+    waist_y = neck_len * 0.5;
     
-    base_half_width = tooth_width * 0.4 + edge_tolerance;
-    waist_half_width = tooth_width * 0.2 + edge_tolerance;
-    waist_y = neck_length * 0.5;
-    
-    steps = 12;
-    
-    points = concat(
-        [for (i = [0:steps]) 
-            let(t = i/steps,
-                x = base_half_width - (base_half_width - waist_half_width) * sin(t * 90),
-                y = -edge_tolerance + t * (waist_y + edge_tolerance))
-            [x, y]
-        ],
-        [for (i = [1:steps])
-            let(t = i/steps,
-                x = waist_half_width + (bulb_radius - waist_half_width) * sin(t * 90),
-                y = waist_y + t * (neck_length - waist_y))
-            [x, y]
-        ],
-        [for (a = [-90:10:270])
-            [bulb_radius * cos(a), neck_length + bulb_radius * sin(a)]
-        ],
-        [for (i = [steps:-1:1])
-            let(t = i/steps,
-                x = -(waist_half_width + (bulb_radius - waist_half_width) * sin(t * 90)),
-                y = waist_y + t * (neck_length - waist_y))
-            [x, y]
-        ],
-        [for (i = [steps:-1:0])
-            let(t = i/steps,
-                x = -(base_half_width - (base_half_width - waist_half_width) * sin(t * 90)),
-                y = -edge_tolerance + t * (waist_y + edge_tolerance))
-            [x, y]
-        ]
-    );
-    
-    polygon(points);
+    union() {
+        // Lower concave section
+        difference() {
+            translate([-base_hw, -edge_tolerance])
+            square([base_hw * 2, waist_y + edge_tolerance]);
+            
+            translate([base_hw + (base_hw - waist_hw) * 0.6, waist_y * 0.5])
+            scale([1, 2])
+            circle(r = (base_hw - waist_hw) * 1.2 - edge_tolerance * 0.5, $fn = 32);
+            
+            translate([-(base_hw + (base_hw - waist_hw) * 0.6), waist_y * 0.5])
+            scale([1, 2])
+            circle(r = (base_hw - waist_hw) * 1.2 - edge_tolerance * 0.5, $fn = 32);
+        }
+        
+        // Upper section to bulb
+        hull() {
+            translate([0, waist_y])
+            square([waist_hw * 2, 0.01], center = true);
+            
+            translate([0, neck_len - bulb_r * 0.3])
+            circle(r = bulb_r * 0.7, $fn = 32);
+        }
+        
+        // Bulb cavity
+        translate([0, neck_len])
+        circle(r = bulb_r, $fn = 32);
+    }
 }
 
 // --- PATTERN 7: T-SLOT SMOOTH (T-shape with concave stem) ---
 // T-head locking but with concave hourglass stem - no harsh direction changes
 // Stem curves inward (concave) creating smooth flow for printhead
 module tslot_smooth_male_2d() {
-    head_width = tooth_width;
-    head_depth = tooth_depth * 0.3;
-    stem_length = tooth_depth - head_depth;
-    
-    // Base width (where it meets plate)
-    base_half_width = tooth_width * 0.3;
-    // Waist (narrowest part of concave stem)
-    waist_half_width = tooth_width * 0.15;
-    waist_y = stem_length * 0.6;
-    
-    steps = 10;
-    
-    // Build the concave stem shape
-    stem_points = concat(
-        // Right side: base to waist (concave inward)
-        [for (i = [0:steps]) 
-            let(t = i/steps,
-                x = base_half_width - (base_half_width - waist_half_width) * sin(t * 90),
-                y = t * waist_y)
-            [x, y]
-        ],
-        // Right side: waist swoops out to meet T-head
-        [for (i = [1:steps])
-            let(t = i/steps,
-                x = waist_half_width + (head_width/2 - waist_half_width) * sin(t * 90),
-                y = waist_y + t * (stem_length - waist_y))
-            [x, y]
-        ]
-    );
+    head_w = tooth_width;
+    head_h = tooth_depth * 0.3;
+    stem_len = tooth_depth - head_h;
+    base_hw = tooth_width * 0.3;
+    waist_hw = tooth_width * 0.15;
+    waist_y = stem_len * 0.6;
     
     union() {
-        // Concave stem
-        polygon(concat(
-            stem_points,
-            // T-head top edge
-            [[head_width/2, stem_length + head_depth],
-             [-head_width/2, stem_length + head_depth]],
-            // Left side mirror (reversed)
-            [for (i = [len(stem_points)-1:-1:0])
-                [-stem_points[i][0], stem_points[i][1]]
-            ]
-        ));
+        // Lower concave stem section
+        difference() {
+            translate([-base_hw, 0])
+            square([base_hw * 2, waist_y]);
+            
+            // Carve right concave
+            translate([base_hw + (base_hw - waist_hw) * 0.5, waist_y * 0.5])
+            scale([1, 1.8])
+            circle(r = (base_hw - waist_hw) * 1.1, $fn = 32);
+            
+            // Carve left concave
+            translate([-(base_hw + (base_hw - waist_hw) * 0.5), waist_y * 0.5])
+            scale([1, 1.8])
+            circle(r = (base_hw - waist_hw) * 1.1, $fn = 32);
+        }
+        
+        // Upper stem section: waist swoops out to T-head
+        hull() {
+            translate([0, waist_y])
+            square([waist_hw * 2, 0.01], center = true);
+            
+            translate([0, stem_len - 0.01])
+            square([head_w, 0.02], center = true);
+        }
+        
+        // T-head
+        translate([-head_w/2, stem_len])
+        square([head_w, head_h]);
     }
 }
 
 module tslot_smooth_female_2d() {
-    head_width = tooth_width + edge_tolerance * 2;
-    head_depth = tooth_depth * 0.3 + edge_tolerance;
-    stem_length = tooth_depth - (tooth_depth * 0.3);
+    head_w = tooth_width + edge_tolerance * 2;
+    head_h = tooth_depth * 0.3 + edge_tolerance;
+    stem_len = tooth_depth - (tooth_depth * 0.3);
+    base_hw = tooth_width * 0.3 + edge_tolerance;
+    waist_hw = tooth_width * 0.15 + edge_tolerance;
+    waist_y = stem_len * 0.6;
     
-    base_half_width = tooth_width * 0.3 + edge_tolerance;
-    waist_half_width = tooth_width * 0.15 + edge_tolerance;
-    waist_y = stem_length * 0.6;
-    
-    steps = 10;
-    
-    stem_points = concat(
-        [for (i = [0:steps]) 
-            let(t = i/steps,
-                x = base_half_width - (base_half_width - waist_half_width) * sin(t * 90),
-                y = -edge_tolerance + t * (waist_y + edge_tolerance))
-            [x, y]
-        ],
-        [for (i = [1:steps])
-            let(t = i/steps,
-                x = waist_half_width + (head_width/2 - waist_half_width) * sin(t * 90),
-                y = waist_y + t * (stem_length - waist_y))
-            [x, y]
-        ]
-    );
-    
-    polygon(concat(
-        stem_points,
-        [[head_width/2, stem_length + head_depth],
-         [-head_width/2, stem_length + head_depth]],
-        [for (i = [len(stem_points)-1:-1:0])
-            [-stem_points[i][0], stem_points[i][1]]
-        ]
-    ));
+    union() {
+        // Lower concave stem
+        difference() {
+            translate([-base_hw, -edge_tolerance])
+            square([base_hw * 2, waist_y + edge_tolerance]);
+            
+            translate([base_hw + (base_hw - waist_hw) * 0.5, waist_y * 0.5])
+            scale([1, 1.8])
+            circle(r = (base_hw - waist_hw) * 1.1 - edge_tolerance * 0.3, $fn = 32);
+            
+            translate([-(base_hw + (base_hw - waist_hw) * 0.5), waist_y * 0.5])
+            scale([1, 1.8])
+            circle(r = (base_hw - waist_hw) * 1.1 - edge_tolerance * 0.3, $fn = 32);
+        }
+        
+        // Upper stem to T-head
+        hull() {
+            translate([0, waist_y])
+            square([waist_hw * 2, 0.01], center = true);
+            
+            translate([0, stem_len - 0.01])
+            square([head_w, 0.02], center = true);
+        }
+        
+        // T-head cavity
+        translate([-head_w/2, stem_len])
+        square([head_w, head_h]);
+    }
 }
 
 // ===========================================
