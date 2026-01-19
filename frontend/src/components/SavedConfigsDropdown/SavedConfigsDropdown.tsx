@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { BoxConfig, BaseplateConfig } from '../../types/config';
+import { compareConfigs } from '../../utils/configComparison';
 
 interface SavedPreference {
   id: number;
@@ -18,7 +19,13 @@ interface SavedConfigsDropdownProps {
   currentBaseplateConfig: BaseplateConfig;
 }
 
-export function SavedConfigsDropdown({ onLoadPreference, currentBoxConfig, currentBaseplateConfig }: SavedConfigsDropdownProps) {
+export interface SavedConfigsDropdownRef {
+  refresh: () => void;
+  getMatchingConfig: () => SavedPreference | null;
+}
+
+export const SavedConfigsDropdown = forwardRef<SavedConfigsDropdownRef, SavedConfigsDropdownProps>(
+  ({ onLoadPreference, currentBoxConfig, currentBaseplateConfig }, ref) => {
   const { user, token } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [preferences, setPreferences] = useState<SavedPreference[]>([]);
@@ -29,6 +36,27 @@ export function SavedConfigsDropdown({ onLoadPreference, currentBoxConfig, curre
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
+
+  // Expose refresh function and matching config to parent
+  useImperativeHandle(ref, () => ({
+    refresh: loadPreferences,
+    getMatchingConfig: () => {
+      return preferences.find(pref => 
+        compareConfigs(
+          currentBoxConfig,
+          currentBaseplateConfig,
+          pref.box_config,
+          pref.baseplate_config
+        )
+      ) || null;
+    }
+  }), [preferences, currentBoxConfig, currentBaseplateConfig]);
+
+  // Refresh preferences when configs change to update matching state
+  useEffect(() => {
+    // This will cause the component to re-render and show the correct active state
+    // We don't need to reload from server, just update the UI
+  }, [currentBoxConfig, currentBaseplateConfig]);
 
   // Load preferences when user is logged in
   useEffect(() => {
@@ -106,9 +134,9 @@ export function SavedConfigsDropdown({ onLoadPreference, currentBoxConfig, curre
       });
 
       if (response.ok) {
-        await loadPreferences();
         setSaveName('');
         setShowSaveDialog(false);
+        await loadPreferences();
       } else {
         const error = await response.json();
         alert(error.error || 'Failed to save preference');
@@ -205,17 +233,31 @@ export function SavedConfigsDropdown({ onLoadPreference, currentBoxConfig, curre
               <div className="p-4 text-center text-slate-400 text-sm">No saved configurations</div>
             ) : (
               <div className="p-2 space-y-1">
-                {preferences.map((pref) => (
-                  <div
-                    key={pref.id}
-                    className="group flex items-center justify-between px-3 py-2 hover:bg-slate-700 rounded-lg transition-colors"
-                  >
-                    <button
-                      onClick={() => handleLoad(pref)}
-                      className="flex-1 text-left text-sm text-slate-300 hover:text-white"
+                {preferences.map((pref) => {
+                  const isActive = compareConfigs(
+                    currentBoxConfig,
+                    currentBaseplateConfig,
+                    pref.box_config,
+                    pref.baseplate_config
+                  );
+                  return (
+                    <div
+                      key={pref.id}
+                      className={`group flex items-center justify-between px-3 py-2 hover:bg-slate-700 rounded-lg transition-colors ${
+                        isActive ? 'bg-slate-700/50' : ''
+                      }`}
                     >
-                      {pref.name}
-                    </button>
+                      <button
+                        onClick={() => handleLoad(pref)}
+                        className="flex-1 text-left text-sm text-slate-300 hover:text-white flex items-center gap-2"
+                      >
+                        {isActive && (
+                          <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                        <span>{pref.name}</span>
+                      </button>
                     <button
                       onClick={() => handleDelete(pref.id)}
                       className="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-300 transition-opacity"
@@ -287,4 +329,6 @@ export function SavedConfigsDropdown({ onLoadPreference, currentBoxConfig, curre
       )}
     </>
   );
-}
+});
+
+SavedConfigsDropdown.displayName = 'SavedConfigsDropdown';

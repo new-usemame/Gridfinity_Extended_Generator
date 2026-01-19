@@ -5,11 +5,13 @@ import { PreviewCanvas } from '../../components/PreviewCanvas/PreviewCanvas';
 import { ExportButtons, MultiSegmentExportButtons } from '../../components/ExportButtons/ExportButtons';
 import { UserDropdown } from '../../components/UserDropdown/UserDropdown';
 import { SavedConfigsDropdown } from '../../components/SavedConfigsDropdown/SavedConfigsDropdown';
+import type { SavedConfigsDropdownRef } from '../../components/SavedConfigsDropdown/SavedConfigsDropdown';
 import { AuthModal } from '../../components/AuthModal/AuthModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, GenerationResult, MultiSegmentResult, GenerationMode } from '../../types/config';
 import { generateBoxScad, generateBaseplateScad, generateCombinedPreviewScad, generateSegmentScad, calculateSplitInfo } from '../../services/scadGenerator';
 import { generateLocalStl, revokeLocalStlUrl, isWasmSupported, isWasmLoaded } from '../../services/openscadWasm';
+import { compareConfigs } from '../../utils/configComparison';
 
 export function Generator() {
   const { user, token } = useAuth();
@@ -24,6 +26,8 @@ export function Generator() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [pendingSave, setPendingSave] = useState(false);
+  const [savedPreferences, setSavedPreferences] = useState<any[]>([]);
+  const savedConfigsDropdownRef = useRef<SavedConfigsDropdownRef>(null);
   
   // Track blob URLs for cleanup
   const blobUrlsRef = useRef<string[]>([]);
@@ -254,7 +258,12 @@ export function Generator() {
       if (response.ok) {
         setSaveName('');
         setShowSaveDialog(false);
-        // Show success message (you could add a toast notification here)
+        // Reload preferences to update the matching state
+        await loadSavedPreferences();
+        // Refresh the saved configs dropdown to show the new/updated config
+        if (savedConfigsDropdownRef.current) {
+          savedConfigsDropdownRef.current.refresh();
+        }
       } else {
         const error = await response.json();
         alert(error.error || 'Failed to save preference');
@@ -266,6 +275,43 @@ export function Generator() {
       setIsSaving(false);
     }
   };
+
+  // Load saved preferences to check for matches
+  const loadSavedPreferences = async () => {
+    if (!token) return;
+    try {
+      const response = await fetch('/api/preferences', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSavedPreferences(data.preferences || []);
+      }
+    } catch (error) {
+      console.error('Failed to load preferences:', error);
+    }
+  };
+
+  // Load preferences when user logs in
+  useEffect(() => {
+    if (user && token) {
+      loadSavedPreferences();
+    } else {
+      setSavedPreferences([]);
+    }
+  }, [user, token]);
+
+  // Check if current config matches any saved config
+  const matchingConfig = savedPreferences.find(pref => 
+    compareConfigs(
+      boxConfig,
+      baseplateConfig,
+      pref.box_config,
+      pref.baseplate_config
+    )
+  );
 
   // Handle downloading configuration
   const handleDownloadConfig = () => {
@@ -329,6 +375,7 @@ export function Generator() {
               <>
                 <UserDropdown />
                 <SavedConfigsDropdown
+                  ref={savedConfigsDropdownRef}
                   onLoadPreference={handleLoadPreference}
                   currentBoxConfig={boxConfig}
                   currentBaseplateConfig={baseplateConfig}
@@ -340,12 +387,22 @@ export function Generator() {
             {/* Save Button */}
             <button
               onClick={handleSaveClick}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2 border border-slate-700"
-              title={user ? 'Save current configuration to your account' : 'Sign in to save configurations'}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 border ${
+                matchingConfig
+                  ? 'bg-green-600 hover:bg-green-500 text-white border-green-500'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700'
+              }`}
+              title={user ? (matchingConfig ? 'Current configuration is saved' : 'Save current configuration to your account') : 'Sign in to save configurations'}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-              </svg>
+              {matchingConfig ? (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+              )}
               Save
             </button>
 
