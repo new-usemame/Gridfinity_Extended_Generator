@@ -209,7 +209,7 @@ export function Generator() {
   const wasmSupported = isWasmSupported();
 
   return (
-    <div className="min-h-[calc(100vh-140px)] flex flex-col bg-slate-950 grid-pattern">
+    <div className="h-screen flex flex-col bg-slate-950 grid-pattern">
       {/* Generator Controls Header */}
       <header className="flex-shrink-0 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm">
         <div className="px-6 py-4 flex items-center justify-between">
@@ -313,48 +313,46 @@ export function Generator() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Config Panel */}
-        <aside className="w-96 flex-shrink-0 border-r border-slate-800 bg-slate-900/50 overflow-y-auto">
-          <div className="h-full flex flex-col">
-            {/* Tab Selector */}
-            <div className="flex border-b border-slate-800">
-              <button
-                onClick={() => setActiveEditor('box')}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                  activeEditor === 'box'
-                    ? 'bg-slate-800 text-green-400 border-b-2 border-green-500'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-                }`}
-              >
-                Box Editor
-              </button>
-              <button
-                onClick={() => setActiveEditor('baseplate')}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                  activeEditor === 'baseplate'
-                    ? 'bg-slate-800 text-green-400 border-b-2 border-green-500'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-                }`}
-              >
-                Baseplate Editor
-              </button>
-            </div>
-            {/* Active Editor Panel */}
-            <div className="flex-1 overflow-y-auto">
-              <ConfigPanel
-                type={activeEditor}
-                boxConfig={boxConfig}
-                baseplateConfig={baseplateConfig}
-                onBoxConfigChange={handleBoxConfigChange}
-                onBaseplateConfigChange={handleBaseplateConfigChange}
-              />
-            </div>
+      <div className="flex-1 flex overflow-hidden min-h-0">
+        {/* Config Panel - Sidebar with independent scroll */}
+        <aside className="w-96 flex-shrink-0 border-r border-slate-800 bg-slate-900/50 h-full flex flex-col">
+          {/* Tab Selector */}
+          <div className="flex-shrink-0 flex border-b border-slate-800">
+            <button
+              onClick={() => setActiveEditor('box')}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                activeEditor === 'box'
+                  ? 'bg-slate-800 text-green-400 border-b-2 border-green-500'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              }`}
+            >
+              Box Editor
+            </button>
+            <button
+              onClick={() => setActiveEditor('baseplate')}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                activeEditor === 'baseplate'
+                  ? 'bg-slate-800 text-green-400 border-b-2 border-green-500'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              }`}
+            >
+              Baseplate Editor
+            </button>
+          </div>
+          {/* Active Editor Panel - Scrollable */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <ConfigPanel
+              type={activeEditor}
+              boxConfig={boxConfig}
+              baseplateConfig={baseplateConfig}
+              onBoxConfigChange={handleBoxConfigChange}
+              onBaseplateConfigChange={handleBaseplateConfigChange}
+            />
           </div>
         </aside>
 
         {/* Preview Area */}
-        <main className="flex-1 flex flex-col min-h-0">
+        <main className="flex-1 flex flex-col min-h-0 pb-56">
           {/* Error Message */}
           {error && (
             <div className="m-4 p-4 bg-red-900/20 border border-red-500/30 rounded-xl text-red-400 text-sm">
@@ -368,7 +366,7 @@ export function Generator() {
           )}
 
           {/* 3D Preview */}
-          <div className="flex-1 relative">
+          <div className="flex-1 relative min-h-0">
             <PreviewCanvas
               boxStlUrl={boxResult?.stlUrl || null}
               baseplateStlUrl={baseplateResult?.stlUrl || null}
@@ -378,41 +376,41 @@ export function Generator() {
               baseplateConfig={baseplateConfig}
             />
           </div>
-
-          {/* Export Buttons */}
-          <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/50 p-4 space-y-4 overflow-x-auto min-w-0">
-            {boxResult && (
-              <div>
-                <h4 className="text-xs font-semibold text-slate-400 mb-2">BOX</h4>
-                <ExportButtons
-                  stlUrl={boxResult.stlUrl}
-                  scadContent={boxResult.scadContent}
-                  filename={boxResult.filename}
-                />
-              </div>
-            )}
-            {multiSegmentResult ? (
-              <div>
-                <h4 className="text-xs font-semibold text-slate-400 mb-2">BASEPLATE (SPLIT)</h4>
-                <MultiSegmentExportButtons
-                  result={multiSegmentResult}
-                  splitInfo={multiSegmentResult.splitInfo}
-                  baseplateConfig={baseplateConfig}
-                  generationMode={generationMode}
-                />
-              </div>
-            ) : baseplateResult && (
-              <div>
-                <h4 className="text-xs font-semibold text-slate-400 mb-2">BASEPLATE</h4>
-                <ExportButtons
-                  stlUrl={baseplateResult.stlUrl}
-                  scadContent={baseplateResult.scadContent}
-                  filename={baseplateResult.filename}
-                />
-              </div>
-            )}
-          </div>
         </main>
+      </div>
+
+      {/* Export Buttons - Fixed to bottom of screen (only over preview area) */}
+      <div className="fixed bottom-0 left-96 right-0 border-t border-slate-800 bg-slate-900/95 backdrop-blur-sm p-4 space-y-4 overflow-x-auto min-w-0 z-10">
+        {boxResult && (
+          <div>
+            <h4 className="text-xs font-semibold text-slate-400 mb-2">BOX</h4>
+            <ExportButtons
+              stlUrl={boxResult.stlUrl}
+              scadContent={boxResult.scadContent}
+              filename={boxResult.filename}
+            />
+          </div>
+        )}
+        {multiSegmentResult ? (
+          <div>
+            <h4 className="text-xs font-semibold text-slate-400 mb-2">BASEPLATE (SPLIT)</h4>
+            <MultiSegmentExportButtons
+              result={multiSegmentResult}
+              splitInfo={multiSegmentResult.splitInfo}
+              baseplateConfig={baseplateConfig}
+              generationMode={generationMode}
+            />
+          </div>
+        ) : baseplateResult && (
+          <div>
+            <h4 className="text-xs font-semibold text-slate-400 mb-2">BASEPLATE</h4>
+            <ExportButtons
+              stlUrl={baseplateResult.stlUrl}
+              scadContent={baseplateResult.scadContent}
+              filename={baseplateResult.filename}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
