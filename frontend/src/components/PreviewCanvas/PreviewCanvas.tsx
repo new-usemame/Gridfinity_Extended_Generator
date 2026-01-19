@@ -25,8 +25,6 @@ export function PreviewCanvas({
   baseplateConfig
 }: PreviewCanvasProps) {
   const [boxZOffset, setBoxZOffset] = useState(0); // mm offset for box position
-  const [overlapDetected, setOverlapDetected] = useState(false);
-  const [overlapMessage, setOverlapMessage] = useState<string | null>(null);
 
   // Reset offset when switching views
   useEffect(() => {
@@ -81,8 +79,6 @@ export function PreviewCanvas({
               boxStlUrl={boxStlUrl || null} 
               baseplateStlUrl={baseplateStlUrl || null}
               boxZOffset={boxZOffset}
-              onOverlapDetected={setOverlapDetected}
-              onOverlapMessage={setOverlapMessage}
               boxConfig={boxConfig}
               baseplateConfig={baseplateConfig}
             />
@@ -125,21 +121,6 @@ export function PreviewCanvas({
                 <span>+20mm</span>
               </div>
             </div>
-            {overlapDetected && (
-              <div className="mt-3 p-2 bg-red-900/20 border border-red-500/30 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <svg className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  <p className="text-xs text-red-400">{overlapMessage || 'Overlap detected!'}</p>
-                </div>
-              </div>
-            )}
-            {!overlapDetected && boxZOffset !== 0 && (
-              <div className="mt-3 p-2 bg-green-900/20 border border-green-500/30 rounded-lg">
-                <p className="text-xs text-green-400">✓ No overlap detected</p>
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -158,29 +139,22 @@ function CombinedSceneContent({
   boxStlUrl, 
   baseplateStlUrl, 
   boxZOffset,
-  onOverlapDetected,
-  onOverlapMessage,
   boxConfig: _boxConfig,
   baseplateConfig: _baseplateConfig
 }: { 
   boxStlUrl: string | null; 
   baseplateStlUrl: string | null;
   boxZOffset: number;
-  onOverlapDetected: (detected: boolean) => void;
-  onOverlapMessage: (message: string | null) => void;
   boxConfig?: BoxConfig;
   baseplateConfig?: BaseplateConfig;
 }) {
   const [boxGeometry, setBoxGeometry] = useState<THREE.BufferGeometry | null>(null);
   const [baseplateGeometry, setBaseplateGeometry] = useState<THREE.BufferGeometry | null>(null);
-  const [boxBoundingBox, setBoxBoundingBox] = useState<THREE.Box3 | null>(null);
-  const [baseplateBoundingBox, setBaseplateBoundingBox] = useState<THREE.Box3 | null>(null);
 
   // Load box STL
   useEffect(() => {
     if (!boxStlUrl) {
       setBoxGeometry(null);
-      setBoxBoundingBox(null);
       return;
     }
 
@@ -229,10 +203,6 @@ function CombinedSceneContent({
         // This positions it on full cells at high Z (right side)
         loadedGeometry.translate(-box.min.x + clearance, -box.min.y, -box.min.z + boxZPosition);
         
-        // Recompute bounding box after translation
-        loadedGeometry.computeBoundingBox();
-        setBoxBoundingBox(loadedGeometry.boundingBox!.clone());
-        
         setBoxGeometry(loadedGeometry);
       },
       undefined,
@@ -246,7 +216,6 @@ function CombinedSceneContent({
   useEffect(() => {
     if (!baseplateStlUrl) {
       setBaseplateGeometry(null);
-      setBaseplateBoundingBox(null);
       return;
     }
 
@@ -276,10 +245,6 @@ function CombinedSceneContent({
         const box = loadedGeometry.boundingBox!;
         loadedGeometry.translate(-box.min.x, -box.min.y, -box.min.z);
         
-        // Recompute bounding box after translation
-        loadedGeometry.computeBoundingBox();
-        setBaseplateBoundingBox(loadedGeometry.boundingBox!.clone());
-        
         setBaseplateGeometry(loadedGeometry);
       },
       undefined,
@@ -288,75 +253,6 @@ function CombinedSceneContent({
       }
     );
   }, [baseplateStlUrl]);
-
-  // Collision detection - uses actual bounding boxes from STL geometry
-  useEffect(() => {
-    if (!boxBoundingBox || !baseplateBoundingBox) {
-      onOverlapDetected(false);
-      onOverlapMessage(null);
-      return;
-    }
-
-    // Create a copy of box bounding box with Z offset applied
-    // The bounding box already includes the feet (they're part of the STL geometry)
-    const offsetBox = boxBoundingBox.clone();
-    offsetBox.translate(new THREE.Vector3(0, boxZOffset, 0));
-    
-    // Check if boxes intersect (feet are already included in bounding box)
-    const intersects = offsetBox.intersectsBox(baseplateBoundingBox);
-    
-    // Calculate key positions
-    const boxBottom = offsetBox.min.y;
-    const boxTop = offsetBox.max.y;
-    const baseplateTop = baseplateBoundingBox.max.y;
-    const baseplateBottom = baseplateBoundingBox.min.y;
-    
-    if (intersects) {
-      // Calculate penetration depth
-      // Positive penetration = box bottom is below baseplate top (penetrating)
-      // Negative penetration = box bottom is above baseplate top (gap)
-      const penetration = baseplateTop - boxBottom;
-      
-      // Also check if box top is below baseplate bottom (box completely inside baseplate)
-      const boxInsideBaseplate = boxTop < baseplateBottom;
-      
-      if (penetration > 0.01) {
-        // Collision: box is penetrating into baseplate
-        onOverlapDetected(true);
-        onOverlapMessage(`Collision: ${penetration.toFixed(2)}mm penetration`);
-      } else if (boxInsideBaseplate) {
-        // Box is completely below baseplate (shouldn't happen normally, but handle it)
-        onOverlapDetected(true);
-        onOverlapMessage(`Collision: box below baseplate`);
-      } else if (penetration > -0.01 && penetration <= 0.01) {
-        // Just touching (within 0.01mm tolerance)
-        onOverlapDetected(false);
-        onOverlapMessage('Touching');
-      } else {
-        // Small gap but still intersecting (edge case)
-        onOverlapDetected(false);
-        onOverlapMessage(`Gap: ${Math.abs(penetration).toFixed(2)}mm`);
-      }
-    } else {
-      // No intersection - check gap
-      const gap = boxBottom - baseplateTop;
-      
-      if (gap > 0.1) {
-        // Box is above baseplate with gap
-        onOverlapDetected(false);
-        onOverlapMessage(`Gap: ${gap.toFixed(2)}mm`);
-      } else if (gap < -0.1) {
-        // Box bottom is below baseplate top but boxes don't intersect
-        // This shouldn't happen if bounding boxes are correct, but handle it
-        onOverlapDetected(false);
-        onOverlapMessage(`Above: ${Math.abs(gap).toFixed(2)}mm`);
-      } else {
-        // Very close (within 0.1mm) but not intersecting
-        onOverlapDetected(false);
-        onOverlapMessage(null);
-      }
-    }
-  }, [boxBoundingBox, baseplateBoundingBox, boxZOffset, onOverlapDetected, onOverlapMessage]);
 
   return (
     <>
