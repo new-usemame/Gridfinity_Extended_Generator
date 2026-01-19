@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Environment, Grid } from '@react-three/drei';
+import { OrbitControls, Environment, Grid, Text, Billboard } from '@react-three/drei';
 import { STLLoader } from 'three-stdlib';
 import * as THREE from 'three';
 import { BoxConfig, BaseplateConfig } from '../../types/config';
@@ -585,12 +585,14 @@ function CameraFit({ geometry }: { geometry: THREE.BufferGeometry }) {
   return null;
 }
 
-// 3D Axis indicator at origin
+// 3D Axis indicator at origin with labels
 function AxisIndicator({ size = 30 }: { size?: number }) {
   const axisLength = size;
   const axisRadius = size * 0.02;
   const coneHeight = size * 0.15;
   const coneRadius = size * 0.05;
+  const labelOffset = axisLength + coneHeight + 3;
+  const fontSize = size * 0.2;
 
   return (
     <group position={[0, 0, 0]}>
@@ -604,9 +606,14 @@ function AxisIndicator({ size = 30 }: { size?: number }) {
           <coneGeometry args={[coneRadius, coneHeight, 8]} />
           <meshBasicMaterial color="#ef4444" />
         </mesh>
+        <Billboard position={[labelOffset, 0, 0]}>
+          <Text fontSize={fontSize} color="#ef4444" anchorX="center" anchorY="middle">
+            X
+          </Text>
+        </Billboard>
       </group>
 
-      {/* Y Axis - Green */}
+      {/* Y Axis - Green (Up) */}
       <group>
         <mesh position={[0, axisLength / 2, 0]}>
           <cylinderGeometry args={[axisRadius, axisRadius, axisLength, 8]} />
@@ -616,6 +623,11 @@ function AxisIndicator({ size = 30 }: { size?: number }) {
           <coneGeometry args={[coneRadius, coneHeight, 8]} />
           <meshBasicMaterial color="#22c55e" />
         </mesh>
+        <Billboard position={[0, labelOffset, 0]}>
+          <Text fontSize={fontSize} color="#22c55e" anchorX="center" anchorY="middle">
+            Y
+          </Text>
+        </Billboard>
       </group>
 
       {/* Z Axis - Blue */}
@@ -628,6 +640,11 @@ function AxisIndicator({ size = 30 }: { size?: number }) {
           <coneGeometry args={[coneRadius, coneHeight, 8]} />
           <meshBasicMaterial color="#3b82f6" />
         </mesh>
+        <Billboard position={[0, 0, labelOffset]}>
+          <Text fontSize={fontSize} color="#3b82f6" anchorX="center" anchorY="middle">
+            Z
+          </Text>
+        </Billboard>
       </group>
 
       {/* Origin sphere */}
