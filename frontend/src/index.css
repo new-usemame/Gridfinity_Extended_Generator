@@ -2,16 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light theme */
+[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --bg-quaternary: #e2e8f0;
+  --accent: #16a34a;
+  --accent-light: #22c55e;
+  --accent-dark: #15803d;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --border-hover: #cbd5e1;
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-quaternary: #475569;
+  --accent: #4ade80;
+  --accent-light: #22c55e;
+  --accent-dark: #16a34a;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --border-color: #475569;
+  --border-hover: #64748b;
+}
+
+/* Default to dark theme if no theme is set */
 :root {
-  --bg-primary: #0a0f1a;
-  --bg-secondary: #111827;
-  --bg-tertiary: #1f2937;
-  --accent-green: #22c55e;
-  --accent-green-dark: #15803d;
-  --text-primary: #f9fafb;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
-  --border-color: #374151;
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-quaternary: #475569;
+  --accent: #4ade80;
+  --accent-light: #22c55e;
+  --accent-dark: #16a34a;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --border-color: #475569;
+  --border-hover: #64748b;
 }
 
 * {
@@ -49,7 +85,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: var(--border-hover);
 }
 
 /* Custom range slider */
@@ -70,7 +106,7 @@ input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   margin-top: -5px;
-  background: var(--accent-green);
+  background: var(--accent);
   height: 16px;
   width: 16px;
   border-radius: 50%;
@@ -89,7 +125,7 @@ input[type="range"]::-moz-range-track {
 
 input[type="range"]::-moz-range-thumb {
   border: none;
-  background: var(--accent-green);
+  background: var(--accent);
   height: 16px;
   width: 16px;
   border-radius: 50%;
@@ -110,16 +146,16 @@ input[type="number"]::-webkit-outer-spin-button {
 input:focus, select:focus, button:focus {
   outline: none;
   ring: 2px;
-  ring-color: var(--accent-green);
+  ring-color: var(--accent);
 }
 
 /* Loading animation */
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+    box-shadow: 0 0 20px rgba(22, 163, 74, 0.3);
   }
   50% {
-    box-shadow: 0 0 40px rgba(34, 197, 94, 0.6);
+    box-shadow: 0 0 40px rgba(22, 163, 74, 0.6);
   }
 }
 
@@ -130,7 +166,7 @@ input:focus, select:focus, button:focus {
 /* Grid pattern background */
 .grid-pattern {
   background-image: 
-    linear-gradient(rgba(34, 197, 94, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(34, 197, 94, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(22, 163, 74, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(22, 163, 74, 0.03) 1px, transparent 1px);
   background-size: 42px 42px;
 }

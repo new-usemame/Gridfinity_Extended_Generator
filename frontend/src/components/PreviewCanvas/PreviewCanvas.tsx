@@ -140,14 +140,14 @@ export function PreviewCanvas({
       {/* Combined View Controls */}
       {isCombinedView && hasModel && (
         <div 
-          className="absolute w-64 bg-slate-900/90 backdrop-blur-sm rounded-xl border border-slate-700 p-4 z-10"
+          className="absolute w-64 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm rounded-xl border border-slate-200 dark:border-slate-700 p-4 z-10"
           style={positionControlStyle}
         >
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-slate-300">Position Control</h3>
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Position Control</h3>
             <button
               onClick={() => setBoxZOffset(0)}
-              className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors"
+              className="px-2 py-1 text-xs bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded transition-colors"
               title="Reset to 0"
             >
               Reset
@@ -155,7 +155,7 @@ export function PreviewCanvas({
           </div>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-2">
+              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-2">
                 Box Z Position: {boxZOffset.toFixed(1)}mm
               </label>
               <input
@@ -165,23 +165,18 @@ export function PreviewCanvas({
                 step="0.1"
                 value={boxZOffset}
                 onChange={(e) => setBoxZOffset(parseFloat(e.target.value))}
-                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-green-500"
+                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-green-500 dark:accent-green-400"
               />
-              <div className="flex justify-between text-xs text-slate-500 mt-1">
-                <span>-20mm</span>
-                <span>0mm</span>
-                <span>+20mm</span>
-              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* Controls Help */}
-      <div className="absolute bottom-4 left-4 text-xs text-slate-500 bg-slate-900/80 backdrop-blur-sm rounded-lg px-3 py-2">
-        <span className="text-slate-400">Drag</span> to rotate • 
-        <span className="text-slate-400"> Scroll</span> to zoom • 
-        <span className="text-slate-400"> Shift+Drag</span> to pan
+      <div className="absolute bottom-4 left-4 text-xs text-slate-600 dark:text-slate-500 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700">
+        <span className="text-slate-700 dark:text-slate-400">Drag</span> to rotate • 
+        <span className="text-slate-700 dark:text-slate-400"> Scroll</span> to zoom • 
+        <span className="text-slate-700 dark:text-slate-400"> Shift+Drag</span> to pan
       </div>
     </div>
   );
@@ -322,10 +317,10 @@ function CombinedSceneContent({
         args={[300, 300]}
         cellSize={42}
         cellThickness={0.5}
-        cellColor="#1e3a4a"
+        cellColor="#cbd5e1"
         sectionSize={42}
         sectionThickness={1}
-        sectionColor="#22c55e"
+        sectionColor="#16a34a"
         fadeDistance={400}
         fadeStrength={1}
         followCamera={false}
@@ -357,7 +352,7 @@ function CombinedSceneContent({
           receiveShadow
         >
           <meshStandardMaterial
-            color="#22c55e"
+            color="#16a34a"
             metalness={0.1}
             roughness={0.4}
             envMapIntensity={0.5}
@@ -444,10 +439,10 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
         args={[300, 300]}
         cellSize={42}
         cellThickness={0.5}
-        cellColor="#1e3a4a"
+        cellColor="#cbd5e1"
         sectionSize={42}
         sectionThickness={1}
-        sectionColor="#22c55e"
+        sectionColor="#16a34a"
         fadeDistance={400}
         fadeStrength={1}
         followCamera={false}

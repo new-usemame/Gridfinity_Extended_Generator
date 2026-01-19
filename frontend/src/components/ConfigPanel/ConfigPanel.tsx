@@ -37,7 +37,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
   };
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-3 space-y-2.5">
       {/* Dimensions Section */}
       <CollapsibleSection title="Dimensions" icon="📐" defaultOpen>
         <SliderInput
@@ -76,7 +76,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           unit="mm"
           onChange={(v) => update('gridSize', v)}
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-500">
           Standard Gridfinity is 42mm.
         </p>
       </CollapsibleSection>
@@ -110,7 +110,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           unit="mm"
           onChange={(v) => update('cornerRadius', v)}
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-500">
           Rounds the vertical edges (corners viewed from above). Standard: 3.75mm.
         </p>
         <ToggleInput
@@ -118,7 +118,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           value={config.preventBottomOverhangs}
           onChange={(v) => update('preventBottomOverhangs', v)}
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-500">
           Adds small chamfer where feet meet box walls to prevent printing overhangs.
         </p>
       </CollapsibleSection>
@@ -144,12 +144,12 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           unit="mm"
           onChange={(v) => update('feetCornerRadius', v)}
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-500">
           Rounds the corners of the feet. Standard is 3.75mm.
         </p>
         
-        <div className="mt-4 pt-4 border-t border-slate-700">
-          <h4 className="text-xs font-semibold text-slate-400 mb-3">FOOT CHAMFER</h4>
+        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+          <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">FOOT CHAMFER</h4>
           <SliderInput
             label="Chamfer Angle"
             value={config.footChamferAngle}
@@ -159,7 +159,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
             unit="°"
             onChange={(v) => update('footChamferAngle', v)}
           />
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-500">
             45° = standard. Higher = steeper taper. Lower = gentler taper.
           </p>
           <SliderInput
@@ -171,7 +171,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
             unit="mm"
             onChange={(v) => update('footChamferHeight', v)}
           />
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-500">
             Total height of the foot chamfer. Standard: 4.75mm.
           </p>
         </div>
@@ -190,7 +190,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           ]}
           onChange={(v) => update('efficientFloor', v as BoxConfig['efficientFloor'])}
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-500">
           Efficient floor reduces material by only printing under the walls.
         </p>
       </CollapsibleSection>
@@ -266,7 +266,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           ]}
           onChange={(v) => update('lipStyle', v as BoxConfig['lipStyle'])}
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-500">
           Standard lip allows bins to stack. Reduced/minimum lips provide easier access.
         </p>
       </CollapsibleSection>
@@ -337,7 +337,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
             onChange={(v) => update('taperedCornerSize', v)}
           />
         )}
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-500">
           Tapered internal corners make it easier to grab items from the bin.
         </p>
       </CollapsibleSection>
@@ -367,7 +367,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
             onChange={(v) => update('wallPatternSpacing', v)}
           />
         )}
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-500">
           Wall patterns reduce material usage and add visual interest.
         </p>
       </CollapsibleSection>
@@ -476,7 +476,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
       config.connectorEnabled, gridCalc]);
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-3 space-y-2.5">
       {/* Sizing Mode Section */}
       <CollapsibleSection title="Sizing Mode" icon="📏" defaultOpen>
         <div className="flex gap-2 mb-4">
@@ -522,7 +522,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
               unit="units"
               onChange={(v) => update('depth', v)}
             />
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-500">
               Actual size: {(config.width * config.gridSize).toFixed(0)}mm x {(config.depth * config.gridSize).toFixed(0)}mm
             </p>
           </>
@@ -547,8 +547,8 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
               onChange={(v) => update('targetDepthMm', v)}
             />
             
-            <div className="mt-3 pt-3 border-t border-slate-700">
-              <h4 className="text-xs font-semibold text-slate-400 mb-2">FILL OPTIONS</h4>
+            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+              <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">FILL OPTIONS</h4>
               <ToggleInput
                 label="Allow Half Cells (Width)"
                 value={config.allowHalfCellsX}
@@ -573,8 +573,8 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
 
             {/* Grid Calculation Preview */}
             {gridCalc && (
-              <div className="mt-3 p-3 bg-slate-700/50 rounded-lg border border-slate-600">
-                <h4 className="text-xs font-semibold text-emerald-400 mb-2">CALCULATED GRID</h4>
+              <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
+                <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2">CALCULATED GRID</h4>
                 <div className="space-y-1 text-xs">
                   <p className="text-slate-300">
                     <span className="text-slate-500">Grid size:</span>{' '}
@@ -615,7 +615,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
           unit="mm"
           onChange={(v) => update('gridSize', v)}
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-500">
           Standard Gridfinity is 42mm. Must match your bins.
         </p>
       </CollapsibleSection>
@@ -627,14 +627,14 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
           value={config.splitEnabled}
           onChange={(v) => update('splitEnabled', v)}
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-500">
           Split large baseplates into smaller segments that fit on your 3D printer bed.
         </p>
 
         {config.splitEnabled && (
           <>
-            <div className="mt-3 pt-3 border-t border-slate-700">
-              <h4 className="text-xs font-semibold text-slate-400 mb-2">PRINTER BED SIZE</h4>
+            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+              <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">PRINTER BED SIZE</h4>
               <NumberInput
                 label="Bed Width"
                 value={config.printerBedWidth}
@@ -653,19 +653,19 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                 unit="mm"
                 onChange={(v) => update('printerBedDepth', v)}
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-500">
                 Common sizes: Ender 3 (220x220), Prusa MK3 (250x210), Bambu X1 (256x256)
               </p>
             </div>
 
-            <div className="mt-3 pt-3 border-t border-slate-700">
-              <h4 className="text-xs font-semibold text-slate-400 mb-2">INTERLOCKING EDGES</h4>
+            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+              <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">INTERLOCKING EDGES</h4>
               <ToggleInput
                 label="Enable Interlocking Edges"
                 value={config.connectorEnabled}
                 onChange={(v) => update('connectorEnabled', v)}
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-500">
                 Add male/female interlocking edges between segments - snaps together without separate connectors.
               </p>
               
@@ -694,7 +694,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                       onChange({ ...config, ...updates });
                     }}
                   />
-                  <div className="p-2 bg-slate-700/50 rounded text-xs text-slate-400">
+                  <div className="p-2 bg-slate-100 dark:bg-slate-700/50 rounded text-xs text-slate-600 dark:text-slate-400">
                     {config.edgePattern === 'dovetail' && '▷ Trapezoidal teeth - wider at tip than base (classic woodworking style)'}
                     {config.edgePattern === 'rectangular' && '▷ Simple square blocks that interlock'}
                     {config.edgePattern === 'triangular' && '▷ Pointed zigzag pattern (sawtooth)'}
@@ -714,7 +714,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                     unit="mm"
                     onChange={(v) => update('toothDepth', v)}
                   />
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-500">
                     Overall height of the connector shape.
                   </p>
                   
@@ -727,7 +727,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                     unit="mm"
                     onChange={(v) => update('toothWidth', v)}
                   />
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-500">
                     Width of each tooth at the base.
                   </p>
                   
@@ -745,7 +745,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                         unit="%"
                         onChange={(v) => update('concaveDepth', v)}
                       />
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-500">
                         How deep the inward swoop curves. 0% = nearly straight, 100% = deep hourglass.
                       </p>
                     </>
@@ -760,7 +760,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                     unit="mm"
                     onChange={(v) => update('connectorTolerance', v)}
                   />
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-500">
                     Typical FDM tolerance: 0.3mm. Increase if fit is too tight.
                   </p>
                 </>
@@ -769,8 +769,8 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
 
             {/* Split Calculation Preview */}
             {splitCalc && (
-              <div className="mt-3 p-3 bg-slate-700/50 rounded-lg border border-slate-600">
-                <h4 className="text-xs font-semibold text-cyan-400 mb-2">SPLIT PREVIEW</h4>
+              <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
+                <h4 className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 mb-2">SPLIT PREVIEW</h4>
                 <div className="space-y-1 text-xs">
                   {splitCalc.needsSplit ? (
                     <>
@@ -810,8 +810,8 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                       
                       {/* Simple grid preview when connectors disabled */}
                       {!config.connectorEnabled && (
-                        <div className="mt-3 p-2 bg-slate-800 rounded">
-                          <p className="text-slate-500 text-[10px] mb-1">Segment Layout:</p>
+                        <div className="mt-3 p-2 bg-slate-200 dark:bg-slate-800 rounded">
+                          <p className="text-slate-600 dark:text-slate-500 text-[10px] mb-1">Segment Layout:</p>
                           <div 
                             className="grid gap-1" 
                             style={{ 
@@ -870,7 +870,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
           value={config.removeBottomTaper}
           onChange={(v) => update('removeBottomTaper', v)}
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-500">
           Removing bottom taper creates flat socket bottoms for CNC/laser cutting.
         </p>
       </CollapsibleSection>
@@ -914,7 +914,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
             unit="mm"
             onChange={(v) => update('magnetTopCover', v)}
           />
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-500">
             Z Offset raises magnets for glue-in. Top Cover creates ceiling to capture magnets.
           </p>
         </CollapsibleSection>
@@ -937,7 +937,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
             value={config.centerScrew}
             onChange={(v) => update('centerScrew', v)}
           />
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-500">
             Center screw allows mounting baseplate to surface.
           </p>
         </CollapsibleSection>
@@ -950,7 +950,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
           value={config.weightCavity}
           onChange={(v) => update('weightCavity', v)}
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-500">
           Creates hollow space to add weights (lead, steel balls) for stability.
         </p>
       </CollapsibleSection>
@@ -974,7 +974,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
           step={4}
           onChange={(v) => update('cornerSegments', v)}
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-500">
           Higher segments = smoother curves but larger file size.
         </p>
       </CollapsibleSection>
@@ -986,12 +986,12 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
           value={config.syncSocketWithFoot}
           onChange={(v) => update('syncSocketWithFoot', v)}
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-500">
           When enabled, socket chamfer automatically matches foot chamfer for proper fit.
         </p>
         {!config.syncSocketWithFoot && (
-          <div className="mt-2 p-2 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
-            <p className="text-xs text-yellow-400">
+          <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-500/30 rounded-lg">
+            <p className="text-xs text-yellow-700 dark:text-yellow-400">
               ⚠️ Socket angle & height must match foot for proper fit!
             </p>
           </div>
@@ -1006,7 +1006,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
             unit="°"
             onChange={(v) => update('socketChamferAngle', v)}
           />
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-500">
             Should match foot chamfer angle. 45° = standard.
           </p>
           <SliderInput
@@ -1018,7 +1018,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
             unit="mm"
             onChange={(v) => update('socketChamferHeight', v)}
           />
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-500">
             Should match foot chamfer height. Standard: 4.75mm.
           </p>
         </div>
@@ -1217,17 +1217,17 @@ function CollapsibleSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 overflow-hidden">
+    <div className="rounded-lg bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200/30 dark:border-slate-700/30 overflow-hidden">
       <button
-        className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-slate-700/30 transition-colors"
+        className="w-full px-3 py-2.5 flex items-center justify-between text-left hover:bg-slate-200/50 dark:hover:bg-slate-700/30 transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
           <span>{icon}</span>
           {title}
         </h3>
         <svg 
-          className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-slate-500 dark:text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none" 
           viewBox="0 0 24 24" 
           stroke="currentColor"
@@ -1236,7 +1236,7 @@ function CollapsibleSection({
         </svg>
       </button>
       {isOpen && (
-        <div className="px-4 pb-4 pt-2 space-y-4 border-t border-slate-700/50">
+        <div className="px-3 pb-3 pt-1.5 space-y-3 border-t border-slate-200/30 dark:border-slate-700/30">
           {children}
         </div>
       )}

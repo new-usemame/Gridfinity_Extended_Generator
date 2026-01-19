@@ -61,14 +61,14 @@ export function NumberInput({ label, value, min, max, step, unit, onChange }: Nu
   };
 
   return (
-    <div className="space-y-2">
-      <label className="text-sm text-slate-400">{label}</label>
+    <div className="space-y-1.5">
+      <label className="text-sm text-slate-600 dark:text-slate-400">{label}</label>
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => handleChange(value - step)}
           disabled={value <= min}
-          className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -86,10 +86,10 @@ export function NumberInput({ label, value, min, max, step, unit, onChange }: Nu
             onFocus={() => setIsFocused(true)}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-center text-white font-mono focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-center text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent"
           />
           {unit && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 dark:text-slate-500">
               {unit}
             </span>
           )}
@@ -99,7 +99,7 @@ export function NumberInput({ label, value, min, max, step, unit, onChange }: Nu
           type="button"
           onClick={() => handleChange(value + step)}
           disabled={value >= max}
-          className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

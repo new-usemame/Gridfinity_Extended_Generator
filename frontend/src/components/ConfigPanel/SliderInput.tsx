@@ -10,10 +10,10 @@ interface SliderInputProps {
 
 export function SliderInput({ label, value, min, max, step, unit, onChange }: SliderInputProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <div className="flex justify-between items-center">
-        <label className="text-sm text-slate-400">{label}</label>
-        <span className="text-sm font-mono text-green-400 bg-slate-900 px-2 py-0.5 rounded">
+        <label className="text-sm text-slate-600 dark:text-slate-400">{label}</label>
+        <span className="text-sm font-mono text-green-600 dark:text-green-400 bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded">
           {value.toFixed(step < 1 ? 2 : 0)}{unit ? ` ${unit}` : ''}
         </span>
       </div>
@@ -24,12 +24,9 @@ export function SliderInput({ label, value, min, max, step, unit, onChange }: Sl
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+        className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"
+        title={`${label}: ${value.toFixed(step < 1 ? 2 : 0)}${unit ? ` ${unit}` : ''} (range: ${min}${unit ? ` ${unit}` : ''} - ${max}${unit ? ` ${unit}` : ''})`}
       />
-      <div className="flex justify-between text-xs text-slate-500">
-        <span>{min}{unit ? ` ${unit}` : ''}</span>
-        <span>{max}{unit ? ` ${unit}` : ''}</span>
-      </div>
     </div>
   );
 }

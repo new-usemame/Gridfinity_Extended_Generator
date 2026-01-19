@@ -50,8 +50,8 @@ export function Navigation() {
         to="/"
         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
           isActive('/')
-            ? 'bg-green-600 text-white shadow-lg shadow-green-500/25'
-            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            ? 'bg-green-600 dark:bg-green-500 text-white shadow-lg shadow-green-500/25'
+            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
         }`}
       >
         Home
@@ -63,8 +63,8 @@ export function Navigation() {
           onClick={() => setIsAboutOpen(!isAboutOpen)}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1 ${
             isAboutActive()
-              ? 'bg-green-600 text-white shadow-lg shadow-green-500/25'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              ? 'bg-green-600 dark:bg-green-500 text-white shadow-lg shadow-green-500/25'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
           About
@@ -79,15 +79,15 @@ export function Navigation() {
         </button>
 
         {isAboutOpen && (
-          <div className="absolute top-full left-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden">
+          <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden">
             {aboutLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
                 className={`block px-4 py-2 text-sm transition-colors ${
                   isActive(link.path)
-                    ? 'bg-slate-700 text-green-400'
-                    : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                    ? 'bg-slate-100 dark:bg-slate-700 text-green-600 dark:text-green-400'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 {link.label}
@@ -102,8 +102,8 @@ export function Navigation() {
         to="/donate"
         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
           isActive('/donate')
-            ? 'bg-green-600 text-white shadow-lg shadow-green-500/25'
-            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            ? 'bg-green-600 dark:bg-green-500 text-white shadow-lg shadow-green-500/25'
+            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
         }`}
       >
         Donate
@@ -113,7 +113,7 @@ export function Navigation() {
       {!user && (
         <button
           onClick={() => setIsAuthModalOpen(true)}
-          className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg text-sm font-medium transition-all"
+          className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition-all"
         >
           Sign In
         </button>
@@ -124,8 +124,8 @@ export function Navigation() {
         to="/generator"
         className={`px-6 py-2.5 rounded-xl text-base font-semibold transition-all duration-200 ${
           isActive('/generator')
-            ? 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-lg shadow-green-500/25'
-            : 'bg-gradient-to-r from-green-600/80 to-green-500/80 text-white hover:from-green-500 hover:to-green-400 shadow-lg shadow-green-500/20 hover:shadow-green-500/40'
+            ? 'bg-gradient-to-r from-green-600 to-green-500 dark:from-green-500 dark:to-green-400 text-white shadow-lg shadow-green-500/25'
+            : 'bg-gradient-to-r from-green-600/80 to-green-500/80 dark:from-green-500/80 dark:to-green-400/80 text-white hover:from-green-500 hover:to-green-400 dark:hover:from-green-400 dark:hover:to-green-300 shadow-lg shadow-green-500/20 hover:shadow-green-500/40'
         }`}
       >
         Generator
