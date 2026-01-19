@@ -622,6 +622,11 @@ module gridfinity_baseplate() {
         has_half_y = depth_units - full_cells_y >= 0.5;
         half_cell_size = grid_unit / 2;
         
+        // Calculate maximum positions for half cells (FAR side, not at origin)
+        // Half cells must be at the maximum X and Y positions, after all full cells
+        max_x_pos = full_cells_x * grid_unit;  // Position after all full cells in X
+        max_y_pos = full_cells_y * grid_unit;  // Position after all full cells in Y (far Z in preview)
+        
         // Full grid cells - MUST start at origin (0,0) so box can sit on them
         // These are at positions: (0,0), (42,0), (0,42), (42,42), etc.
         for (gx = [0:full_cells_x-1]) {
@@ -631,28 +636,29 @@ module gridfinity_baseplate() {
             }
         }
         
-        // Half cells on X edge (far/right side) - at HIGH X values, AFTER full cells
-        // Position: (full_cells_x * grid_unit, ...) which is far right
+        // Half cells on X edge (far/right side) - at MAXIMUM X position, FAR from origin
+        // MUST be at max_x_pos (after full cells), NOT at 0
         if (has_half_x) {
             for (gy = [0:full_cells_y-1]) {
-                translate([full_cells_x * grid_unit, gy * grid_unit, 0])
+                translate([max_x_pos, gy * grid_unit, 0])
                 grid_socket(half_cell_size, grid_unit);
             }
         }
         
-        // Half cells on Y edge (far/back side) - at HIGH Y values, AFTER full cells  
-        // Position: (..., full_cells_y * grid_unit) which is far back (far Z in preview)
+        // Half cells on Y edge (far/back side) - at MAXIMUM Y position, FAR from origin
+        // MUST be at max_y_pos (after full cells), NOT at 0
+        // This is the far back position (far Z in preview)
         if (has_half_y) {
             for (gx = [0:full_cells_x-1]) {
-                translate([gx * grid_unit, full_cells_y * grid_unit, 0])
+                translate([gx * grid_unit, max_y_pos, 0])
                 grid_socket(grid_unit, half_cell_size);
             }
         }
         
-        // Corner half cell (if both X and Y have half cells) - far corner at HIGH X, HIGH Y
-        // This is the back-right corner (far Z, far X in preview)
+        // Corner half cell (if both X and Y have half cells) - far corner at MAXIMUM X, MAXIMUM Y
+        // This is the back-right corner (far Z, far X in preview), NOT at (0,0)
         if (has_half_x && has_half_y) {
-            translate([full_cells_x * grid_unit, full_cells_y * grid_unit, 0])
+            translate([max_x_pos, max_y_pos, 0])
             grid_socket(half_cell_size, half_cell_size);
         }
     }
