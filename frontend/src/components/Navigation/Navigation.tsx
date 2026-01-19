@@ -1,9 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { AuthModal } from '../AuthModal/AuthModal';
 
 export function Navigation() {
   const location = useLocation();
+  const { user } = useAuth();
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const isActive = (path: string) => {
@@ -105,6 +109,16 @@ export function Navigation() {
         Donate
       </Link>
 
+      {/* Auth Button or User Indicator */}
+      {!user && (
+        <button
+          onClick={() => setIsAuthModalOpen(true)}
+          className="px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg text-sm font-medium transition-all"
+        >
+          Sign In
+        </button>
+      )}
+
       {/* Generator - Bigger button on the right */}
       <Link
         to="/generator"
@@ -116,6 +130,8 @@ export function Navigation() {
       >
         Generator
       </Link>
+
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </nav>
   );
 }

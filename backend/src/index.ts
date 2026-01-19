@@ -3,6 +3,8 @@ import cors from 'cors';
 import path from 'path';
 import { generateRouter } from './routes/generate.js';
 import { filesRouter } from './routes/files.js';
+import { authRouter } from './routes/auth.js';
+import { preferencesRouter } from './routes/preferences.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -17,6 +19,8 @@ app.use('/files', express.static(path.join(process.cwd(), 'generated')));
 // API Routes
 app.use('/api/generate', generateRouter);
 app.use('/api/files', filesRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/preferences', preferencesRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

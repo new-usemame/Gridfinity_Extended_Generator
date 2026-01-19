@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { ConfigPanel } from '../../components/ConfigPanel/ConfigPanel';
 import { PreviewCanvas } from '../../components/PreviewCanvas/PreviewCanvas';
 import { ExportButtons, MultiSegmentExportButtons } from '../../components/ExportButtons/ExportButtons';
+import { UserDropdown } from '../../components/UserDropdown/UserDropdown';
 import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, GenerationResult, MultiSegmentResult, GenerationMode } from '../../types/config';
 import { generateBoxScad, generateBaseplateScad, generateCombinedPreviewScad, generateSegmentScad, calculateSplitInfo } from '../../services/scadGenerator';
 import { generateLocalStl, revokeLocalStlUrl, isWasmSupported, isWasmLoaded } from '../../services/openscadWasm';
@@ -193,6 +194,16 @@ export function Generator() {
     };
   }, [cleanupBlobUrls]);
 
+  // Handle loading preferences
+  const handleLoadPreference = useCallback((boxConfig: BoxConfig | null, baseplateConfig: BaseplateConfig | null) => {
+    if (boxConfig) {
+      setBoxConfig(boxConfig);
+    }
+    if (baseplateConfig) {
+      setBaseplateConfig(baseplateConfig);
+    }
+  }, []);
+
   // Check WASM support
   const wasmSupported = isWasmSupported();
 
@@ -200,7 +211,14 @@ export function Generator() {
     <div className="min-h-[calc(100vh-140px)] flex flex-col bg-slate-950 grid-pattern">
       {/* Generator Controls Header */}
       <header className="flex-shrink-0 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm">
-        <div className="px-6 py-4 flex items-center justify-end">
+        <div className="px-6 py-4 flex items-center justify-between">
+          {/* User Dropdown */}
+          <UserDropdown
+            onLoadPreference={handleLoadPreference}
+            currentBoxConfig={boxConfig}
+            currentBaseplateConfig={baseplateConfig}
+          />
+
           {/* Generation Mode Toggle */}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 bg-slate-900 rounded-lg p-0.5">

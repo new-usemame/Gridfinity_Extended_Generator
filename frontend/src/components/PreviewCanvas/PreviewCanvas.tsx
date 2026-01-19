@@ -1,9 +1,13 @@
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, Grid, Text, Billboard } from '@react-three/drei';
 import { STLLoader } from 'three-stdlib';
 import * as THREE from 'three';
 import { BoxConfig, BaseplateConfig } from '../../types/config';
+
+// Track if camera has been fitted to prevent resetting on geometry changes
+let cameraFittedForScene = false;
+let cameraFittedForCombined = false;
 
 interface PreviewCanvasProps {
   stlUrl?: string | null;
@@ -446,37 +450,42 @@ function CameraFitCombined({
   const { camera } = useThree();
   
   useEffect(() => {
-    const boxes: THREE.Box3[] = [];
-    
-    if (boxGeometry) {
-      boxGeometry.computeBoundingBox();
-      if (boxGeometry.boundingBox) {
-        boxes.push(boxGeometry.boundingBox);
-      }
-    }
-    
-    if (baseplateGeometry) {
-      baseplateGeometry.computeBoundingBox();
-      if (baseplateGeometry.boundingBox) {
-        boxes.push(baseplateGeometry.boundingBox);
-      }
-    }
-    
-    if (boxes.length > 0) {
-      // Combine all bounding boxes
-      const combinedBox = boxes[0].clone();
-      for (let i = 1; i < boxes.length; i++) {
-        combinedBox.union(boxes[i]);
+    // Only fit camera once on initial load
+    // Don't reset camera when geometry changes after initial load
+    if (!cameraFittedForCombined && (boxGeometry || baseplateGeometry)) {
+      const boxes: THREE.Box3[] = [];
+      
+      if (boxGeometry) {
+        boxGeometry.computeBoundingBox();
+        if (boxGeometry.boundingBox) {
+          boxes.push(boxGeometry.boundingBox);
+        }
       }
       
-      const size = new THREE.Vector3();
-      combinedBox.getSize(size);
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
-      const cameraZ = Math.abs(maxDim / Math.sin(fov / 2)) * 1.5;
+      if (baseplateGeometry) {
+        baseplateGeometry.computeBoundingBox();
+        if (baseplateGeometry.boundingBox) {
+          boxes.push(baseplateGeometry.boundingBox);
+        }
+      }
       
-      camera.position.set(cameraZ * 0.7, cameraZ * 0.5, cameraZ * 0.7);
-      camera.lookAt(0, 0, 0);
+      if (boxes.length > 0) {
+        // Combine all bounding boxes
+        const combinedBox = boxes[0].clone();
+        for (let i = 1; i < boxes.length; i++) {
+          combinedBox.union(boxes[i]);
+        }
+        
+        const size = new THREE.Vector3();
+        combinedBox.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
+        const cameraZ = Math.abs(maxDim / Math.sin(fov / 2)) * 1.5;
+        
+        camera.position.set(cameraZ * 0.7, cameraZ * 0.5, cameraZ * 0.7);
+        camera.lookAt(0, 0, 0);
+        cameraFittedForCombined = true;
+      }
     }
   }, [boxGeometry, baseplateGeometry, camera]);
 
@@ -487,17 +496,22 @@ function CameraFit({ geometry }: { geometry: THREE.BufferGeometry }) {
   const { camera } = useThree();
   
   useEffect(() => {
-    geometry.computeBoundingBox();
-    const box = geometry.boundingBox;
-    if (box) {
-      const size = new THREE.Vector3();
-      box.getSize(size);
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
-      const cameraZ = Math.abs(maxDim / Math.sin(fov / 2)) * 1.5;
-      
-      camera.position.set(cameraZ * 0.7, cameraZ * 0.5, cameraZ * 0.7);
-      camera.lookAt(0, 0, 0);
+    // Only fit camera once on initial load
+    // Don't reset camera when geometry changes after initial load
+    if (!cameraFittedForScene) {
+      geometry.computeBoundingBox();
+      const box = geometry.boundingBox;
+      if (box) {
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
+        const cameraZ = Math.abs(maxDim / Math.sin(fov / 2)) * 1.5;
+        
+        camera.position.set(cameraZ * 0.7, cameraZ * 0.5, cameraZ * 0.7);
+        camera.lookAt(0, 0, 0);
+        cameraFittedForScene = true;
+      }
     }
   }, [geometry, camera]);
 
