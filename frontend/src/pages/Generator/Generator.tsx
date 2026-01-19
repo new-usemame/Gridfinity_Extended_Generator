@@ -4,6 +4,7 @@ import { ConfigPanel } from '../../components/ConfigPanel/ConfigPanel';
 import { PreviewCanvas } from '../../components/PreviewCanvas/PreviewCanvas';
 import { ExportButtons, MultiSegmentExportButtons } from '../../components/ExportButtons/ExportButtons';
 import { UserDropdown } from '../../components/UserDropdown/UserDropdown';
+import { SavedConfigsDropdown } from '../../components/SavedConfigsDropdown/SavedConfigsDropdown';
 import { AuthModal } from '../../components/AuthModal/AuthModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, GenerationResult, MultiSegmentResult, GenerationMode } from '../../types/config';
@@ -326,7 +327,8 @@ export function Generator() {
               </>
             ) : (
               <>
-                <UserDropdown
+                <UserDropdown />
+                <SavedConfigsDropdown
                   onLoadPreference={handleLoadPreference}
                   currentBoxConfig={boxConfig}
                   currentBaseplateConfig={baseplateConfig}
