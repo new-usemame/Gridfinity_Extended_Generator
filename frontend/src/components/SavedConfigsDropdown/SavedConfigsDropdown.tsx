@@ -268,7 +268,8 @@ export const SavedConfigsDropdown = forwardRef<SavedConfigsDropdownRef, SavedCon
                       </svg>
                     </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
