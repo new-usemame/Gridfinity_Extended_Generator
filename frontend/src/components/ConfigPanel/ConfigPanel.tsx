@@ -1104,7 +1104,7 @@ function SegmentEdgeEditor({
         </span>
       </div>
       
-      {/* Segment grid with clickable edges */}
+      {/* Segment grid with clickable edges - reversed Y so back is at top, front at bottom */}
       <div 
         className="grid gap-2" 
         style={{ 
@@ -1112,7 +1112,7 @@ function SegmentEdgeEditor({
           maxWidth: `${Math.min(splitInfo.segmentsX * 80, 300)}px`
         }}
       >
-        {splitInfo.segments.flat().map((seg) => (
+        {[...splitInfo.segments].reverse().flat().map((seg) => (
           <div 
             key={`${seg.segmentX}-${seg.segmentY}`}
             className="relative bg-slate-700/50 border border-slate-600 rounded p-2"
