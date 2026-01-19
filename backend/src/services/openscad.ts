@@ -523,134 +523,191 @@ module tslot_female_2d() {
     square([head_width, head_depth + edge_tolerance]);
 }
 
-// --- PATTERN 6: PUZZLE SMOOTH (Jigsaw with filleted base) ---
-// Same bulb locking mechanism but with smooth curved transition at base
-// Prevents corner lift during 3D printing by allowing printhead to flow smoothly
+// --- PATTERN 6: PUZZLE SMOOTH (Jigsaw with concave swoop) ---
+// Classic puzzle bulb but with concave hourglass neck - no sharp corners
+// The neck curves INWARD (concave) before swooping out to the bulb
+// Allows printhead to trace smooth continuous curves
 module puzzle_smooth_male_2d() {
-    neck_width = tooth_width * 0.5;
     bulb_radius = tooth_width * 0.4;
     neck_length = tooth_depth - bulb_radius;
-    fillet_r = min(neck_width * 0.4, 1.5);  // Base fillet radius
     
-    // Use hull to create smooth transition from base to neck
-    union() {
-        // Filleted base transition using hull of circles
-        hull() {
-            // Base circles at corners
-            translate([-neck_width/2 + fillet_r, fillet_r]) circle(r = fillet_r, $fn = 16);
-            translate([neck_width/2 - fillet_r, fillet_r]) circle(r = fillet_r, $fn = 16);
-            // Slightly up the neck for smooth flow
-            translate([-neck_width/2 + fillet_r, fillet_r * 2]) circle(r = fillet_r, $fn = 16);
-            translate([neck_width/2 - fillet_r, fillet_r * 2]) circle(r = fillet_r, $fn = 16);
-        }
-        
-        // Main neck (straight section)
-        translate([-neck_width/2, fillet_r])
-        square([neck_width, neck_length - fillet_r]);
-        
-        // Bulb (locking feature)
-        translate([0, neck_length])
-        circle(r = bulb_radius, $fn = 32);
-    }
+    // Base width (where it meets plate) - wider for stability
+    base_half_width = tooth_width * 0.4;
+    // Narrowest point of the concave neck (waist)
+    waist_half_width = tooth_width * 0.2;
+    waist_y = neck_length * 0.5;  // Middle of neck
+    
+    // Create smooth concave curve using polygon points
+    // Generate points for the concave swoop on each side
+    steps = 12;
+    
+    // Build polygon with concave sides leading to bulb
+    points = concat(
+        // Right side: base to waist (concave inward curve)
+        [for (i = [0:steps]) 
+            let(t = i/steps,
+                // Sine curve creates smooth concave swoop
+                x = base_half_width - (base_half_width - waist_half_width) * sin(t * 90),
+                y = t * waist_y)
+            [x, y]
+        ],
+        // Right side: waist to bulb connection (concave outward to meet bulb)
+        [for (i = [1:steps])
+            let(t = i/steps,
+                // Curve back out to meet the bulb
+                x = waist_half_width + (bulb_radius - waist_half_width) * sin(t * 90),
+                y = waist_y + t * (neck_length - waist_y))
+            [x, y]
+        ],
+        // Bulb arc (top half of circle)
+        [for (a = [-90:10:270])
+            [bulb_radius * cos(a), neck_length + bulb_radius * sin(a)]
+        ],
+        // Left side: bulb connection back to waist
+        [for (i = [steps:-1:1])
+            let(t = i/steps,
+                x = -(waist_half_width + (bulb_radius - waist_half_width) * sin(t * 90)),
+                y = waist_y + t * (neck_length - waist_y))
+            [x, y]
+        ],
+        // Left side: waist back to base
+        [for (i = [steps:-1:0])
+            let(t = i/steps,
+                x = -(base_half_width - (base_half_width - waist_half_width) * sin(t * 90)),
+                y = t * waist_y)
+            [x, y]
+        ]
+    );
+    
+    polygon(points);
 }
 
 module puzzle_smooth_female_2d() {
-    neck_width = tooth_width * 0.5 + edge_tolerance * 2;
     bulb_radius = tooth_width * 0.4 + edge_tolerance;
     neck_length = tooth_depth - (tooth_width * 0.4);
-    fillet_r = min((tooth_width * 0.5) * 0.4, 1.5) + edge_tolerance * 0.5;
     
-    // Smooth cavity with filleted entrance
-    union() {
-        // Filleted entrance for smooth printhead flow
-        hull() {
-            translate([-neck_width/2 + fillet_r, -edge_tolerance + fillet_r]) circle(r = fillet_r, $fn = 16);
-            translate([neck_width/2 - fillet_r, -edge_tolerance + fillet_r]) circle(r = fillet_r, $fn = 16);
-            translate([-neck_width/2 + fillet_r, fillet_r * 2]) circle(r = fillet_r, $fn = 16);
-            translate([neck_width/2 - fillet_r, fillet_r * 2]) circle(r = fillet_r, $fn = 16);
-        }
-        
-        // Neck slot
-        translate([-neck_width/2, fillet_r])
-        square([neck_width, neck_length - fillet_r + edge_tolerance]);
-        
-        // Bulb cavity
-        translate([0, neck_length])
-        circle(r = bulb_radius, $fn = 32);
-    }
+    base_half_width = tooth_width * 0.4 + edge_tolerance;
+    waist_half_width = tooth_width * 0.2 + edge_tolerance;
+    waist_y = neck_length * 0.5;
+    
+    steps = 12;
+    
+    points = concat(
+        [for (i = [0:steps]) 
+            let(t = i/steps,
+                x = base_half_width - (base_half_width - waist_half_width) * sin(t * 90),
+                y = -edge_tolerance + t * (waist_y + edge_tolerance))
+            [x, y]
+        ],
+        [for (i = [1:steps])
+            let(t = i/steps,
+                x = waist_half_width + (bulb_radius - waist_half_width) * sin(t * 90),
+                y = waist_y + t * (neck_length - waist_y))
+            [x, y]
+        ],
+        [for (a = [-90:10:270])
+            [bulb_radius * cos(a), neck_length + bulb_radius * sin(a)]
+        ],
+        [for (i = [steps:-1:1])
+            let(t = i/steps,
+                x = -(waist_half_width + (bulb_radius - waist_half_width) * sin(t * 90)),
+                y = waist_y + t * (neck_length - waist_y))
+            [x, y]
+        ],
+        [for (i = [steps:-1:0])
+            let(t = i/steps,
+                x = -(base_half_width - (base_half_width - waist_half_width) * sin(t * 90)),
+                y = -edge_tolerance + t * (waist_y + edge_tolerance))
+            [x, y]
+        ]
+    );
+    
+    polygon(points);
 }
 
-// --- PATTERN 7: T-SLOT SMOOTH (T-shape with filleted base) ---
-// Same T-head locking mechanism but with smooth curved transitions
-// Eliminates sharp corners for better print quality and adhesion
+// --- PATTERN 7: T-SLOT SMOOTH (T-shape with concave stem) ---
+// T-head locking but with concave hourglass stem - no harsh direction changes
+// Stem curves inward (concave) creating smooth flow for printhead
 module tslot_smooth_male_2d() {
-    stem_width = tooth_width * 0.4;
     head_width = tooth_width;
-    head_depth = tooth_depth * 0.35;
-    stem_depth = tooth_depth - head_depth;
-    base_fillet = min(stem_width * 0.35, 1.2);   // Fillet at base where stem meets plate
-    head_fillet = min(stem_width * 0.25, 0.8);   // Fillet at T-head junction
+    head_depth = tooth_depth * 0.3;
+    stem_length = tooth_depth - head_depth;
+    
+    // Base width (where it meets plate)
+    base_half_width = tooth_width * 0.3;
+    // Waist (narrowest part of concave stem)
+    waist_half_width = tooth_width * 0.15;
+    waist_y = stem_length * 0.6;
+    
+    steps = 10;
+    
+    // Build the concave stem shape
+    stem_points = concat(
+        // Right side: base to waist (concave inward)
+        [for (i = [0:steps]) 
+            let(t = i/steps,
+                x = base_half_width - (base_half_width - waist_half_width) * sin(t * 90),
+                y = t * waist_y)
+            [x, y]
+        ],
+        // Right side: waist swoops out to meet T-head
+        [for (i = [1:steps])
+            let(t = i/steps,
+                x = waist_half_width + (head_width/2 - waist_half_width) * sin(t * 90),
+                y = waist_y + t * (stem_length - waist_y))
+            [x, y]
+        ]
+    );
     
     union() {
-        // Filleted base transition
-        hull() {
-            translate([-stem_width/2 + base_fillet, base_fillet]) circle(r = base_fillet, $fn = 16);
-            translate([stem_width/2 - base_fillet, base_fillet]) circle(r = base_fillet, $fn = 16);
-            translate([-stem_width/2 + base_fillet, base_fillet * 2]) circle(r = base_fillet, $fn = 16);
-            translate([stem_width/2 - base_fillet, base_fillet * 2]) circle(r = base_fillet, $fn = 16);
-        }
-        
-        // Main stem
-        translate([-stem_width/2, base_fillet])
-        square([stem_width, stem_depth - base_fillet - head_fillet]);
-        
-        // Filleted junction to T-head (inside corners)
-        hull() {
-            translate([-stem_width/2 + head_fillet, stem_depth - head_fillet]) circle(r = head_fillet, $fn = 16);
-            translate([stem_width/2 - head_fillet, stem_depth - head_fillet]) circle(r = head_fillet, $fn = 16);
-            translate([-head_width/2 + head_fillet, stem_depth + head_fillet]) circle(r = head_fillet, $fn = 16);
-            translate([head_width/2 - head_fillet, stem_depth + head_fillet]) circle(r = head_fillet, $fn = 16);
-        }
-        
-        // T-head with rounded outer corners
-        hull() {
-            translate([-head_width/2 + head_fillet, stem_depth + head_fillet]) circle(r = head_fillet, $fn = 16);
-            translate([head_width/2 - head_fillet, stem_depth + head_fillet]) circle(r = head_fillet, $fn = 16);
-            translate([-head_width/2 + head_fillet, stem_depth + head_depth - head_fillet]) circle(r = head_fillet, $fn = 16);
-            translate([head_width/2 - head_fillet, stem_depth + head_depth - head_fillet]) circle(r = head_fillet, $fn = 16);
-        }
+        // Concave stem
+        polygon(concat(
+            stem_points,
+            // T-head top edge
+            [[head_width/2, stem_length + head_depth],
+             [-head_width/2, stem_length + head_depth]],
+            // Left side mirror (reversed)
+            [for (i = [len(stem_points)-1:-1:0])
+                [-stem_points[i][0], stem_points[i][1]]
+            ]
+        ));
     }
 }
 
 module tslot_smooth_female_2d() {
-    stem_width = tooth_width * 0.4 + edge_tolerance * 2;
     head_width = tooth_width + edge_tolerance * 2;
-    head_depth = tooth_depth * 0.35 + edge_tolerance;
-    stem_depth = tooth_depth - (tooth_depth * 0.35);
-    base_fillet = min((tooth_width * 0.4) * 0.35, 1.2) + edge_tolerance * 0.5;
-    head_fillet = min((tooth_width * 0.4) * 0.25, 0.8) + edge_tolerance * 0.5;
+    head_depth = tooth_depth * 0.3 + edge_tolerance;
+    stem_length = tooth_depth - (tooth_depth * 0.3);
     
-    union() {
-        // Filleted entrance
-        hull() {
-            translate([-stem_width/2 + base_fillet, -edge_tolerance + base_fillet]) circle(r = base_fillet, $fn = 16);
-            translate([stem_width/2 - base_fillet, -edge_tolerance + base_fillet]) circle(r = base_fillet, $fn = 16);
-            translate([-stem_width/2 + base_fillet, base_fillet * 2]) circle(r = base_fillet, $fn = 16);
-            translate([stem_width/2 - base_fillet, base_fillet * 2]) circle(r = base_fillet, $fn = 16);
-        }
-        
-        // Stem slot
-        translate([-stem_width/2, base_fillet])
-        square([stem_width, stem_depth - base_fillet]);
-        
-        // T-head cavity (with rounded corners for better fit)
-        hull() {
-            translate([-head_width/2 + head_fillet, stem_depth + head_fillet]) circle(r = head_fillet, $fn = 16);
-            translate([head_width/2 - head_fillet, stem_depth + head_fillet]) circle(r = head_fillet, $fn = 16);
-            translate([-head_width/2 + head_fillet, stem_depth + head_depth - head_fillet]) circle(r = head_fillet, $fn = 16);
-            translate([head_width/2 - head_fillet, stem_depth + head_depth - head_fillet]) circle(r = head_fillet, $fn = 16);
-        }
-    }
+    base_half_width = tooth_width * 0.3 + edge_tolerance;
+    waist_half_width = tooth_width * 0.15 + edge_tolerance;
+    waist_y = stem_length * 0.6;
+    
+    steps = 10;
+    
+    stem_points = concat(
+        [for (i = [0:steps]) 
+            let(t = i/steps,
+                x = base_half_width - (base_half_width - waist_half_width) * sin(t * 90),
+                y = -edge_tolerance + t * (waist_y + edge_tolerance))
+            [x, y]
+        ],
+        [for (i = [1:steps])
+            let(t = i/steps,
+                x = waist_half_width + (head_width/2 - waist_half_width) * sin(t * 90),
+                y = waist_y + t * (stem_length - waist_y))
+            [x, y]
+        ]
+    );
+    
+    polygon(concat(
+        stem_points,
+        [[head_width/2, stem_length + head_depth],
+         [-head_width/2, stem_length + head_depth]],
+        [for (i = [len(stem_points)-1:-1:0])
+            [-stem_points[i][0], stem_points[i][1]]
+        ]
+    ));
 }
 
 // ===========================================
