@@ -291,7 +291,7 @@ export function Generator() {
   return (
     <div className="h-screen flex flex-col bg-slate-950 grid-pattern">
       {/* Generator Controls Header */}
-      <header className="flex-shrink-0 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm">
+      <header className="flex-shrink-0 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm relative z-50">
         <div className="px-6 py-4 flex items-center justify-between">
           {/* Left side: Title/Logo */}
           <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">

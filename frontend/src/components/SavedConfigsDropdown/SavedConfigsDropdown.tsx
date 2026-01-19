@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { BoxConfig, BaseplateConfig } from '../../types/config';
 
@@ -26,6 +27,8 @@ export function SavedConfigsDropdown({ onLoadPreference, currentBoxConfig, curre
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
 
   // Load preferences when user is logged in
   useEffect(() => {
@@ -34,10 +37,22 @@ export function SavedConfigsDropdown({ onLoadPreference, currentBoxConfig, curre
     }
   }, [user, token]);
 
+  // Update dropdown position when opening
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+  }, [isOpen]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+          buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
@@ -136,28 +151,38 @@ export function SavedConfigsDropdown({ onLoadPreference, currentBoxConfig, curre
   if (!user) return null;
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors"
-        title="Saved configurations"
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-        </svg>
-        <span className="text-sm font-medium">Saved</span>
-        <svg
-          className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
+    <>
+      <div className="relative">
+        <button
+          ref={buttonRef}
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors"
+          title="Saved configurations"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+          </svg>
+          <span className="text-sm font-medium">Saved</span>
+          <svg
+            className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </div>
 
-      {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-[100] overflow-hidden">
+      {isOpen && createPortal(
+        <div
+          ref={dropdownRef}
+          className="fixed w-80 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-[9999] overflow-hidden"
+          style={{
+            top: `${dropdownPosition.top}px`,
+            right: `${dropdownPosition.right}px`,
+          }}
+        >
           <div className="max-h-96 overflow-y-auto">
             <div className="p-2">
               <button
@@ -205,12 +230,13 @@ export function SavedConfigsDropdown({ onLoadPreference, currentBoxConfig, curre
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {showSaveDialog && (
+      {showSaveDialog && createPortal(
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
           onClick={() => {
             setShowSaveDialog(false);
             setSaveName('');
@@ -256,8 +282,9 @@ export function SavedConfigsDropdown({ onLoadPreference, currentBoxConfig, curre
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
