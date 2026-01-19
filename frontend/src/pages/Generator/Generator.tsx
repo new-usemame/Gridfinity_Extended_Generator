@@ -4,17 +4,25 @@ import { ConfigPanel } from '../../components/ConfigPanel/ConfigPanel';
 import { PreviewCanvas } from '../../components/PreviewCanvas/PreviewCanvas';
 import { ExportButtons, MultiSegmentExportButtons } from '../../components/ExportButtons/ExportButtons';
 import { UserDropdown } from '../../components/UserDropdown/UserDropdown';
+import { AuthModal } from '../../components/AuthModal/AuthModal';
+import { useAuth } from '../../contexts/AuthContext';
 import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, GenerationResult, MultiSegmentResult, GenerationMode } from '../../types/config';
 import { generateBoxScad, generateBaseplateScad, generateCombinedPreviewScad, generateSegmentScad, calculateSplitInfo } from '../../services/scadGenerator';
 import { generateLocalStl, revokeLocalStlUrl, isWasmSupported, isWasmLoaded } from '../../services/openscadWasm';
 
 export function Generator() {
+  const { user, token } = useAuth();
   const [generationMode, setGenerationMode] = useState<GenerationMode>('server');
   const [isWasmReady, setIsWasmReady] = useState(false);
   const [wasmLoadingStatus, setWasmLoadingStatus] = useState<string | null>(null);
   const hasInitiallyGenerated = useRef(false);
   const [boxConfig, setBoxConfig] = useState<BoxConfig>(defaultBoxConfig);
   const [baseplateConfig, setBaseplateConfig] = useState<BaseplateConfig>(defaultBaseplateConfig);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [saveName, setSaveName] = useState('');
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [pendingSave, setPendingSave] = useState(false);
   
   // Track blob URLs for cleanup
   const blobUrlsRef = useRef<string[]>([]);
@@ -205,6 +213,59 @@ export function Generator() {
     }
   }, []);
 
+  // Handle save button click
+  const handleSaveClick = () => {
+    if (!user || !token) {
+      setPendingSave(true);
+      setIsAuthModalOpen(true);
+      return;
+    }
+    setShowSaveDialog(true);
+  };
+
+  // Open save dialog after successful login
+  useEffect(() => {
+    if (user && token && pendingSave) {
+      setPendingSave(false);
+      setShowSaveDialog(true);
+    }
+  }, [user, token, pendingSave]);
+
+  // Handle saving preference
+  const handleSave = async () => {
+    if (!saveName.trim() || !token) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/preferences', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: saveName.trim(),
+          boxConfig: boxConfig,
+          baseplateConfig: baseplateConfig,
+        }),
+      });
+
+      if (response.ok) {
+        setSaveName('');
+        setShowSaveDialog(false);
+        // Show success message (you could add a toast notification here)
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to save preference');
+      }
+    } catch (error) {
+      console.error('Failed to save preference:', error);
+      alert('Failed to save preference');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Check WASM support
   const wasmSupported = isWasmSupported();
 
@@ -229,14 +290,38 @@ export function Generator() {
             </div>
           </Link>
 
-          {/* Right side: User Dropdown and Controls */}
-          <div className="flex items-center gap-4">
-            {/* User Dropdown */}
-            <UserDropdown
-              onLoadPreference={handleLoadPreference}
-              currentBoxConfig={boxConfig}
-              currentBaseplateConfig={baseplateConfig}
-            />
+          {/* Right side: Auth, Save, User Dropdown and Controls */}
+          <div className="flex items-center gap-3">
+            {/* Auth UI and Save Button */}
+            {!user ? (
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Sign In
+              </button>
+            ) : (
+              <UserDropdown
+                onLoadPreference={handleLoadPreference}
+                currentBoxConfig={boxConfig}
+                currentBaseplateConfig={baseplateConfig}
+              />
+            )}
+
+            {/* Save Button */}
+            <button
+              onClick={handleSaveClick}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+              title={user ? 'Save current configuration' : 'Sign in to save configurations'}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+              </svg>
+              Save
+            </button>
 
             {/* Generation Mode Toggle */}
             <div className="flex items-center gap-2">
@@ -311,6 +396,67 @@ export function Generator() {
           </div>
         </div>
       </header>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setPendingSave(false);
+        }} 
+      />
+
+      {/* Save Dialog */}
+      {showSaveDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md"
+          onClick={() => {
+            setShowSaveDialog(false);
+            setSaveName('');
+          }}
+        >
+          <div
+            className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold text-white mb-4">Save Configuration</h3>
+            <input
+              type="text"
+              value={saveName}
+              onChange={(e) => setSaveName(e.target.value)}
+              placeholder="Configuration name"
+              className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white mb-4 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSave();
+                } else if (e.key === 'Escape') {
+                  setShowSaveDialog(false);
+                  setSaveName('');
+                }
+              }}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleSave}
+                disabled={!saveName.trim() || isSaving}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {isSaving ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowSaveDialog(false);
+                  setSaveName('');
+                }}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden min-h-0">
