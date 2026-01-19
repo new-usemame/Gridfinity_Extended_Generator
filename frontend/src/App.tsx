@@ -320,6 +320,7 @@ function App() {
                   <MultiSegmentExportButtons
                     result={multiSegmentResult}
                     splitInfo={multiSegmentResult.splitInfo}
+                    baseplateConfig={baseplateConfig}
                   />
                 </div>
               ) : baseplateResult && (
@@ -350,6 +351,7 @@ function App() {
                   <MultiSegmentExportButtons
                     result={multiSegmentResult}
                     splitInfo={multiSegmentResult.splitInfo}
+                    baseplateConfig={baseplateConfig}
                   />
                 </div>
               ) : baseplateResult && (

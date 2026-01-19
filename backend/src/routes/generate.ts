@@ -61,6 +61,26 @@ router.post('/segments', async (req: Request, res: Response) => {
   }
 });
 
+// Generate a single segment for download
+router.post('/segment', async (req: Request, res: Response) => {
+  try {
+    const { config, segmentX, segmentY } = req.body;
+
+    if (!config || segmentX === undefined || segmentY === undefined) {
+      return res.status(400).json({ error: 'Missing config, segmentX, or segmentY in request body' });
+    }
+
+    const result = await openscadService.generateSingleSegment(config as BaseplateConfig, segmentX, segmentY);
+    res.json(result);
+  } catch (error) {
+    console.error('Single segment generation error:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate segment',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Get SCAD code preview
 router.post('/preview-scad', async (req: Request, res: Response) => {
   try {

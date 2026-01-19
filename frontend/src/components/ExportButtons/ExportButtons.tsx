@@ -1,14 +1,16 @@
-import { MultiSegmentResult, SplitResult, SegmentGenerationResult } from '../../types/config';
+import React from 'react';
+import { MultiSegmentResult, SplitResult, SegmentGenerationResult, BaseplateConfig } from '../../types/config';
+
+interface MultiSegmentExportButtonsProps {
+  result: MultiSegmentResult;
+  splitInfo: SplitResult;
+  baseplateConfig: BaseplateConfig; // Need config to regenerate segments
+}
 
 interface ExportButtonsProps {
   stlUrl: string;
   scadContent: string;
   filename: string;
-}
-
-interface MultiSegmentExportButtonsProps {
-  result: MultiSegmentResult;
-  splitInfo: SplitResult;
 }
 
 
@@ -89,16 +91,23 @@ export function ExportButtons({ stlUrl, scadContent, filename }: ExportButtonsPr
 }
 
 // Multi-segment export buttons with individual downloads
-export function MultiSegmentExportButtons({ result, splitInfo }: MultiSegmentExportButtonsProps) {
+export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig }: MultiSegmentExportButtonsProps) {
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const [generatingSegment, setGeneratingSegment] = React.useState<string | null>(null);
+
   const downloadAllSequentially = async () => {
-    // Download all segments and connector sequentially
+    setIsGenerating(true);
+    
+    // Download all segments sequentially (generate each on-demand)
     for (const segment of result.segments) {
-      await downloadSingleSegment(segment);
-      // Small delay between downloads to avoid browser blocking
-      await new Promise(resolve => setTimeout(resolve, 300));
+      setGeneratingSegment(`${segment.segmentX},${segment.segmentY}`);
+      await downloadSingleSegment(segment, true);
+      // Small delay between downloads
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
     
     if (result.connector) {
+      setGeneratingSegment('connector');
       await new Promise(resolve => setTimeout(resolve, 300));
       downloadConnector();
     }
@@ -114,15 +123,61 @@ export function MultiSegmentExportButtons({ result, splitInfo }: MultiSegmentExp
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    
+    setIsGenerating(false);
+    setGeneratingSegment(null);
   };
 
-  const downloadSingleSegment = async (segment: SegmentGenerationResult) => {
-    const link = document.createElement('a');
-    link.href = segment.stlUrl;
-    link.download = `segment_${segment.segmentX}_${segment.segmentY}.stl`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadSingleSegment = async (segment: SegmentGenerationResult, skipState = false) => {
+    if (!skipState) {
+      setIsGenerating(true);
+      setGeneratingSegment(`${segment.segmentX},${segment.segmentY}`);
+    }
+    
+    try {
+      // Request the server to generate this specific segment
+      const response = await fetch('/api/generate/segment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          config: baseplateConfig,
+          segmentX: segment.segmentX,
+          segmentY: segment.segmentY
+        })
+      });
+      
+      if (!response.ok) {
+        // Fallback to the preview URL
+        const link = document.createElement('a');
+        link.href = segment.stlUrl;
+        link.download = `segment_${segment.segmentX}_${segment.segmentY}.stl`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        const data = await response.json();
+        const link = document.createElement('a');
+        link.href = data.stlUrl;
+        link.download = `segment_${segment.segmentX}_${segment.segmentY}.stl`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error('Failed to generate segment:', err);
+      // Fallback to preview URL
+      const link = document.createElement('a');
+      link.href = segment.stlUrl;
+      link.download = `segment_${segment.segmentX}_${segment.segmentY}.stl`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    if (!skipState) {
+      setIsGenerating(false);
+      setGeneratingSegment(null);
+    }
   };
 
   const downloadConnector = () => {
@@ -154,12 +209,29 @@ export function MultiSegmentExportButtons({ result, splitInfo }: MultiSegmentExp
         {/* Download All */}
         <button
           onClick={downloadAllSequentially}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-cyan-500 text-white text-sm font-medium hover:from-cyan-500 hover:to-cyan-400 transition-all shadow-lg shadow-cyan-500/25"
+          disabled={isGenerating}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-medium transition-all shadow-lg ${
+            isGenerating 
+              ? 'bg-slate-600 cursor-wait' 
+              : 'bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 shadow-cyan-500/25'
+          }`}
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          Download All
+          {isGenerating ? (
+            <>
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Generating {generatingSegment === 'connector' ? 'connector' : `[${generatingSegment}]`}...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Download All
+            </>
+          )}
         </button>
       </div>
 
@@ -168,27 +240,59 @@ export function MultiSegmentExportButtons({ result, splitInfo }: MultiSegmentExp
         <h4 className="text-xs font-semibold text-slate-400 mb-2">INDIVIDUAL DOWNLOADS</h4>
         
         <div className="flex flex-wrap gap-2">
-          {result.segments.map((segment: SegmentGenerationResult) => (
-            <button
-              key={`${segment.segmentX}-${segment.segmentY}`}
-              onClick={() => downloadSingleSegment(segment)}
-              className="flex items-center gap-1 px-2 py-1 rounded bg-slate-700 text-slate-300 text-xs font-medium hover:bg-slate-600 hover:text-white transition-colors"
-            >
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Segment [{segment.segmentX},{segment.segmentY}]
-            </button>
-          ))}
+          {result.segments.map((segment: SegmentGenerationResult) => {
+            const segKey = `${segment.segmentX},${segment.segmentY}`;
+            const isThisGenerating = isGenerating && generatingSegment === segKey;
+            return (
+              <button
+                key={`${segment.segmentX}-${segment.segmentY}`}
+                onClick={() => downloadSingleSegment(segment)}
+                disabled={isGenerating}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                  isThisGenerating 
+                    ? 'bg-cyan-700 text-white animate-pulse'
+                    : isGenerating
+                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'
+                }`}
+              >
+                {isThisGenerating ? (
+                  <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                )}
+                Segment [{segment.segmentX},{segment.segmentY}]
+              </button>
+            );
+          })}
           
           {result.connector && (
             <button
               onClick={downloadConnector}
-              className="flex items-center gap-1 px-2 py-1 rounded bg-emerald-700 text-white text-xs font-medium hover:bg-emerald-600 transition-colors"
+              disabled={isGenerating}
+              className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                generatingSegment === 'connector'
+                  ? 'bg-emerald-600 text-white animate-pulse'
+                  : isGenerating
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                  : 'bg-emerald-700 text-white hover:bg-emerald-600'
+              }`}
             >
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
+              {generatingSegment === 'connector' ? (
+                <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              )}
               Connector
             </button>
           )}
@@ -218,15 +322,16 @@ ${splitInfo.segments.flat().map(seg =>
 ${hasConnectors ? `CONNECTORS:
 -----------
 - connector.stl: Print multiple copies to join segments together
-- Insert connectors into the dovetail slots on adjacent segment edges
-- Connectors should slide in smoothly and lock segments together
+- Insert puzzle-piece connectors into the slots on adjacent segment edges
+- Connectors slide in from above and lock the segments together
+- Print connectors flat (no supports needed)
 
 ASSEMBLY:
 ---------
-1. Print all segments and connectors
+1. Print all segments and connectors (all print flat, no supports)
 2. Lay out segments in a grid according to their coordinates
-3. Insert connectors between adjacent segments
-4. Connectors create a flush, stable connection between pieces
+3. Insert connectors into the slots between adjacent segments
+4. Connectors lock flush and keep segments aligned
 ` : `ASSEMBLY:
 ---------
 1. Print all segments

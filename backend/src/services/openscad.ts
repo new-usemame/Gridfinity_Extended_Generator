@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { BoxConfig, BaseplateConfig, calculateGridFromMm, splitBaseplateForPrinter, SegmentInfo, SplitResult } from '../types/config.js';
+export { SplitResult, SegmentInfo } from '../types/config.js';
 
 const execAsync = promisify(exec);
 
@@ -70,16 +71,22 @@ export class OpenSCADService {
       config.connectorEnabled
     );
 
-    // Generate each segment
+    // Generate a combined preview SCAD (faster - single render)
+    const combinedScad = this.generateCombinedPreviewScad(config, splitInfo);
+    const combinedResult = await this.renderScad(combinedScad, 'baseplate_preview');
+    
+    // Create segment entries for the combined result
+    // Each segment gets the same STL URL (combined preview) but different position info
     const segments: Array<{ stlUrl: string; scadContent: string; filename: string; segmentX: number; segmentY: number }> = [];
     
     for (let sy = 0; sy < splitInfo.segmentsY; sy++) {
       for (let sx = 0; sx < splitInfo.segmentsX; sx++) {
         const segmentInfo = splitInfo.segments[sy][sx];
-        const scadContent = this.generateSegmentScad(config, segmentInfo);
-        const result = await this.renderScad(scadContent, `baseplate_${sx}_${sy}`);
+        const segmentScad = this.generateSegmentScad(config, segmentInfo);
         segments.push({
-          ...result,
+          stlUrl: combinedResult.stlUrl, // Use combined preview for display
+          scadContent: segmentScad,       // But keep individual SCAD for download
+          filename: `baseplate_segment_${sx}_${sy}.stl`,
           segmentX: sx,
           segmentY: sy
         });
@@ -96,13 +103,258 @@ export class OpenSCADService {
     return { segments, connector, splitInfo };
   }
 
-  // Generate connector piece SCAD
+  // Generate combined preview showing all segments laid out together
+  generateCombinedPreviewScad(config: BaseplateConfig, splitInfo: SplitResult): string {
+    const gridSize = config.gridSize;
+    const gap = 5; // Gap between segments in mm
+    
+    let segmentModules = '';
+    let segmentPlacements = '';
+    
+    // Generate each segment as a module and place them in a grid
+    for (let sy = 0; sy < splitInfo.segmentsY; sy++) {
+      for (let sx = 0; sx < splitInfo.segmentsX; sx++) {
+        const segment = splitInfo.segments[sy][sx];
+        const moduleName = `segment_${sx}_${sy}`;
+        
+        // Calculate segment dimensions
+        const segWidth = segment.gridUnitsX * gridSize;
+        const segDepth = segment.gridUnitsY * gridSize;
+        
+        // Calculate position with gap
+        let posX = 0;
+        let posY = 0;
+        
+        for (let i = 0; i < sx; i++) {
+          posX += splitInfo.segments[sy][i].gridUnitsX * gridSize + gap;
+        }
+        for (let i = 0; i < sy; i++) {
+          posY += splitInfo.segments[i][sx].gridUnitsY * gridSize + gap;
+        }
+        
+        segmentPlacements += `
+    // Segment [${sx}, ${sy}]
+    translate([${posX}, ${posY}, 0])
+    segment_base(${segment.gridUnitsX}, ${segment.gridUnitsY}, ${segment.hasConnectorLeft}, ${segment.hasConnectorRight}, ${segment.hasConnectorFront}, ${segment.hasConnectorBack});
+`;
+      }
+    }
+    
+    return `// Gridfinity Baseplate - Combined Preview
+// Shows all ${splitInfo.totalSegments} segments laid out with ${gap}mm gaps
+// This is a preview - download individual segments for printing
+
+/* [Configuration] */
+grid_unit = ${gridSize};
+corner_radius = ${config.cornerRadius};
+socket_chamfer_angle = ${config.socketChamferAngle};
+socket_chamfer_height = ${config.socketChamferHeight};
+connector_tolerance = ${config.connectorTolerance};
+style = "${config.style}";
+magnet_diameter = ${config.magnetDiameter};
+magnet_depth = ${config.magnetDepth};
+remove_bottom_taper = ${config.removeBottomTaper};
+
+/* [Constants] */
+clearance = 0.25;
+socket_taper_height = socket_chamfer_height;
+socket_bottom_inset = socket_chamfer_height / tan(socket_chamfer_angle);
+plate_height = socket_taper_height;
+
+// Puzzle connector dimensions
+tab_width = 6;
+tab_length = 4;
+tab_neck_width = 4;
+
+$fn = 24; // Lower for faster preview
+
+// Render all segments
+${segmentPlacements}
+
+// Parametric segment module
+module segment_base(width_units, depth_units, conn_left, conn_right, conn_front, conn_back) {
+    plate_width = width_units * grid_unit;
+    plate_depth = depth_units * grid_unit;
+    
+    difference() {
+        rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
+        
+        // Socket cutouts
+        for (gx = [0:width_units-1]) {
+            for (gy = [0:depth_units-1]) {
+                translate([gx * grid_unit, gy * grid_unit, 0])
+                grid_socket();
+            }
+        }
+        
+        // Connector slots
+        if (conn_left) {
+            for (i = [1:depth_units-1]) {
+                translate([0, i * grid_unit, 0])
+                rotate([0, 0, -90])
+                puzzle_slot();
+            }
+            if (depth_units == 1) {
+                translate([0, 0.5 * grid_unit, 0])
+                rotate([0, 0, -90])
+                puzzle_slot();
+            }
+        }
+        if (conn_right) {
+            for (i = [1:width_units > 1 ? depth_units-1 : 0]) {
+                translate([plate_width, i * grid_unit, 0])
+                rotate([0, 0, 90])
+                puzzle_slot();
+            }
+            if (depth_units == 1) {
+                translate([plate_width, 0.5 * grid_unit, 0])
+                rotate([0, 0, 90])
+                puzzle_slot();
+            }
+        }
+        if (conn_front) {
+            for (i = [1:width_units-1]) {
+                translate([i * grid_unit, 0, 0])
+                rotate([0, 0, 180])
+                puzzle_slot();
+            }
+            if (width_units == 1) {
+                translate([0.5 * grid_unit, 0, 0])
+                rotate([0, 0, 180])
+                puzzle_slot();
+            }
+        }
+        if (conn_back) {
+            for (i = [1:depth_units > 1 ? width_units-1 : 0]) {
+                translate([i * grid_unit, plate_depth, 0])
+                puzzle_slot();
+            }
+            if (width_units == 1) {
+                translate([0.5 * grid_unit, plate_depth, 0])
+                puzzle_slot();
+            }
+        }
+    }
+}
+
+module puzzle_slot() {
+    extra = connector_tolerance;
+    translate([0, 0, -0.1])
+    linear_extrude(height = plate_height + 0.2) {
+        // Narrow entry slot
+        translate([-(tab_neck_width/2 + extra), 0])
+        square([tab_neck_width + extra * 2, tab_length - 0.5]);
+        // Wider pocket for mushroom head
+        translate([-(tab_width/2 + extra), tab_length - 1.7])
+        square([tab_width + extra * 2, 2.2]);
+    }
+}
+
+module rounded_rect_plate(width, depth, height, radius) {
+    if (radius <= 0) {
+        cube([width, depth, height]);
+    } else {
+        r = min(radius, min(width, depth) / 2 - 0.01);
+        hull() {
+            translate([r, r, 0]) cylinder(r = r, h = height);
+            translate([width - r, r, 0]) cylinder(r = r, h = height);
+            translate([r, depth - r, 0]) cylinder(r = r, h = height);
+            translate([width - r, depth - r, 0]) cylinder(r = r, h = height);
+        }
+    }
+}
+
+module socket_rounded_rect(width, depth, height, radius) {
+    if (radius <= 0) {
+        cube([width, depth, height]);
+    } else {
+        r = min(radius, min(width, depth) / 2 - 0.01);
+        hull() {
+            translate([r, r, 0]) cylinder(r = r, h = height);
+            translate([width - r, r, 0]) cylinder(r = r, h = height);
+            translate([r, depth - r, 0]) cylinder(r = r, h = height);
+            translate([width - r, depth - r, 0]) cylinder(r = r, h = height);
+        }
+    }
+}
+
+module grid_socket() {
+    socket_width = grid_unit - clearance * 2;
+    socket_depth_size = grid_unit - clearance * 2;
+    socket_corner_radius = 3.75;
+    bottom_width = socket_width - socket_bottom_inset * 2;
+    bottom_depth = socket_depth_size - socket_bottom_inset * 2;
+    bottom_radius = max(0.5, socket_corner_radius - socket_bottom_inset);
+    
+    translate([clearance, clearance, -0.1]) {
+        hull() {
+            translate([0, 0, plate_height])
+            socket_rounded_rect(socket_width, socket_depth_size, 0.2, socket_corner_radius);
+            if (!remove_bottom_taper) {
+                translate([socket_bottom_inset, socket_bottom_inset, 0])
+                socket_rounded_rect(bottom_width, bottom_depth, 0.2, bottom_radius);
+            } else {
+                socket_rounded_rect(socket_width, socket_depth_size, 0.2, socket_corner_radius);
+            }
+        }
+    }
+    
+    if (style == "magnet") {
+        positions = [[4.8, 4.8], [4.8, grid_unit - 4.8], [grid_unit - 4.8, 4.8], [grid_unit - 4.8, grid_unit - 4.8]];
+        for (pos = positions) {
+            translate([pos[0], pos[1], plate_height - magnet_depth])
+            cylinder(d = magnet_diameter, h = magnet_depth + 0.1);
+        }
+    }
+}
+`;
+  }
+
+  // Generate a single segment (for individual download)
+  async generateSingleSegment(config: BaseplateConfig, segmentX: number, segmentY: number): Promise<{ stlUrl: string; scadContent: string; filename: string }> {
+    // Calculate split info
+    let totalGridUnitsX: number;
+    let totalGridUnitsY: number;
+    
+    if (config.sizingMode === 'fill_area_mm') {
+      const calc = calculateGridFromMm(
+        config.targetWidthMm,
+        config.targetDepthMm,
+        config.gridSize,
+        config.allowHalfCellsX,
+        config.allowHalfCellsY,
+        config.paddingAlignment
+      );
+      totalGridUnitsX = Math.floor(calc.gridUnitsX);
+      totalGridUnitsY = Math.floor(calc.gridUnitsY);
+    } else {
+      totalGridUnitsX = Math.floor(config.width);
+      totalGridUnitsY = Math.floor(config.depth);
+    }
+
+    const splitInfo = splitBaseplateForPrinter(
+      totalGridUnitsX,
+      totalGridUnitsY,
+      config.printerBedWidth,
+      config.printerBedDepth,
+      config.gridSize,
+      config.connectorEnabled
+    );
+
+    // Get segment info
+    const segmentInfo = splitInfo.segments[segmentY][segmentX];
+    const scadContent = this.generateSegmentScad(config, segmentInfo);
+    
+    return this.renderScad(scadContent, `segment_${segmentX}_${segmentY}`);
+  }
+
+  // Generate connector piece SCAD - flat puzzle-piece style (no bridges)
   generateConnectorScad(config: BaseplateConfig): string {
     const plateHeight = config.socketChamferHeight;
     const tolerance = config.connectorTolerance;
     
     return `// Gridfinity Baseplate Connector Piece
-// Dovetail puzzle-piece connector for joining baseplate segments
+// Flat puzzle-piece connector - prints without supports
 // Print multiple of these to connect your baseplate segments
 
 /* [Configuration] */
@@ -110,51 +362,60 @@ plate_height = ${plateHeight};
 tolerance = ${tolerance};
 
 /* [Connector Dimensions] */
-// Dovetail profile dimensions
-base_width = 8;        // Width at narrow end (bottom)
-top_width = 10;        // Width at wide end (top) 
-depth = 3;             // How far connector extends into each plate
-tab_height = plate_height - 0.5;  // Slightly shorter than plate for flush fit
+// Puzzle tab dimensions - designed for printability
+tab_width = 6;           // Width at the widest part
+tab_neck_width = 4;      // Narrower neck creates the lock
+tab_length = 4;          // How far each tab extends
+connector_height = plate_height;
 
 $fn = 32;
 
-// Main connector - double-sided dovetail
+// Main connector - double-sided puzzle piece
 connector_piece();
 
 module connector_piece() {
-    // Two dovetails joined at their bases, creating a piece that
-    // fits into female cavities on adjacent baseplate segments
+    // Flat connector that bridges two baseplate segments
+    // Prints flat (Z up), no bridges or supports needed
+    // Shape: mushroom tabs on both ends with narrow center
+    
+    translate([0, 0, 0])
+    linear_extrude(height = connector_height)
     union() {
-        // First dovetail (extends in -Y direction)
-        dovetail_male(base_width, top_width, depth, tab_height);
+        // Center bar connecting both tabs
+        translate([-tab_neck_width/2 + tolerance/2, -0.5])
+        square([tab_neck_width - tolerance, 1]);
         
-        // Second dovetail (extends in +Y direction)  
-        mirror([0, 1, 0])
-        dovetail_male(base_width, top_width, depth, tab_height);
+        // Tab extending in +Y direction
+        puzzle_tab_2d();
         
-        // Central joining section
-        translate([-base_width/2 + tolerance/2, -0.5, 0])
-        cube([base_width - tolerance, 1, tab_height]);
+        // Tab extending in -Y direction
+        mirror([0, 1])
+        puzzle_tab_2d();
     }
 }
 
-// Male dovetail tab - trapezoidal profile
-module dovetail_male(base_w, top_w, d, h) {
-    // Dovetail shape: narrow at base, wider at top
-    // This creates a locking mechanism when inserted into female cavity
-    translate([0, -d, 0])
-    linear_extrude(height = h)
-    polygon(points = [
-        [-base_w/2 + tolerance/2, 0],
-        [base_w/2 - tolerance/2, 0],
-        [top_w/2 - tolerance/2, d],
-        [-top_w/2 + tolerance/2, d]
+// 2D puzzle tab profile - mushroom shape for locking
+module puzzle_tab_2d() {
+    // Neck (narrower part that goes through the slot)
+    translate([-tab_neck_width/2 + tolerance/2, 0])
+    square([tab_neck_width - tolerance, tab_length - 1.2]);
+    
+    // Head (wider mushroom cap that locks behind the slot)
+    // Tapered entry for easy insertion
+    translate([0, tab_length - 1.5])
+    polygon([
+        [-tab_neck_width/2 + tolerance/2, 0],
+        [tab_neck_width/2 - tolerance/2, 0],
+        [tab_width/2 - tolerance/2, 0.8],
+        [tab_width/2 - tolerance/2, 1.5],
+        [-tab_width/2 + tolerance/2, 1.5],
+        [-tab_width/2 + tolerance/2, 0.8]
     ]);
 }
 `;
   }
 
-  // Generate segment SCAD with connector cavities
+  // Generate segment SCAD with puzzle-piece connector slots
   generateSegmentScad(config: BaseplateConfig, segment: SegmentInfo): string {
     const widthUnits = segment.gridUnitsX;
     const depthUnits = segment.gridUnitsY;
@@ -162,11 +423,11 @@ module dovetail_male(base_w, top_w, d, h) {
     const tolerance = config.connectorTolerance;
     const gridSize = config.gridSize;
     
-    // Calculate connector positions - one per grid unit boundary
+    // Calculate connector positions - at grid intersections on edges
     const connectorCode = this.generateConnectorCavitiesCode(segment, gridSize, plateHeight, tolerance);
     
     return `// Gridfinity Baseplate Segment [${segment.segmentX}, ${segment.segmentY}]
-// Part of a split baseplate system with dovetail connectors
+// Part of a split baseplate system with puzzle-piece connectors
 // Socket profile matches bin foot for proper fit
 
 /* [Configuration] */
@@ -201,11 +462,10 @@ socket_bottom_inset = socket_chamfer_height / tan(socket_chamfer_angle);
 socket_depth = socket_taper_height;
 plate_height = socket_depth;
 
-// Connector dimensions (must match connector_piece)
-connector_base_width = 8;
-connector_top_width = 10;
-connector_depth = 3;
-connector_height = plate_height - 0.5;
+// Puzzle connector dimensions (must match connector_piece)
+tab_width = 6;
+tab_length = 4;
+tab_neck_width = 4;
 
 $fn = 32;
 
@@ -229,23 +489,28 @@ module gridfinity_segment() {
             }
         }
         
-        // Connector cavities
+        // Connector slot cavities
         ${connectorCode}
     }
 }
 
-// Dovetail female cavity - cut into baseplate edge
-module dovetail_female(base_w, top_w, d, h) {
-    // Female cavity is slightly larger than male tab for clearance
+// Puzzle slot - female cavity for connector tab (mushroom pocket)
+module puzzle_slot() {
     extra = connector_tolerance;
-    translate([0, -d - extra/2, -0.1])
-    linear_extrude(height = h + 0.2)
-    polygon(points = [
-        [-base_w/2 - extra, 0],
-        [base_w/2 + extra, 0],
-        [top_w/2 + extra, d + extra],
-        [-top_w/2 - extra, d + extra]
-    ]);
+    
+    // Slot cut through full height of the plate
+    // Shape matches puzzle tab: narrow entry + wider pocket behind
+    translate([0, 0, -0.1])
+    linear_extrude(height = plate_height + 0.2) {
+        // Narrow entry slot (for the neck)
+        translate([-(tab_neck_width/2 + extra), 0])
+        square([tab_neck_width + extra * 2, tab_length - 0.5]);
+        
+        // Wider pocket (for the mushroom head to lock into)
+        // The head slides in through the entry and locks behind
+        translate([-(tab_width/2 + extra), tab_length - 1.7])
+        square([tab_width + extra * 2, 2.2]);
+    }
 }
 
 // Rounded rectangle module for baseplate
@@ -385,54 +650,87 @@ module screw_holes() {
 `;
   }
 
-  // Generate connector cavity placement code
+  // Generate connector cavity placement code - puzzle slots at grid intersections
   private generateConnectorCavitiesCode(segment: SegmentInfo, gridSize: number, plateHeight: number, tolerance: number): string {
     const cavities: string[] = [];
     
-    // Left edge connectors (one per grid unit boundary)
+    // Left edge connectors - at grid line intersections
     if (segment.hasConnectorLeft) {
-      for (let i = 0; i < segment.gridUnitsY; i++) {
-        const y = (i + 0.5) * gridSize; // Center of each grid unit
+      // Place slots at each grid line intersection (between cells)
+      for (let i = 1; i < segment.gridUnitsY; i++) {
+        const y = i * gridSize; // At grid boundaries
         cavities.push(`
-        // Left edge connector at grid unit ${i}
+        // Left edge slot at grid intersection ${i}
         translate([0, ${y}, 0])
-        rotate([0, 0, 90])
-        dovetail_female(connector_base_width, connector_top_width, connector_depth, connector_height);`);
+        rotate([0, 0, -90])
+        puzzle_slot();`);
+      }
+      // Also at center if only 1 unit
+      if (segment.gridUnitsY === 1) {
+        const y = 0.5 * gridSize;
+        cavities.push(`
+        // Left edge slot (single unit)
+        translate([0, ${y}, 0])
+        rotate([0, 0, -90])
+        puzzle_slot();`);
       }
     }
     
     // Right edge connectors
     if (segment.hasConnectorRight) {
-      for (let i = 0; i < segment.gridUnitsY; i++) {
-        const y = (i + 0.5) * gridSize;
+      for (let i = 1; i < segment.gridUnitsY; i++) {
+        const y = i * gridSize;
         cavities.push(`
-        // Right edge connector at grid unit ${i}
+        // Right edge slot at grid intersection ${i}
         translate([plate_width, ${y}, 0])
-        rotate([0, 0, -90])
-        dovetail_female(connector_base_width, connector_top_width, connector_depth, connector_height);`);
+        rotate([0, 0, 90])
+        puzzle_slot();`);
+      }
+      if (segment.gridUnitsY === 1) {
+        const y = 0.5 * gridSize;
+        cavities.push(`
+        // Right edge slot (single unit)
+        translate([plate_width, ${y}, 0])
+        rotate([0, 0, 90])
+        puzzle_slot();`);
       }
     }
     
     // Front edge connectors
     if (segment.hasConnectorFront) {
-      for (let i = 0; i < segment.gridUnitsX; i++) {
-        const x = (i + 0.5) * gridSize;
+      for (let i = 1; i < segment.gridUnitsX; i++) {
+        const x = i * gridSize;
         cavities.push(`
-        // Front edge connector at grid unit ${i}
+        // Front edge slot at grid intersection ${i}
         translate([${x}, 0, 0])
         rotate([0, 0, 180])
-        dovetail_female(connector_base_width, connector_top_width, connector_depth, connector_height);`);
+        puzzle_slot();`);
+      }
+      if (segment.gridUnitsX === 1) {
+        const x = 0.5 * gridSize;
+        cavities.push(`
+        // Front edge slot (single unit)
+        translate([${x}, 0, 0])
+        rotate([0, 0, 180])
+        puzzle_slot();`);
       }
     }
     
     // Back edge connectors
     if (segment.hasConnectorBack) {
-      for (let i = 0; i < segment.gridUnitsX; i++) {
-        const x = (i + 0.5) * gridSize;
+      for (let i = 1; i < segment.gridUnitsX; i++) {
+        const x = i * gridSize;
         cavities.push(`
-        // Back edge connector at grid unit ${i}
+        // Back edge slot at grid intersection ${i}
         translate([${x}, plate_depth, 0])
-        dovetail_female(connector_base_width, connector_top_width, connector_depth, connector_height);`);
+        puzzle_slot();`);
+      }
+      if (segment.gridUnitsX === 1) {
+        const x = 0.5 * gridSize;
+        cavities.push(`
+        // Back edge slot (single unit)
+        translate([${x}, plate_depth, 0])
+        puzzle_slot();`);
       }
     }
     
