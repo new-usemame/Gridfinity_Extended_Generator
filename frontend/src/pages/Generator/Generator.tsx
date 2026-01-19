@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { ConfigPanel } from '../../components/ConfigPanel/ConfigPanel';
 import { PreviewCanvas } from '../../components/PreviewCanvas/PreviewCanvas';
 import { ExportButtons, MultiSegmentExportButtons } from '../../components/ExportButtons/ExportButtons';
@@ -212,15 +213,33 @@ export function Generator() {
       {/* Generator Controls Header */}
       <header className="flex-shrink-0 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm">
         <div className="px-6 py-4 flex items-center justify-between">
-          {/* User Dropdown */}
-          <UserDropdown
-            onLoadPreference={handleLoadPreference}
-            currentBoxConfig={boxConfig}
-            currentBaseplateConfig={baseplateConfig}
-          />
+          {/* Left side: Title/Logo */}
+          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center shadow-lg shadow-green-500/20">
+              <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-xl font-display font-semibold text-white">Gridfinity Generator</h1>
+              <p className="text-xs text-slate-500 font-display">Customizable storage solutions</p>
+            </div>
+          </Link>
 
-          {/* Generation Mode Toggle */}
-          <div className="flex items-center gap-2">
+          {/* Right side: User Dropdown and Controls */}
+          <div className="flex items-center gap-4">
+            {/* User Dropdown */}
+            <UserDropdown
+              onLoadPreference={handleLoadPreference}
+              currentBoxConfig={boxConfig}
+              currentBaseplateConfig={baseplateConfig}
+            />
+
+            {/* Generation Mode Toggle */}
+            <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 bg-slate-900 rounded-lg p-0.5">
               <button
                 onClick={() => setGenerationMode('server')}
@@ -288,6 +307,7 @@ export function Generator() {
                 `Generate STL`
               )}
             </button>
+            </div>
           </div>
         </div>
       </header>
