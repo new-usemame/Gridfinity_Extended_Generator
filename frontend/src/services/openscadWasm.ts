@@ -62,19 +62,70 @@ export async function preloadWasm(): Promise<void> {
 }
 
 /**
- * Render SCAD code to STL
+ * Render SCAD code to STL using the low-level API for better error handling
  * @param scadContent - The OpenSCAD source code
  * @returns A Blob containing the STL file data
  */
 export async function renderScadToStl(scadContent: string): Promise<Blob> {
-  const instance = await getWasmInstance();
+  const wasmInstance = await getWasmInstance();
+  const openscad = wasmInstance.getInstance();
 
-  // Use the built-in renderToStl method which returns STL as string
-  const stlString = await instance.renderToStl(scadContent);
+  console.log('[OpenSCAD] Starting render...');
+  console.log('[OpenSCAD] SCAD content length:', scadContent.length);
 
-  // Convert string to Blob
-  // STL files from OpenSCAD are typically ASCII format
-  return new Blob([stlString], { type: 'application/octet-stream' });
+  try {
+    // Write the SCAD code to a virtual file
+    openscad.FS.writeFile('/input.scad', scadContent);
+    console.log('[OpenSCAD] Wrote input.scad');
+
+    // Run OpenSCAD to generate the STL
+    const exitCode = openscad.callMain(['/input.scad', '-o', '/output.stl']);
+    console.log('[OpenSCAD] callMain exit code:', exitCode);
+
+    // Check if rendering was successful
+    if (exitCode !== 0) {
+      throw new Error(`OpenSCAD rendering failed with exit code ${exitCode}`);
+    }
+
+    // Read the output STL file
+    let stlString: string;
+    try {
+      stlString = openscad.FS.readFile('/output.stl', { encoding: 'utf8' }) as string;
+      console.log('[OpenSCAD] Read output.stl, length:', stlString?.length || 0);
+    } catch (readError) {
+      console.error('[OpenSCAD] Failed to read output.stl:', readError);
+      throw new Error('Failed to read generated STL file - rendering may have failed');
+    }
+
+    // Clean up virtual files
+    try {
+      openscad.FS.unlink('/input.scad');
+      openscad.FS.unlink('/output.stl');
+    } catch (cleanupError) {
+      console.warn('[OpenSCAD] Cleanup warning:', cleanupError);
+    }
+
+    if (!stlString || stlString.length === 0) {
+      throw new Error('OpenSCAD returned empty STL output');
+    }
+
+    // Validate STL format (should start with "solid")
+    if (!stlString.trim().toLowerCase().startsWith('solid')) {
+      console.warn('[OpenSCAD] Warning: STL may be in binary format or invalid');
+    }
+
+    console.log('[OpenSCAD] Render complete, STL length:', stlString.length);
+
+    // Convert string to Blob
+    return new Blob([stlString], { type: 'application/octet-stream' });
+  } catch (error) {
+    console.error('[OpenSCAD] Render failed:', error);
+    // Re-throw with more context
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`OpenSCAD error: ${String(error)}`);
+  }
 }
 
 /**

@@ -247,10 +247,13 @@ function App() {
         await handleServerGenerate();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Generation error:', err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
       // If local generation fails, suggest falling back to server
       if (generationMode === 'local') {
-        setError(`Local generation failed: ${err instanceof Error ? err.message : 'Unknown error'}. Try switching to Server mode.`);
+        setError(`Local generation failed: ${errorMessage}. Try switching to Server mode.`);
+      } else {
+        setError(errorMessage || 'An error occurred');
       }
     } finally {
       setIsGenerating(false);
