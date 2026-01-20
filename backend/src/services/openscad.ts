@@ -1633,8 +1633,8 @@ module wall_pattern_grid(width, height, depth, cell_size, spacing) {
     }
 }
 
-// Gridfinity Extended lip cutout module
-// Creates proper tapered lip structure for 3D printing (user-controlled angle)
+// Custom foot-matched lip cutout module
+// Creates a simple chamfer that exactly matches the foot chamfer geometry for perfect stacking
 // The lip is cut from the top of the wall to create the stacking feature
 module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
     // Calculate inner dimensions
@@ -1642,162 +1642,50 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
     inner_width = box_width - wall_thickness * 2;
     inner_depth = box_depth - wall_thickness * 2;
     
-    // Calculate taper insets from angle (these determine how far the tapers extend outward)
-    // Ensure insets are at least wall_thickness to prevent cutting into the wall
-    // Lower taper uses lip_chamfer_angle (aesthetic)
-    lower_taper_inset_base = gf_lip_lower_taper_height / tan(gf_lip_lower_taper_angle);
-    // Upper taper MUST use foot_chamfer_angle to match foot geometry for proper stacking
-    upper_taper_inset_base = gf_lip_upper_taper_height / tan(gf_lip_upper_taper_angle);
-    // Use the larger of calculated inset or wall_thickness to ensure we don't cut into wall
-    lower_taper_inset = max(lower_taper_inset_base, wall_thickness);
-    upper_taper_inset = max(upper_taper_inset_base, wall_thickness);
-    
-    // Calculate inner lip radius (accounts for tapers reducing the corner radius)
-    // Use the actual insets, not the heights, since insets depend on angle
-    inner_lip_radius = max(0, outer_radius - lower_taper_inset - upper_taper_inset);
-    
-    // Calculate lip support thickness based on style
-    lip_support_thickness = (lip_style == "reduced") 
-        ? gf_lip_upper_taper_height - wall_thickness
-        : gf_lip_upper_taper_height + gf_lip_lower_taper_height - wall_thickness;
-    
     if (lip_style == "none") {
         // No lip - flat top, no cutout needed
     } 
-    else if (lip_style == "minimum") {
-        // Minimum lip: removes entire lip area (similar to "none" but with minimal chamfer)
-        // Just removes the top section to create a flush edge
-        translate([0, 0, wall_height - gf_lip_total_height])
-        translate([wall_thickness, wall_thickness, 0])
-        rounded_rect(
-            inner_width,
-            inner_depth,
-            gf_lip_total_height + 0.1,
-            inner_wall_radius
-        );
-    } 
-    else if (lip_style == "reduced") {
-        // Reduced lip: only upper taper (1.9mm) with reduced support
-        // Creates a simpler lip structure for easier access
-        lower_taper_z = gf_lip_lower_taper_height;
-        upper_taper_height = gf_lip_upper_taper_height;
-        
-        translate([0, 0, wall_height - upper_taper_height - lower_taper_z])
-        union() {
-            // Lower section: remove vertical wall up to lower taper
-            translate([wall_thickness, wall_thickness, 0])
-            rounded_rect(
-                inner_width,
-                inner_depth,
-                lower_taper_z + 0.1,
-                inner_wall_radius
-            );
-            
-            // Upper taper section: MUST match foot_chamfer_angle for proper stacking
-            // Calculate inset from angle: inset = height / tan(angle)
-            // Ensure inset is at least wall_thickness to prevent cutting into wall
-            taper_inset_base = upper_taper_height / tan(gf_lip_upper_taper_angle);
-            taper_inset = max(taper_inset_base, wall_thickness);
-            translate([0, 0, lower_taper_z])
-            hull() {
-                // Bottom of taper: inner wall radius
-                translate([wall_thickness, wall_thickness, 0])
-                rounded_rect(
-                    inner_width,
-                    inner_depth,
-                    0.01,
-                    inner_wall_radius
-                );
-                // Top of taper: expanded outward by taper_inset
-                translate([wall_thickness - taper_inset, wall_thickness - taper_inset, upper_taper_height])
-                rounded_rect(
-                    inner_width + taper_inset * 2,
-                    inner_depth + taper_inset * 2,
-                    0.01,
-                    max(0, inner_wall_radius + taper_inset)
-                );
-            }
-        }
-    } 
     else {
-        // Normal/Standard lip: full structure with all tapers
-        // Structure: lower taper (0.7mm) → riser (1.8mm) → upper taper (1.9mm) → lip (1.2mm)
-        // Total height: 0.7 + 1.8 + 1.9 = 4.4mm (lip is part of upper taper)
-        // The cutout expands outward from inner_wall_radius to create the lip recess
+        // Simple foot-matched chamfer for all stacking styles
+        // Uses foot_chamfer_angle and foot_chamfer_height directly to match foot geometry
         
-        lower_taper_height = gf_lip_lower_taper_height;
-        riser_height = gf_lip_riser_height;
-        upper_taper_height = gf_lip_upper_taper_height;
-        lip_height = gf_lip_height;
+        // Calculate chamfer inset from foot geometry (same calculation as foot)
+        // This determines how far the recess expands outward to create the cavity
+        chamfer_inset = foot_chamfer_height / tan(foot_chamfer_angle);
         
-        // Use the pre-calculated taper insets from module level (already account for angle and wall_thickness)
-        // Calculate the radius at the top of the upper taper (where lip starts)
-        // This is the outer radius minus the upper taper inset
-        lip_top_radius = max(0, outer_radius - upper_taper_inset);
+        // Foot dimensions at the top (where it will sit in the recess)
+        foot_full_size = grid_unit - clearance * 2;  // 41.5mm at top
+        foot_radius = feet_corner_radius > 0 ? feet_corner_radius : gf_corner_radius;
         
-        translate([0, 0, wall_height - gf_lip_total_height])
-        union() {
-            // Upper taper + lip section: user-controlled angle taper expanding outward
-            // This creates the main lip recess that boxes stack into
-            translate([0, 0, lower_taper_height + riser_height])
-            hull() {
-                // Bottom of upper taper: starts at inner_wall_radius
-                translate([wall_thickness, wall_thickness, 0])
-                rounded_rect(
-                    inner_width,
-                    inner_depth,
-                    0.01,
-                    inner_wall_radius
-                );
-                // Top of upper taper: expands outward to lip_top_radius
-                translate([wall_thickness - upper_taper_inset, wall_thickness - upper_taper_inset, upper_taper_height])
-                rounded_rect(
-                    inner_width + upper_taper_inset * 2,
-                    inner_depth + upper_taper_inset * 2,
-                    0.01,
-                    max(0, inner_wall_radius + upper_taper_inset)
-                );
-                // Lip section: continues at lip_top_radius
-                translate([wall_thickness - upper_taper_inset, wall_thickness - upper_taper_inset, upper_taper_height + lip_height])
-                rounded_rect(
-                    inner_width + upper_taper_inset * 2,
-                    inner_depth + upper_taper_inset * 2,
-                    0.01,
-                    max(0, inner_wall_radius + upper_taper_inset)
-                );
-            }
-            
-            // Riser section: vertical wall between lower and upper tapers
-            translate([wall_thickness, wall_thickness, lower_taper_height])
+        // The recess creates a cavity for the foot to fit into
+        // The foot expands from smaller bottom to larger top at foot_chamfer_angle
+        // The recess should match this geometry: larger at bottom, smaller at top (inverse of foot)
+        // At the top of the recess, we need space for the foot's top size
+        // The recess expands outward as we go down to create clearance
+        
+        translate([0, 0, wall_height - foot_chamfer_height])
+        hull() {
+            // Top of recess: inner wall dimensions (where foot's top will sit)
+            // The foot's top is foot_full_size, positioned with clearance offset
+            // The inner dimensions should provide adequate clearance
+            translate([wall_thickness, wall_thickness, foot_chamfer_height])
             rounded_rect(
                 inner_width,
                 inner_depth,
-                riser_height + 0.1,
+                0.01,
                 inner_wall_radius
             );
             
-            // Lower taper section: user-controlled angle taper from inner_wall_radius outward
-            // This creates the support structure transition
-            // Use the pre-calculated lower_taper_inset from module level (already accounts for angle and wall_thickness)
-            translate([0, 0, 0])
-            hull() {
-                // Bottom: inner wall radius
-                translate([wall_thickness, wall_thickness, 0])
-                rounded_rect(
-                    inner_width,
-                    inner_depth,
-                    0.01,
-                    inner_wall_radius
-                );
-                // Top: transitions outward (prepares for riser)
-                translate([wall_thickness - lower_taper_inset, wall_thickness - lower_taper_inset, lower_taper_height])
-                rounded_rect(
-                    inner_width + lower_taper_inset * 2,
-                    inner_depth + lower_taper_inset * 2,
-                    0.01,
-                    max(0, inner_wall_radius + lower_taper_inset)
-                );
-            }
+            // Bottom of recess: expanded outward by chamfer_inset
+            // This creates the tapered cavity that matches the foot's expansion profile
+            // The expansion matches the foot's angle and height for perfect fit
+            translate([wall_thickness - chamfer_inset, wall_thickness - chamfer_inset, 0])
+            rounded_rect(
+                inner_width + chamfer_inset * 2,
+                inner_depth + chamfer_inset * 2,
+                0.01,
+                max(0, inner_wall_radius + chamfer_inset)
+            );
         }
     }
 }
