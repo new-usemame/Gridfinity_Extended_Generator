@@ -906,53 +906,50 @@ module edge_tooth_female(pattern) {
 }
 
 // 3D male tooth (extruded with optional peaked roof)
+// The roof follows the actual profile shape to avoid overhangs for 3D printing
 module male_tooth_3d(pattern, height) {
     if (roof_intensity > 0.01) {
-        // Calculate peak height first
-        peak_height = height * roof_intensity * 0.3; // Peak height based on intensity
+        // Calculate peak height based on intensity
+        peak_height = height * roof_intensity * 0.3;
         
         // Calculate base height where roof starts (based on roof_depth)
         // roof_depth = 0 means roof starts near top, roof_depth = 1 means roof at base
-        // We need to ensure base_height + peak_height <= height
         max_base_height = height - peak_height;
         base_height = max_base_height * (1 - roof_depth);
+        
+        // Ensure total doesn't exceed height (auto-shorten if needed)
+        total_needed = base_height + peak_height;
+        if (total_needed > height) {
+            // Reduce base_height so total equals height
+            base_height = height - peak_height;
+        }
         
         // Base extrusion up to where roof starts
         linear_extrude(height = base_height)
         edge_tooth_male(pattern);
         
-        // Peaked roof: create a slanted roof using multiple cross-sections
-        // Each cross-section is the profile scaled down in width toward the center
-        // This creates a smooth "^" shaped roof that follows the profile
+        // Peaked roof: follows the profile shape using intersection
+        // This ensures the roof respects concave sections (like wineglass waist)
+        // and never creates overhangs
         translate([0, 0, base_height])
-        num_sections = 12;
-        for (i = [0 : 1 : num_sections - 1]) {
-            h_ratio = i / num_sections;
-            h_current = peak_height * h_ratio;
-            h_next = peak_height * ((i + 1) / num_sections);
-            scale_current = 1.0 - h_ratio; // Scale from 1.0 (full width) to 0.0 (center point)
-            scale_next = 1.0 - ((i + 1) / num_sections);
+        intersection() {
+            // Constraint: The roof must stay within the profile bounds
+            // Extrude the profile to the peak height
+            linear_extrude(height = peak_height + 0.1)
+            edge_tooth_male(pattern);
             
-            // Hull between current and next cross-section
+            // Roof shape: hull between profile base and center peak line
+            // This creates a "^" shape that slopes from edges to center
             hull() {
-                // Current cross-section: scaled profile
-                translate([0, 0, h_current])
+                // Base: full profile at roof start (z=0 in translated space)
                 linear_extrude(height = 0.01)
-                scale([scale_current, 1]) // Scale width (x) toward center, keep length (y)
                 edge_tooth_male(pattern);
                 
-                // Next cross-section: more scaled profile (or center peak for last section)
-                if (i < num_sections - 1) {
-                    translate([0, 0, h_next])
-                    linear_extrude(height = 0.01)
-                    scale([scale_next, 1])
-                    edge_tooth_male(pattern);
-                } else {
-                    // Final section: center peak line
-                    for (y = [0 : tooth_depth/20 : tooth_depth]) {
-                        translate([0, y, peak_height])
-                        cylinder(r = 0.05, h = 0.01, $fn = 8);
-                    }
+                // Peak: center line running along the length (y-direction)
+                // Sample points along the length for smooth peak
+                for (y = [0 : tooth_depth/30 : tooth_depth]) {
+                    translate([0, y, peak_height])
+                    cylinder(r = 0.06, h = 0.01, $fn = 12);
                 }
             }
         }
@@ -964,19 +961,26 @@ module male_tooth_3d(pattern, height) {
 }
 
 // 3D female cavity (extruded - no roof, just shorter to accommodate male roof)
+// The female side is a simple cutout that matches the male shape
 module female_cavity_3d(pattern, height) {
     translate([0, 0, -0.1]) {
         // Female cavity has no roof - it's just a cutout
         // Make it shorter to accommodate the male roof when roof is enabled
         if (roof_intensity > 0.01) {
-            // Calculate the peak height on the male connector
-            base_height = height * (1 - roof_depth);
+            // Calculate the same dimensions as the male connector
             peak_height = height * roof_intensity * 0.3;
-            peak_height = min(peak_height, height - base_height);
+            max_base_height = height - peak_height;
+            base_height = max_base_height * (1 - roof_depth);
             
-            // Make cavity shorter - it should end where the male roof starts
-            // Add small clearance for the peak
-            cavity_height = base_height + peak_height * 0.1; // Slight clearance for peak
+            // Ensure total doesn't exceed height (same logic as male)
+            total_needed = base_height + peak_height;
+            if (total_needed > height) {
+                base_height = height - peak_height;
+            }
+            
+            // Female cavity height: base_height + peak_height (accommodates the full male roof)
+            // Add small clearance for tolerance
+            cavity_height = base_height + peak_height;
             linear_extrude(height = cavity_height + 0.2)
             edge_tooth_female(pattern);
         } else {
