@@ -1795,11 +1795,12 @@ module perfect_fit_lip_additive(wall_height, outer_radius) {
     // |    |
     // |    |  <- wall
     //
-    // The triangle extends OUTWARD at the top, with the slanted edge (hypotenuse) on the inside
+    // Mirrored horizontally from the previous version:
+    // - Outer edge stays vertical (at box_width) - no change
+    // - Inner edge slopes outward (creates / on inside)
     translate([0, 0, wall_height])
     difference() {
-        // Outer shape: extends OUTWARD at top (gets larger), creating the triangle
-        // The hypotenuse will be on the inside after we cut the inner cavity
+        // Outer shape: stays at outer wall edge (vertical edge on outside, no change)
         hull() {
             // Bottom: at the outer wall edge (where triangle sits on wall, z=0)
             translate([0, 0, 0])
@@ -1810,19 +1811,18 @@ module perfect_fit_lip_additive(wall_height, outer_radius) {
                 outer_radius
             );
             
-            // Top: extends OUTWARD to create the triangle (hypotenuse will be on inside)
-            // The triangle gets larger at the top, with the slanted edge facing inward
-            translate([-chamfer_inset, -chamfer_inset, triangle_height])
+            // Top: stays at outer wall edge (vertical edge, no change)
+            translate([0, 0, triangle_height])
             rounded_rect(
-                box_width + chamfer_inset * 2,
-                box_depth + chamfer_inset * 2,
+                box_width,
+                box_depth,
                 0.01,
-                outer_radius + chamfer_inset
+                outer_radius
             );
         }
         
         // Inner cut: creates the hypotenuse on the INSIDE
-        // The outer edge stays vertical, the inner edge slopes outward (creating / on inside)
+        // Mirrored from before - inner edge extends OUTWARD at top (creates / on inside)
         hull() {
             // Bottom: at inner wall edge (where hypotenuse starts)
             translate([wall_thickness, wall_thickness, -0.1])
@@ -1833,8 +1833,8 @@ module perfect_fit_lip_additive(wall_height, outer_radius) {
                 max(0, outer_radius - wall_thickness)
             );
             
-            // Top: extends OUTWARD to create the slanted hypotenuse on the INSIDE
-            // This creates the / shape - inner edge moves outward, hypotenuse faces inward
+            // Top: extends OUTWARD (mirrored horizontally) to create / on inside
+            // This creates the slanted hypotenuse facing inward
             translate([wall_thickness - chamfer_inset, wall_thickness - chamfer_inset, triangle_height + 0.1])
             rounded_rect(
                 box_width - (wall_thickness - chamfer_inset) * 2,
