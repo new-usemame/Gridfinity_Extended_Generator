@@ -141,7 +141,15 @@ export function PreviewCanvas({
       {/* 3D Canvas */}
       <Canvas
         camera={{ position: [80, 60, 80], fov: 45 }}
-        gl={{ antialias: true, alpha: true }}
+        gl={{ 
+          antialias: true, 
+          alpha: true,
+          powerPreference: "high-performance",
+          stencil: false,
+          depth: true
+        }}
+        performance={{ min: 0.5 }}
+        dpr={[1, 2]}
       >
         <Suspense fallback={null}>
           {isCombinedView ? (
@@ -230,9 +238,7 @@ function CombinedSceneContent({
     loader.load(
       boxStlUrl,
       (loadedGeometry) => {
-        loadedGeometry.computeVertexNormals();
-        
-        // Apply coordinate transformation
+        // Apply coordinate transformation first (before computing normals for better performance)
         // OpenSCAD: X=right, Y=back, Z=up
         // Three.js: X=right, Y=up, Z=front
         // We want: SCAD high Y (back) → Three.js low Z (left) so half cells appear on left
@@ -271,6 +277,10 @@ function CombinedSceneContent({
         // This positions it on full cells at high Z (right side)
         loadedGeometry.translate(-box.min.x + clearance, -box.min.y, -box.min.z + boxZPosition);
         
+        // Compute normals after all transformations for better performance
+        // Use smooth normals for better visual quality
+        loadedGeometry.computeVertexNormals();
+        
         setBoxGeometry(loadedGeometry);
       },
       undefined,
@@ -291,9 +301,7 @@ function CombinedSceneContent({
     loader.load(
       baseplateStlUrl,
       (loadedGeometry) => {
-        loadedGeometry.computeVertexNormals();
-        
-        // Apply coordinate transformation
+        // Apply coordinate transformation first (before computing normals for better performance)
         // OpenSCAD: X=right, Y=back, Z=up
         // Three.js: X=right, Y=up, Z=front
         // We want: SCAD high Y (back) → Three.js low Z (left) so half cells appear on left
@@ -313,6 +321,10 @@ function CombinedSceneContent({
         const box = loadedGeometry.boundingBox!;
         loadedGeometry.translate(-box.min.x, -box.min.y, -box.min.z);
         
+        // Compute normals after all transformations for better performance
+        // Use smooth normals for better visual quality
+        loadedGeometry.computeVertexNormals();
+        
         setBaseplateGeometry(loadedGeometry);
       },
       undefined,
@@ -322,16 +334,21 @@ function CombinedSceneContent({
     );
   }, [baseplateStlUrl]);
 
+  // Detect if geometry is large (for performance optimization)
+  const isLargeGeometry = baseplateGeometry 
+    ? (baseplateGeometry.attributes.position?.count || 0) > 100000
+    : false;
+
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[10, 10, 5]} intensity={1} />
       <directionalLight position={[-10, 10, -5]} intensity={0.5} />
       <pointLight position={[0, 20, 0]} intensity={0.5} />
 
-      {/* Environment for reflections */}
-      <Environment preset="city" />
+      {/* Environment for reflections - use lighter preset for large geometries */}
+      {!isLargeGeometry && <Environment preset="sunset" />}
 
       {/* Grid Floor */}
       <Grid
@@ -354,12 +371,12 @@ function CombinedSceneContent({
 
       {/* Baseplate Model */}
       {baseplateGeometry && (
-        <mesh geometry={baseplateGeometry} castShadow receiveShadow>
+        <mesh geometry={baseplateGeometry}>
           <meshStandardMaterial
             color="#3b82f6"
             metalness={0.1}
             roughness={0.4}
-            envMapIntensity={0.5}
+            envMapIntensity={isLargeGeometry ? 0.2 : 0.5}
           />
         </mesh>
       )}
@@ -369,8 +386,6 @@ function CombinedSceneContent({
         <mesh 
           geometry={boxGeometry} 
           position={[0, boxZOffset, 0]}
-          castShadow 
-          receiveShadow
         >
           <meshStandardMaterial
             color="#16a34a"
@@ -410,8 +425,6 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
     loader.load(
       stlUrl,
       (loadedGeometry) => {
-        loadedGeometry.computeVertexNormals();
-        
         // OpenSCAD uses Z-up, Three.js uses Y-up
         // Apply rotation matrix to convert coordinate systems:
         // - OpenSCAD +X → Three.js +X (unchanged)
@@ -435,6 +448,9 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
         // Center on X/Z, put bottom (min Y) at ground level
         loadedGeometry.translate(-center.x, -box.min.y, -center.z);
         
+        // Compute normals after all transformations for better performance
+        loadedGeometry.computeVertexNormals();
+        
         setGeometry(loadedGeometry);
       },
       undefined,
@@ -444,16 +460,21 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
     );
   }, [stlUrl]);
 
+  // Detect if geometry is large (for performance optimization)
+  const isLargeGeometry = geometry 
+    ? (geometry.attributes.position?.count || 0) > 100000
+    : false;
+
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[10, 10, 5]} intensity={1} />
       <directionalLight position={[-10, 10, -5]} intensity={0.5} />
       <pointLight position={[0, 20, 0]} intensity={0.5} />
 
-      {/* Environment for reflections */}
-      <Environment preset="city" />
+      {/* Environment for reflections - use lighter preset for large geometries */}
+      {!isLargeGeometry && <Environment preset="sunset" />}
 
       {/* Grid Floor */}
       <Grid
@@ -492,13 +513,16 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
 }
 
 function ModelMesh({ geometry }: { geometry: THREE.BufferGeometry }) {
+  // Detect if geometry is large (for performance optimization)
+  const isLargeGeometry = (geometry.attributes.position?.count || 0) > 100000;
+  
   return (
-    <mesh geometry={geometry} castShadow receiveShadow>
+    <mesh geometry={geometry}>
       <meshStandardMaterial
         color="#22c55e"
         metalness={0.1}
         roughness={0.4}
-        envMapIntensity={0.5}
+        envMapIntensity={isLargeGeometry ? 0.2 : 0.5}
       />
     </mesh>
   );

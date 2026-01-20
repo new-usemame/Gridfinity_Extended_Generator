@@ -225,82 +225,6 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
         </div>
       </CollapsibleSection>
 
-      {/* Floor Section */}
-      <CollapsibleSection title="Floor" icon="🏠">
-        <SelectInput
-          label="Floor Type"
-          value={config.efficientFloor}
-          options={[
-            { value: 'off', label: 'Solid Floor' },
-            { value: 'on', label: 'Efficient (Saves Material)' },
-            { value: 'rounded', label: 'Rounded Efficient' },
-            { value: 'smooth', label: 'Smooth Efficient' }
-          ]}
-          onChange={(v) => update('efficientFloor', v as BoxConfig['efficientFloor'])}
-        />
-        <p className="text-xs text-slate-500 dark:text-slate-500">
-          Efficient floor reduces material by only printing under the walls.
-        </p>
-      </CollapsibleSection>
-
-      {/* Magnets & Screws Section */}
-      <CollapsibleSection title="Magnets & Screws" icon="🧲">
-        <ToggleInput
-          label="Enable Magnets"
-          value={config.magnetEnabled}
-          onChange={(v) => update('magnetEnabled', v)}
-        />
-        {config.magnetEnabled && (
-          <>
-            <NumberInput
-              label="Magnet Diameter"
-              value={config.magnetDiameter}
-              min={3}
-              max={10}
-              step={0.1}
-              unit="mm"
-              onChange={(v) => update('magnetDiameter', v)}
-            />
-            <NumberInput
-              label="Magnet Depth"
-              value={config.magnetDepth}
-              min={1}
-              max={5}
-              step={0.1}
-              unit="mm"
-              onChange={(v) => update('magnetDepth', v)}
-            />
-            <SelectInput
-              label="Easy Release"
-              value={config.magnetEasyRelease}
-              options={[
-                { value: 'off', label: 'Off' },
-                { value: 'auto', label: 'Auto' },
-                { value: 'inner', label: 'Inner' },
-                { value: 'outer', label: 'Outer' }
-              ]}
-              onChange={(v) => update('magnetEasyRelease', v as BoxConfig['magnetEasyRelease'])}
-            />
-          </>
-        )}
-        <ToggleInput
-          label="Enable Screw Holes"
-          value={config.screwEnabled}
-          onChange={(v) => update('screwEnabled', v)}
-        />
-        {config.screwEnabled && (
-          <NumberInput
-            label="Screw Diameter"
-            value={config.screwDiameter}
-            min={2}
-            max={6}
-            step={0.5}
-            unit="mm"
-            onChange={(v) => update('screwDiameter', v)}
-          />
-        )}
-      </CollapsibleSection>
-
       {/* Lip Style Section */}
       <CollapsibleSection title="Lip Style" icon="🔝">
         <SelectInput
@@ -317,107 +241,6 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
         />
         <p className="text-xs text-slate-500 dark:text-slate-500">
           Standard lip allows bins to stack. Reduced/minimum lips provide easier access.
-        </p>
-      </CollapsibleSection>
-
-      {/* Finger Slide Section */}
-      <CollapsibleSection title="Finger Slide" icon="👆">
-        <ToggleInput
-          label="Enable Finger Slide"
-          value={config.fingerSlide}
-          onChange={(v) => update('fingerSlide', v)}
-        />
-        {config.fingerSlide && (
-          <>
-            <SelectInput
-              label="Slide Style"
-              value={config.fingerSlideStyle}
-              options={[
-                { value: 'rounded', label: 'Rounded' },
-                { value: 'chamfered', label: 'Chamfered' },
-                { value: 'none', label: 'Rectangular' }
-              ]}
-              onChange={(v) => update('fingerSlideStyle', v as BoxConfig['fingerSlideStyle'])}
-            />
-            <SliderInput
-              label="Slide Radius"
-              value={config.fingerSlideRadius}
-              min={4}
-              max={20}
-              step={1}
-              unit="mm"
-              onChange={(v) => update('fingerSlideRadius', v)}
-            />
-            <SelectInput
-              label="Position"
-              value={config.fingerSlidePosition}
-              options={[
-                { value: 'front', label: 'Front' },
-                { value: 'back', label: 'Back' },
-                { value: 'left', label: 'Left' },
-                { value: 'right', label: 'Right' }
-              ]}
-              onChange={(v) => update('fingerSlidePosition', v as BoxConfig['fingerSlidePosition'])}
-            />
-          </>
-        )}
-      </CollapsibleSection>
-
-      {/* Tapered Corners Section */}
-      <CollapsibleSection title="Tapered Corners" icon="📐">
-        <SelectInput
-          label="Corner Style"
-          value={config.taperedCorner}
-          options={[
-            { value: 'none', label: 'None' },
-            { value: 'rounded', label: 'Rounded' },
-            { value: 'chamfered', label: 'Chamfered' }
-          ]}
-          onChange={(v) => update('taperedCorner', v as BoxConfig['taperedCorner'])}
-        />
-        {config.taperedCorner !== 'none' && (
-          <SliderInput
-            label="Taper Size"
-            value={config.taperedCornerSize}
-            min={5}
-            max={20}
-            step={1}
-            unit="mm"
-            onChange={(v) => update('taperedCornerSize', v)}
-          />
-        )}
-        <p className="text-xs text-slate-500 dark:text-slate-500">
-          Tapered internal corners make it easier to grab items from the bin.
-        </p>
-      </CollapsibleSection>
-
-      {/* Wall Pattern Section */}
-      <CollapsibleSection title="Wall Pattern" icon="⬡">
-        <SelectInput
-          label="Pattern Style"
-          value={config.wallPattern}
-          options={[
-            { value: 'none', label: 'None (Solid)' },
-            { value: 'hexgrid', label: 'Hexagon Grid' },
-            { value: 'grid', label: 'Square Grid' },
-            { value: 'voronoi', label: 'Voronoi' },
-            { value: 'brick', label: 'Brick Pattern' }
-          ]}
-          onChange={(v) => update('wallPattern', v as BoxConfig['wallPattern'])}
-        />
-        {config.wallPattern !== 'none' && (
-          <SliderInput
-            label="Pattern Spacing"
-            value={config.wallPatternSpacing}
-            min={1}
-            max={5}
-            step={0.5}
-            unit="mm"
-            onChange={(v) => update('wallPatternSpacing', v)}
-          />
-        )}
-        <p className="text-xs text-slate-500 dark:text-slate-500">
-          Wall patterns reduce material usage and add visual interest.
         </p>
       </CollapsibleSection>
 
@@ -441,38 +264,221 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
         />
       </CollapsibleSection>
 
-      {/* Label Tab Section */}
-      <CollapsibleSection title="Label Tab" icon="🏷️">
-        <ToggleInput
-          label="Enable Label Tab"
-          value={config.labelEnabled}
-          onChange={(v) => update('labelEnabled', v)}
-        />
-        {config.labelEnabled && (
-          <>
+      {/* Work in Progress Section */}
+      <div className="mt-4 pt-4 border-t-2 border-slate-300 dark:border-slate-600">
+        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3 italic">Work in Progress</h2>
+        <div className="space-y-2.5">
+          {/* Floor Section */}
+          <CollapsibleSection title="Floor" icon="🏠" wip>
             <SelectInput
-              label="Position"
-              value={config.labelPosition}
+              label="Floor Type"
+              value={config.efficientFloor}
               options={[
-                { value: 'front', label: 'Front' },
-                { value: 'back', label: 'Back' },
-                { value: 'left', label: 'Left' },
-                { value: 'right', label: 'Right' }
+                { value: 'off', label: 'Solid Floor' },
+                { value: 'on', label: 'Efficient (Saves Material)' },
+                { value: 'rounded', label: 'Rounded Efficient' },
+                { value: 'smooth', label: 'Smooth Efficient' }
               ]}
-              onChange={(v) => update('labelPosition', v as BoxConfig['labelPosition'])}
+              onChange={(v) => update('efficientFloor', v as BoxConfig['efficientFloor'])}
             />
-            <SliderInput
-              label="Label Width"
-              value={config.labelWidth}
-              min={20}
-              max={100}
-              step={5}
-              unit="%"
-              onChange={(v) => update('labelWidth', v)}
+            <p className="text-xs text-slate-500 dark:text-slate-500">
+              Efficient floor reduces material by only printing under the walls.
+            </p>
+          </CollapsibleSection>
+
+          {/* Magnets & Screws Section */}
+          <CollapsibleSection title="Magnets & Screws" icon="🧲" wip>
+            <ToggleInput
+              label="Enable Magnets"
+              value={config.magnetEnabled}
+              onChange={(v) => update('magnetEnabled', v)}
             />
-          </>
-        )}
-      </CollapsibleSection>
+            {config.magnetEnabled && (
+              <>
+                <NumberInput
+                  label="Magnet Diameter"
+                  value={config.magnetDiameter}
+                  min={3}
+                  max={10}
+                  step={0.1}
+                  unit="mm"
+                  onChange={(v) => update('magnetDiameter', v)}
+                />
+                <NumberInput
+                  label="Magnet Depth"
+                  value={config.magnetDepth}
+                  min={1}
+                  max={5}
+                  step={0.1}
+                  unit="mm"
+                  onChange={(v) => update('magnetDepth', v)}
+                />
+                <SelectInput
+                  label="Easy Release"
+                  value={config.magnetEasyRelease}
+                  options={[
+                    { value: 'off', label: 'Off' },
+                    { value: 'auto', label: 'Auto' },
+                    { value: 'inner', label: 'Inner' },
+                    { value: 'outer', label: 'Outer' }
+                  ]}
+                  onChange={(v) => update('magnetEasyRelease', v as BoxConfig['magnetEasyRelease'])}
+                />
+              </>
+            )}
+            <ToggleInput
+              label="Enable Screw Holes"
+              value={config.screwEnabled}
+              onChange={(v) => update('screwEnabled', v)}
+            />
+            {config.screwEnabled && (
+              <NumberInput
+                label="Screw Diameter"
+                value={config.screwDiameter}
+                min={2}
+                max={6}
+                step={0.5}
+                unit="mm"
+                onChange={(v) => update('screwDiameter', v)}
+              />
+            )}
+          </CollapsibleSection>
+
+          {/* Finger Slide Section */}
+          <CollapsibleSection title="Finger Slide" icon="👆" wip>
+            <ToggleInput
+              label="Enable Finger Slide"
+              value={config.fingerSlide}
+              onChange={(v) => update('fingerSlide', v)}
+            />
+            {config.fingerSlide && (
+              <>
+                <SelectInput
+                  label="Slide Style"
+                  value={config.fingerSlideStyle}
+                  options={[
+                    { value: 'rounded', label: 'Rounded' },
+                    { value: 'chamfered', label: 'Chamfered' },
+                    { value: 'none', label: 'Rectangular' }
+                  ]}
+                  onChange={(v) => update('fingerSlideStyle', v as BoxConfig['fingerSlideStyle'])}
+                />
+                <SliderInput
+                  label="Slide Radius"
+                  value={config.fingerSlideRadius}
+                  min={4}
+                  max={20}
+                  step={1}
+                  unit="mm"
+                  onChange={(v) => update('fingerSlideRadius', v)}
+                />
+                <SelectInput
+                  label="Position"
+                  value={config.fingerSlidePosition}
+                  options={[
+                    { value: 'front', label: 'Front' },
+                    { value: 'back', label: 'Back' },
+                    { value: 'left', label: 'Left' },
+                    { value: 'right', label: 'Right' }
+                  ]}
+                  onChange={(v) => update('fingerSlidePosition', v as BoxConfig['fingerSlidePosition'])}
+                />
+              </>
+            )}
+          </CollapsibleSection>
+
+          {/* Tapered Corners Section */}
+          <CollapsibleSection title="Tapered Corners" icon="📐" wip>
+            <SelectInput
+              label="Corner Style"
+              value={config.taperedCorner}
+              options={[
+                { value: 'none', label: 'None' },
+                { value: 'rounded', label: 'Rounded' },
+                { value: 'chamfered', label: 'Chamfered' }
+              ]}
+              onChange={(v) => update('taperedCorner', v as BoxConfig['taperedCorner'])}
+            />
+            {config.taperedCorner !== 'none' && (
+              <SliderInput
+                label="Taper Size"
+                value={config.taperedCornerSize}
+                min={5}
+                max={20}
+                step={1}
+                unit="mm"
+                onChange={(v) => update('taperedCornerSize', v)}
+              />
+            )}
+            <p className="text-xs text-slate-500 dark:text-slate-500">
+              Tapered internal corners make it easier to grab items from the bin.
+            </p>
+          </CollapsibleSection>
+
+          {/* Wall Pattern Section */}
+          <CollapsibleSection title="Wall Pattern" icon="⬡" wip>
+            <SelectInput
+              label="Pattern Style"
+              value={config.wallPattern}
+              options={[
+                { value: 'none', label: 'None (Solid)' },
+                { value: 'hexgrid', label: 'Hexagon Grid' },
+                { value: 'grid', label: 'Square Grid' },
+                { value: 'voronoi', label: 'Voronoi' },
+                { value: 'brick', label: 'Brick Pattern' }
+              ]}
+              onChange={(v) => update('wallPattern', v as BoxConfig['wallPattern'])}
+            />
+            {config.wallPattern !== 'none' && (
+              <SliderInput
+                label="Pattern Spacing"
+                value={config.wallPatternSpacing}
+                min={1}
+                max={5}
+                step={0.5}
+                unit="mm"
+                onChange={(v) => update('wallPatternSpacing', v)}
+              />
+            )}
+            <p className="text-xs text-slate-500 dark:text-slate-500">
+              Wall patterns reduce material usage and add visual interest.
+            </p>
+          </CollapsibleSection>
+
+          {/* Label Tab Section */}
+          <CollapsibleSection title="Label Tab" icon="🏷️" wip>
+            <ToggleInput
+              label="Enable Label Tab"
+              value={config.labelEnabled}
+              onChange={(v) => update('labelEnabled', v)}
+            />
+            {config.labelEnabled && (
+              <>
+                <SelectInput
+                  label="Position"
+                  value={config.labelPosition}
+                  options={[
+                    { value: 'front', label: 'Front' },
+                    { value: 'back', label: 'Back' },
+                    { value: 'left', label: 'Left' },
+                    { value: 'right', label: 'Right' }
+                  ]}
+                  onChange={(v) => update('labelPosition', v as BoxConfig['labelPosition'])}
+                />
+                <SliderInput
+                  label="Label Width"
+                  value={config.labelWidth}
+                  min={20}
+                  max={100}
+                  step={5}
+                  unit="%"
+                  onChange={(v) => update('labelWidth', v)}
+                />
+              </>
+            )}
+          </CollapsibleSection>
+        </div>
+      </div>
     </div>
   );
 }
@@ -892,120 +898,8 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
         )}
       </CollapsibleSection>
 
-      {/* Style Section */}
-      <CollapsibleSection title="Plate Style" icon="🎨" defaultOpen>
-        <SelectInput
-          label="Socket Style"
-          value={config.style}
-          options={[
-            { value: 'default', label: 'Default (Open Sockets)' },
-            { value: 'magnet', label: 'With Magnets' },
-            { value: 'weighted', label: 'Weighted (Weight Cavity)' },
-            { value: 'screw', label: 'With Screw Holes' }
-          ]}
-          onChange={(v) => update('style', v as BaseplateConfig['style'])}
-        />
-        <SelectInput
-          label="Plate Type"
-          value={config.plateStyle}
-          options={[
-            { value: 'default', label: 'Standard 3D Print' },
-            { value: 'cnclaser', label: 'CNC / Laser Cut' }
-          ]}
-          onChange={(v) => update('plateStyle', v as BaseplateConfig['plateStyle'])}
-        />
-        <ToggleInput
-          label="Remove Bottom Taper"
-          value={config.removeBottomTaper}
-          onChange={(v) => update('removeBottomTaper', v)}
-        />
-        <p className="text-xs text-slate-500 dark:text-slate-500">
-          Removing bottom taper creates flat socket bottoms for CNC/laser cutting.
-        </p>
-      </CollapsibleSection>
-
-      {/* Magnets Section */}
-      {(config.style === 'magnet' || config.style === 'default') && (
-        <CollapsibleSection title="Magnets" icon="🧲">
-          <NumberInput
-            label="Magnet Diameter"
-            value={config.magnetDiameter}
-            min={3}
-            max={10}
-            step={0.1}
-            unit="mm"
-            onChange={(v) => update('magnetDiameter', v)}
-          />
-          <NumberInput
-            label="Magnet Depth"
-            value={config.magnetDepth}
-            min={1}
-            max={5}
-            step={0.1}
-            unit="mm"
-            onChange={(v) => update('magnetDepth', v)}
-          />
-          <NumberInput
-            label="Z Offset (Raise Magnet)"
-            value={config.magnetZOffset}
-            min={0}
-            max={3}
-            step={0.1}
-            unit="mm"
-            onChange={(v) => update('magnetZOffset', v)}
-          />
-          <NumberInput
-            label="Top Cover (Capture)"
-            value={config.magnetTopCover}
-            min={0}
-            max={2}
-            step={0.1}
-            unit="mm"
-            onChange={(v) => update('magnetTopCover', v)}
-          />
-          <p className="text-xs text-slate-500 dark:text-slate-500">
-            Z Offset raises magnets for glue-in. Top Cover creates ceiling to capture magnets.
-          </p>
-        </CollapsibleSection>
-      )}
-
-      {/* Screws Section */}
-      {(config.style === 'screw' || config.style === 'default') && (
-        <CollapsibleSection title="Screw Holes" icon="🔩">
-          <NumberInput
-            label="Screw Diameter"
-            value={config.screwDiameter}
-            min={2}
-            max={6}
-            step={0.5}
-            unit="mm"
-            onChange={(v) => update('screwDiameter', v)}
-          />
-          <ToggleInput
-            label="Center Screw Hole"
-            value={config.centerScrew}
-            onChange={(v) => update('centerScrew', v)}
-          />
-          <p className="text-xs text-slate-500 dark:text-slate-500">
-            Center screw allows mounting baseplate to surface.
-          </p>
-        </CollapsibleSection>
-      )}
-
-      {/* Weight Cavity Section */}
-      <CollapsibleSection title="Weight Cavity" icon="⚖️">
-        <ToggleInput
-          label="Enable Weight Cavity"
-          value={config.weightCavity}
-          onChange={(v) => update('weightCavity', v)}
-        />
-        <p className="text-xs text-slate-500 dark:text-slate-500">
-          Creates hollow space to add weights (lead, steel balls) for stability.
-        </p>
-      </CollapsibleSection>
-
-      {/* Corner Rounding Section */}
-      <CollapsibleSection title="Corner Rounding" icon="⭕">
+      {/* Outer Corner Rounding Section */}
+      <CollapsibleSection title="Outer Corner Rounding" icon="⭕">
         <SliderInput
           label="Corner Radius"
           value={config.cornerRadius}
@@ -1084,6 +978,124 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
           </p>
         </div>
       </CollapsibleSection>
+
+      {/* Work in Progress Section */}
+      <div className="mt-4 pt-4 border-t-2 border-slate-300 dark:border-slate-600">
+        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3 italic">Work in Progress</h2>
+        <div className="space-y-2.5">
+          {/* Style Section */}
+          <CollapsibleSection title="Plate Style" icon="🎨" wip>
+            <SelectInput
+              label="Socket Style"
+              value={config.style}
+              options={[
+                { value: 'default', label: 'Default (Open Sockets)' },
+                { value: 'magnet', label: 'With Magnets' },
+                { value: 'weighted', label: 'Weighted (Weight Cavity)' },
+                { value: 'screw', label: 'With Screw Holes' }
+              ]}
+              onChange={(v) => update('style', v as BaseplateConfig['style'])}
+            />
+            <SelectInput
+              label="Plate Type"
+              value={config.plateStyle}
+              options={[
+                { value: 'default', label: 'Standard 3D Print' },
+                { value: 'cnclaser', label: 'CNC / Laser Cut' }
+              ]}
+              onChange={(v) => update('plateStyle', v as BaseplateConfig['plateStyle'])}
+            />
+            <ToggleInput
+              label="Remove Bottom Taper"
+              value={config.removeBottomTaper}
+              onChange={(v) => update('removeBottomTaper', v)}
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-500">
+              Removing bottom taper creates flat socket bottoms for CNC/laser cutting.
+            </p>
+          </CollapsibleSection>
+
+          {/* Magnets Section */}
+          {(config.style === 'magnet' || config.style === 'default') && (
+            <CollapsibleSection title="Magnets" icon="🧲" wip>
+              <NumberInput
+                label="Magnet Diameter"
+                value={config.magnetDiameter}
+                min={3}
+                max={10}
+                step={0.1}
+                unit="mm"
+                onChange={(v) => update('magnetDiameter', v)}
+              />
+              <NumberInput
+                label="Magnet Depth"
+                value={config.magnetDepth}
+                min={1}
+                max={5}
+                step={0.1}
+                unit="mm"
+                onChange={(v) => update('magnetDepth', v)}
+              />
+              <NumberInput
+                label="Z Offset (Raise Magnet)"
+                value={config.magnetZOffset}
+                min={0}
+                max={3}
+                step={0.1}
+                unit="mm"
+                onChange={(v) => update('magnetZOffset', v)}
+              />
+              <NumberInput
+                label="Top Cover (Capture)"
+                value={config.magnetTopCover}
+                min={0}
+                max={2}
+                step={0.1}
+                unit="mm"
+                onChange={(v) => update('magnetTopCover', v)}
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-500">
+                Z Offset raises magnets for glue-in. Top Cover creates ceiling to capture magnets.
+              </p>
+            </CollapsibleSection>
+          )}
+
+          {/* Screws Section */}
+          {(config.style === 'screw' || config.style === 'default') && (
+            <CollapsibleSection title="Screw Holes" icon="🔩" wip>
+              <NumberInput
+                label="Screw Diameter"
+                value={config.screwDiameter}
+                min={2}
+                max={6}
+                step={0.5}
+                unit="mm"
+                onChange={(v) => update('screwDiameter', v)}
+              />
+              <ToggleInput
+                label="Center Screw Hole"
+                value={config.centerScrew}
+                onChange={(v) => update('centerScrew', v)}
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-500">
+                Center screw allows mounting baseplate to surface.
+              </p>
+            </CollapsibleSection>
+          )}
+
+          {/* Weight Cavity Section */}
+          <CollapsibleSection title="Weight Cavity" icon="⚖️" wip>
+            <ToggleInput
+              label="Enable Weight Cavity"
+              value={config.weightCavity}
+              onChange={(v) => update('weightCavity', v)}
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-500">
+              Creates hollow space to add weights (lead, steel balls) for stability.
+            </p>
+          </CollapsibleSection>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1268,22 +1280,24 @@ function CollapsibleSection({
   title, 
   icon, 
   children, 
-  defaultOpen = false 
+  defaultOpen = false,
+  wip = false
 }: { 
   title: string; 
   icon: string; 
   children: React.ReactNode; 
   defaultOpen?: boolean;
+  wip?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="rounded-lg bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200/30 dark:border-slate-700/30 overflow-hidden">
+    <div className={`rounded-lg bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200/30 dark:border-slate-700/30 overflow-hidden ${wip ? 'opacity-60' : ''}`}>
       <button
         className="w-full px-3 py-2.5 flex items-center justify-between text-left hover:bg-slate-200/50 dark:hover:bg-slate-700/30 transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+        <h3 className={`text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 ${wip ? 'italic' : ''}`}>
           <span>{icon}</span>
           {title}
         </h3>
