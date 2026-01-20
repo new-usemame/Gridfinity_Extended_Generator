@@ -1329,8 +1329,11 @@ gf_lip_taper_total = lip_chamfer_height - gf_lip_riser_height - gf_lip_height;
 gf_lip_lower_taper_height = gf_lip_taper_total * 0.27;
 gf_lip_upper_taper_height = gf_lip_taper_total * 0.73;
 gf_lip_total_height = lip_chamfer_height;  // Use user-controlled total height
-// Taper angle (same for both upper and lower tapers)
-gf_lip_taper_angle = lip_chamfer_angle;
+// Lower taper angle (can use lip_chamfer_angle for aesthetic purposes)
+gf_lip_lower_taper_angle = lip_chamfer_angle;
+// Upper taper angle MUST match foot_chamfer_angle for proper stacking
+// This is the critical part that creates the recess for the foot to fit into
+gf_lip_upper_taper_angle = foot_chamfer_angle;
 
 /* [Calculated] */
 box_width = width_units * grid_unit;
@@ -1641,8 +1644,10 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
     
     // Calculate taper insets from angle (these determine how far the tapers extend outward)
     // Ensure insets are at least wall_thickness to prevent cutting into the wall
-    lower_taper_inset_base = gf_lip_lower_taper_height / tan(gf_lip_taper_angle);
-    upper_taper_inset_base = gf_lip_upper_taper_height / tan(gf_lip_taper_angle);
+    // Lower taper uses lip_chamfer_angle (aesthetic)
+    lower_taper_inset_base = gf_lip_lower_taper_height / tan(gf_lip_lower_taper_angle);
+    // Upper taper MUST use foot_chamfer_angle to match foot geometry for proper stacking
+    upper_taper_inset_base = gf_lip_upper_taper_height / tan(gf_lip_upper_taper_angle);
     // Use the larger of calculated inset or wall_thickness to ensure we don't cut into wall
     lower_taper_inset = max(lower_taper_inset_base, wall_thickness);
     upper_taper_inset = max(upper_taper_inset_base, wall_thickness);
@@ -1688,10 +1693,10 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
                 inner_wall_radius
             );
             
-            // Upper taper section: user-controlled angle taper from inner_wall_radius outward
+            // Upper taper section: MUST match foot_chamfer_angle for proper stacking
             // Calculate inset from angle: inset = height / tan(angle)
             // Ensure inset is at least wall_thickness to prevent cutting into wall
-            taper_inset_base = upper_taper_height / tan(gf_lip_taper_angle);
+            taper_inset_base = upper_taper_height / tan(gf_lip_upper_taper_angle);
             taper_inset = max(taper_inset_base, wall_thickness);
             translate([0, 0, lower_taper_z])
             hull() {
