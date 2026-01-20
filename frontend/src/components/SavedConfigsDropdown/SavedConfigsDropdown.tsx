@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { BoxConfig, BaseplateConfig } from '../../types/config';
+import { BoxConfig, BaseplateConfig, normalizeBoxConfig, normalizeBaseplateConfig } from '../../types/config';
 import { compareConfigs } from '../../utils/configComparison';
 
 interface SavedPreference {
@@ -150,7 +150,11 @@ export const SavedConfigsDropdown = forwardRef<SavedConfigsDropdownRef, SavedCon
   };
 
   const handleLoad = (pref: SavedPreference) => {
-    onLoadPreference(pref.box_config, pref.baseplate_config);
+    // Normalize configs to ensure backwards compatibility (though they should already be normalized from the API)
+    onLoadPreference(
+      pref.box_config ? normalizeBoxConfig(pref.box_config) : null,
+      pref.baseplate_config ? normalizeBaseplateConfig(pref.baseplate_config) : null
+    );
     setIsOpen(false);
   };
 

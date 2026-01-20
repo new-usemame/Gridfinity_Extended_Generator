@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { Pool } from 'pg';
 import path from 'path';
 import { mkdirSync, existsSync } from 'fs';
-import { BoxConfig, BaseplateConfig } from '../types/config.js';
+import { BoxConfig, BaseplateConfig, normalizeBoxConfig, normalizeBaseplateConfig } from '../types/config.js';
 
 // Determine which database to use based on DATABASE_URL
 // Railway provides DATABASE_URL for PostgreSQL services
@@ -257,8 +257,8 @@ export const preferencesDb = {
     const rows = result.rows || [];
     return rows.map(row => ({
       ...row,
-      box_config: row.box_config ? JSON.parse(row.box_config) : null,
-      baseplate_config: row.baseplate_config ? JSON.parse(row.baseplate_config) : null,
+      box_config: row.box_config ? normalizeBoxConfig(JSON.parse(row.box_config)) : null,
+      baseplate_config: row.baseplate_config ? normalizeBaseplateConfig(JSON.parse(row.baseplate_config)) : null,
     }));
   },
 
@@ -267,8 +267,8 @@ export const preferencesDb = {
     if (!result.row) return undefined;
     return {
       ...result.row,
-      box_config: result.row.box_config ? JSON.parse(result.row.box_config) : null,
-      baseplate_config: result.row.baseplate_config ? JSON.parse(result.row.baseplate_config) : null,
+      box_config: result.row.box_config ? normalizeBoxConfig(JSON.parse(result.row.box_config)) : null,
+      baseplate_config: result.row.baseplate_config ? normalizeBaseplateConfig(JSON.parse(result.row.baseplate_config)) : null,
     };
   },
 

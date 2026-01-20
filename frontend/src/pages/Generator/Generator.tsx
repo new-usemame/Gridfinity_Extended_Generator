@@ -10,7 +10,7 @@ import type { SavedConfigsDropdownRef } from '../../components/SavedConfigsDropd
 import { AuthModal } from '../../components/AuthModal/AuthModal';
 import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
 import { useAuth } from '../../contexts/AuthContext';
-import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, GenerationResult, MultiSegmentResult } from '../../types/config';
+import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, GenerationResult, MultiSegmentResult, normalizeBoxConfig, normalizeBaseplateConfig } from '../../types/config';
 import { compareConfigs } from '../../utils/configComparison';
 
 export function Generator() {
@@ -155,10 +155,12 @@ export function Generator() {
   // Handle loading preferences
   const handleLoadPreference = useCallback((boxConfig: BoxConfig | null, baseplateConfig: BaseplateConfig | null) => {
     if (boxConfig) {
-      setBoxConfig(boxConfig);
+      // Normalize to ensure backwards compatibility with old configs
+      setBoxConfig(normalizeBoxConfig(boxConfig));
     }
     if (baseplateConfig) {
-      setBaseplateConfig(baseplateConfig);
+      // Normalize to ensure backwards compatibility with old configs
+      setBaseplateConfig(normalizeBaseplateConfig(baseplateConfig));
     }
   }, []);
 
@@ -343,8 +345,8 @@ export function Generator() {
           alert('Invalid JSON file: boxConfig must be an object');
           return;
         }
-        // Merge with defaults to ensure all fields are present
-        setBoxConfig({ ...defaultBoxConfig, ...config.boxConfig });
+        // Normalize to ensure backwards compatibility with old configs
+        setBoxConfig(normalizeBoxConfig(config.boxConfig));
       } else {
         alert('Invalid JSON file: missing boxConfig');
         return;
@@ -356,8 +358,8 @@ export function Generator() {
           alert('Invalid JSON file: baseplateConfig must be an object');
           return;
         }
-        // Merge with defaults to ensure all fields are present
-        setBaseplateConfig({ ...defaultBaseplateConfig, ...config.baseplateConfig });
+        // Normalize to ensure backwards compatibility with old configs
+        setBaseplateConfig(normalizeBaseplateConfig(config.baseplateConfig));
       } else {
         alert('Invalid JSON file: missing baseplateConfig');
         return;

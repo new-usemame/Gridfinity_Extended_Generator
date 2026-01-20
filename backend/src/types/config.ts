@@ -425,3 +425,27 @@ export function calculateGridFromMm(
     paddingFarY
   };
 }
+
+/**
+ * Normalize/migrate a BoxConfig to ensure all fields are present with defaults.
+ * This provides backwards compatibility when loading old configs that may be missing new fields.
+ */
+export function normalizeBoxConfig(config: Partial<BoxConfig> | null): BoxConfig {
+  if (!config) {
+    return defaultBoxConfig;
+  }
+  // Merge with defaults to ensure all fields are present
+  return { ...defaultBoxConfig, ...config };
+}
+
+/**
+ * Normalize/migrate a BaseplateConfig to ensure all fields are present with defaults.
+ * This provides backwards compatibility when loading old configs that may be missing new fields.
+ */
+export function normalizeBaseplateConfig(config: Partial<BaseplateConfig> | null): BaseplateConfig {
+  if (!config) {
+    return defaultBaseplateConfig;
+  }
+  // Merge with defaults to ensure all fields are present
+  return { ...defaultBaseplateConfig, ...config };
+}
