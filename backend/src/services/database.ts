@@ -342,5 +342,3 @@ if (pgPool) {
     process.exit(0);
   });
 }
-
-export default { sqliteDb, pgPool };
