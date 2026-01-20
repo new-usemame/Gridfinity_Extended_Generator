@@ -57,6 +57,7 @@ export interface BoxConfig {
   
   // Feet options
   feetCornerRadius: number;
+  footBottomCornerRadius: number;  // Corner radius of the bottom of the foot (independent from top)
   gridSize: number;  // Grid unit size in mm (standard is 42mm)
   
   // Foot chamfer - simple angle and height controls
@@ -165,6 +166,7 @@ export const defaultBoxConfig: BoxConfig = {
   cornerRadius: 3.75,
   preventBottomOverhangs: true,  // Enabled by default for better printing
   feetCornerRadius: 3.75,
+  footBottomCornerRadius: 0.5,  // Minimum safe value for bottom corner radius
   gridSize: 42,
   footChamferAngle: 45,      // 45 degrees = standard Gridfinity
   footChamferHeight: 4.75    // Standard total height: 0.8 + 1.8 + 2.15 = 4.75mm

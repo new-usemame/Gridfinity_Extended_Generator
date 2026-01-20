@@ -111,7 +111,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           onChange={(v) => update('cornerRadius', v)}
         />
         <p className="text-xs text-slate-500 dark:text-slate-500">
-          Rounds the vertical edges (corners viewed from above). Standard: 3.75mm.
+          Rounds the vertical edges (corners viewed from above) and the corner radius of the top of the feet. Standard: 3.75mm.
         </p>
         <ToggleInput
           label="Prevent Bottom Overhangs"
@@ -135,18 +135,6 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           ]}
           onChange={(v) => update('flatBase', v as BoxConfig['flatBase'])}
         />
-        <SliderInput
-          label="Feet Corner Radius"
-          value={config.feetCornerRadius}
-          min={0}
-          max={5}
-          step={0.25}
-          unit="mm"
-          onChange={(v) => update('feetCornerRadius', v)}
-        />
-        <p className="text-xs text-slate-500 dark:text-slate-500">
-          Rounds the corners of the feet. Standard is 3.75mm.
-        </p>
         
         <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
           <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">FOOT CHAMFER</h4>
@@ -173,6 +161,22 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           />
           <p className="text-xs text-slate-500 dark:text-slate-500">
             Total height of the foot chamfer. Standard: 4.75mm.
+          </p>
+        </div>
+        
+        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+          <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">FOOT CORNER RADIUS</h4>
+          <SliderInput
+            label="Bottom Corner Radius"
+            value={config.footBottomCornerRadius}
+            min={0}
+            max={5}
+            step={0.25}
+            unit="mm"
+            onChange={(v) => update('footBottomCornerRadius', v)}
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-500">
+            Corner radius of the bottom of the foot. The top corner radius is controlled by the Wall & Floor Corner Radius slider.
           </p>
         </div>
       </CollapsibleSection>

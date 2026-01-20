@@ -1285,7 +1285,8 @@ finger_slide_radius = ${config.fingerSlideRadius};
 label_enabled = ${config.labelEnabled};
 corner_radius = ${config.cornerRadius};
 prevent_bottom_overhangs = ${config.preventBottomOverhangs};
-feet_corner_radius = ${config.feetCornerRadius};
+feet_corner_radius = ${config.cornerRadius};
+foot_bottom_corner_radius = ${config.footBottomCornerRadius};
 grid_unit = ${config.gridSize};
 foot_chamfer_angle = ${config.footChamferAngle};
 foot_chamfer_height = ${config.footChamferHeight};
@@ -1417,7 +1418,7 @@ module gridfinity_foot() {
     // Bottom size - calculated from chamfer angle and height
     // foot_bottom_inset is pre-calculated: height / tan(angle)
     bottom_size = foot_full_size - foot_bottom_inset * 2;
-    bottom_radius = max(0.5, foot_radius - foot_bottom_inset);
+    bottom_radius = foot_bottom_corner_radius;
     
     translate([clearance, clearance, 0])
     hull() {
