@@ -1636,8 +1636,17 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
     inner_width = box_width - wall_thickness * 2;
     inner_depth = box_depth - wall_thickness * 2;
     
+    // Calculate taper insets from angle (these determine how far the tapers extend outward)
+    // Ensure insets are at least wall_thickness to prevent cutting into the wall
+    lower_taper_inset_base = gf_lip_lower_taper_height / tan(gf_lip_taper_angle);
+    upper_taper_inset_base = gf_lip_upper_taper_height / tan(gf_lip_taper_angle);
+    // Use the larger of calculated inset or wall_thickness to ensure we don't cut into wall
+    lower_taper_inset = max(lower_taper_inset_base, wall_thickness);
+    upper_taper_inset = max(upper_taper_inset_base, wall_thickness);
+    
     // Calculate inner lip radius (accounts for tapers reducing the corner radius)
-    inner_lip_radius = max(0, outer_radius - gf_lip_lower_taper_height - gf_lip_upper_taper_height);
+    // Use the actual insets, not the heights, since insets depend on angle
+    inner_lip_radius = max(0, outer_radius - lower_taper_inset - upper_taper_inset);
     
     // Calculate lip support thickness based on style
     lip_support_thickness = (lip_style == "reduced") 
@@ -1678,7 +1687,9 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
             
             // Upper taper section: user-controlled angle taper from inner_wall_radius outward
             // Calculate inset from angle: inset = height / tan(angle)
-            taper_inset = upper_taper_height / tan(gf_lip_taper_angle);
+            // Ensure inset is at least wall_thickness to prevent cutting into wall
+            taper_inset_base = upper_taper_height / tan(gf_lip_taper_angle);
+            taper_inset = max(taper_inset_base, wall_thickness);
             translate([0, 0, lower_taper_z])
             hull() {
                 // Bottom of taper: inner wall radius
@@ -1711,8 +1722,7 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
         upper_taper_height = gf_lip_upper_taper_height;
         lip_height = gf_lip_height;
         
-        // Calculate the upper taper inset from angle: inset = height / tan(angle)
-        upper_taper_inset = upper_taper_height / tan(gf_lip_taper_angle);
+        // Use the pre-calculated taper insets from module level (already account for angle and wall_thickness)
         // Calculate the radius at the top of the upper taper (where lip starts)
         // This is the outer radius minus the upper taper inset
         lip_top_radius = max(0, outer_radius - upper_taper_inset);
@@ -1760,8 +1770,7 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
             
             // Lower taper section: user-controlled angle taper from inner_wall_radius outward
             // This creates the support structure transition
-            // Calculate inset from angle: inset = height / tan(angle)
-            lower_taper_inset = lower_taper_height / tan(gf_lip_taper_angle);
+            // Use the pre-calculated lower_taper_inset from module level (already accounts for angle and wall_thickness)
             translate([0, 0, 0])
             hull() {
                 // Bottom: inner wall radius
