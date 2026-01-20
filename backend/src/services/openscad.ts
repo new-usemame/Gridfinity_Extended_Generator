@@ -1785,11 +1785,21 @@ module perfect_fit_lip_additive(wall_height, outer_radius) {
     chamfer_inset = wall_thickness;
     
     // Create a triangular ring that sits ON TOP of the wall, pointing UP
-    // The triangle starts at the outer wall edge and tapers INWARD as it goes up
+    // The triangle has the hypotenuse on the INSIDE (slanted edge faces inward)
+    // 
+    //     /|  <- triangle on top, hypotenuse on inside (left), vertical edge on outside (right)
+    //    / |
+    //   /  |
+    //  /   |
+    // /____|  <- wall top edge
+    // |    |
+    // |    |  <- wall
+    //
+    // The triangle extends OUTWARD at the top, with the slanted edge (hypotenuse) on the inside
     translate([0, 0, wall_height])
     difference() {
-        // Outer shape: full box width/depth at bottom, tapers inward at top
-        // This creates the triangular ring on top
+        // Outer shape: extends OUTWARD at top (gets larger), creating the triangle
+        // The hypotenuse will be on the inside after we cut the inner cavity
         hull() {
             // Bottom: at the outer wall edge (where triangle sits on wall, z=0)
             translate([0, 0, 0])
@@ -1800,25 +1810,39 @@ module perfect_fit_lip_additive(wall_height, outer_radius) {
                 outer_radius
             );
             
-            // Top: tapers INWARD to create the chamfer (triangle points UP and INWARD)
-            translate([chamfer_inset, chamfer_inset, triangle_height])
+            // Top: extends OUTWARD to create the triangle (hypotenuse will be on inside)
+            // The triangle gets larger at the top, with the slanted edge facing inward
+            translate([-chamfer_inset, -chamfer_inset, triangle_height])
             rounded_rect(
-                box_width - chamfer_inset * 2,
-                box_depth - chamfer_inset * 2,
+                box_width + chamfer_inset * 2,
+                box_depth + chamfer_inset * 2,
                 0.01,
-                max(0.5, outer_radius - chamfer_inset)
+                outer_radius + chamfer_inset
             );
         }
         
-        // Inner cut: removes the inner cavity area to create the ring
-        // The ring only exists on the wall thickness area
-        translate([wall_thickness, wall_thickness, -0.1])
-        rounded_rect(
-            box_width - wall_thickness * 2,
-            box_depth - wall_thickness * 2,
-            triangle_height + 0.2,
-            max(0, outer_radius - wall_thickness)
-        );
+        // Inner cut: creates the hypotenuse on the INSIDE
+        // The outer edge stays vertical, the inner edge slopes outward (creating / on inside)
+        hull() {
+            // Bottom: at inner wall edge (where hypotenuse starts)
+            translate([wall_thickness, wall_thickness, -0.1])
+            rounded_rect(
+                box_width - wall_thickness * 2,
+                box_depth - wall_thickness * 2,
+                0.01,
+                max(0, outer_radius - wall_thickness)
+            );
+            
+            // Top: extends OUTWARD to create the slanted hypotenuse on the INSIDE
+            // This creates the / shape - inner edge moves outward, hypotenuse faces inward
+            translate([wall_thickness - chamfer_inset, wall_thickness - chamfer_inset, triangle_height + 0.1])
+            rounded_rect(
+                box_width - (wall_thickness - chamfer_inset) * 2,
+                box_depth - (wall_thickness - chamfer_inset) * 2,
+                0.01,
+                max(0.5, outer_radius - wall_thickness + chamfer_inset)
+            );
+        }
     }
 }
 
