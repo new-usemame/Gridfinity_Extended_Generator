@@ -418,6 +418,7 @@ module grid_socket() {
     const toothWidth = config.toothWidth;
     const concaveDepth = config.concaveDepth ?? 50; // 0-100% depth of concave swoop
     const wineglassAspectRatio = config.wineglassAspectRatio ?? 1.0; // Aspect ratio for wineglass bulb (0.5-2.0)
+    const roofIntensity = config.connectorRoofIntensity ?? 0; // 0-100% peak intensity
     
     return `
 // ===========================================
@@ -430,6 +431,7 @@ tooth_width = ${toothWidth};
 edge_tolerance = ${tolerance};
 concave_depth = ${concaveDepth / 100}; // 0.0 to 1.0 (how deep the concave swoop is)
 wineglass_aspect_ratio = ${wineglassAspectRatio}; // Aspect ratio for wineglass bulb (0.5-2.0, 1.0=circular)
+roof_intensity = ${roofIntensity / 100}; // 0.0 to 1.0 (peak intensity for connector roof, 0=flat)
 
 // --- PATTERN 1: DOVETAIL (Trapezoidal) ---
 // Classic woodworking dovetail - wider at tip than base
@@ -901,17 +903,70 @@ module edge_tooth_female(pattern) {
     else dovetail_female_2d(); // default
 }
 
-// 3D male tooth (extruded)
+// 3D male tooth (extruded with optional peaked roof)
 module male_tooth_3d(pattern, height) {
-    linear_extrude(height = height)
-    edge_tooth_male(pattern);
+    if (roof_intensity > 0.01) {
+        // Base height - most of the connector
+        base_height = height * 0.85;
+        peak_height = height * roof_intensity * 0.3; // Peak height based on intensity
+        
+        // Base extrusion
+        linear_extrude(height = base_height)
+        edge_tooth_male(pattern);
+        
+        // Peaked roof: hull between top edge and peak line
+        // The peak runs along the center (x=0) of the connector's width
+        hull() {
+            // Top edge of the base (full profile)
+            translate([0, 0, base_height])
+            linear_extrude(height = 0.01)
+            edge_tooth_male(pattern);
+            
+            // Peak line along the center (runs along y-direction, which is the connector length)
+            // Create multiple points along the peak for smooth hull
+            for (y = [0 : tooth_depth/10 : tooth_depth]) {
+                translate([0, y, base_height + peak_height])
+                cylinder(r = 0.05, h = 0.01, $fn = 8);
+            }
+        }
+    } else {
+        // Flat top (original behavior)
+        linear_extrude(height = height)
+        edge_tooth_male(pattern);
+    }
 }
 
-// 3D female cavity (extruded, for difference)
+// 3D female cavity (extruded with optional peaked roof)
 module female_cavity_3d(pattern, height) {
-    translate([0, 0, -0.1])
-    linear_extrude(height = height + 0.2)
-    edge_tooth_female(pattern);
+    translate([0, 0, -0.1]) {
+        if (roof_intensity > 0.01) {
+            // Base height - most of the cavity
+            base_height = height * 0.85;
+            peak_height = height * roof_intensity * 0.3; // Peak height based on intensity
+            
+            // Base extrusion
+            linear_extrude(height = base_height + 0.2)
+            edge_tooth_female(pattern);
+            
+            // Peaked roof cavity: hull between top edge and peak line
+            hull() {
+                // Top edge of the base (full profile)
+                translate([0, 0, base_height + 0.1])
+                linear_extrude(height = 0.01)
+                edge_tooth_female(pattern);
+                
+                // Peak line along the center (with tolerance)
+                for (y = [0 : tooth_depth/10 : tooth_depth]) {
+                    translate([0, y, base_height + 0.1 + peak_height])
+                    cylinder(r = 0.05 + edge_tolerance, h = 0.01, $fn = 8);
+                }
+            }
+        } else {
+            // Flat top (original behavior)
+            linear_extrude(height = height + 0.2)
+            edge_tooth_female(pattern);
+        }
+    }
 }
 `;
   }

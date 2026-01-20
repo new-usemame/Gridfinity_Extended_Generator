@@ -833,6 +833,19 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                   )}
                   
                   <SliderInput
+                    label="Roof Peak Intensity"
+                    value={config.connectorRoofIntensity ?? 0}
+                    min={0}
+                    max={100}
+                    step={5}
+                    unit="%"
+                    onChange={(v) => update('connectorRoofIntensity', v)}
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-500">
+                    Adds a peaked "^" roof to connector tops. 0% = flat, 100% = maximum peak height.
+                  </p>
+                  
+                  <SliderInput
                     label="Fit Tolerance"
                     value={config.connectorTolerance}
                     min={0.05}
