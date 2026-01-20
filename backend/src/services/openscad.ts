@@ -420,6 +420,7 @@ module grid_socket() {
     const wineglassAspectRatio = config.wineglassAspectRatio ?? 1.0; // Aspect ratio for wineglass bulb (0.5-2.0)
     const roofIntensity = config.connectorRoofIntensity ?? 0; // 0-100% peak intensity
     const roofDepth = config.connectorRoofDepth ?? 0; // 0-100% how far down from top the roof starts
+    const socketChamferAngle = config.socketChamferAngle; // Socket chamfer angle in degrees
     
     return `
 // ===========================================
@@ -434,6 +435,7 @@ concave_depth = ${concaveDepth / 100}; // 0.0 to 1.0 (how deep the concave swoop
 wineglass_aspect_ratio = ${wineglassAspectRatio}; // Aspect ratio for wineglass bulb (0.5-2.0, 1.0=circular)
 roof_intensity = ${roofIntensity / 100}; // 0.0 to 1.0 (peak intensity for connector roof, 0=flat)
 roof_depth = ${roofDepth / 100}; // 0.0 to 1.0 (how far down from top the roof starts, 0=at top)
+socket_chamfer_angle = ${socketChamferAngle}; // Socket chamfer angle in degrees (used for roof angle)
 
 // --- PATTERN 1: DOVETAIL (Trapezoidal) ---
 // Classic woodworking dovetail - wider at tip than base
@@ -907,10 +909,22 @@ module edge_tooth_female(pattern) {
 
 // 3D male tooth (extruded with optional peaked roof)
 // The roof follows the actual profile shape to avoid overhangs for 3D printing
+// The roof angle matches the socket chamfer angle
 module male_tooth_3d(pattern, height) {
     if (roof_intensity > 0.01) {
-        // Calculate peak height based on intensity
-        peak_height = height * roof_intensity * 0.3;
+        // Calculate peak height based on socket chamfer angle and intensity
+        // The roof angle matches the socket chamfer angle
+        // effective_angle = socket_chamfer_angle * roof_intensity (scaled by intensity)
+        // Convert to radians for tan() function
+        effective_angle_deg = socket_chamfer_angle * roof_intensity;
+        effective_angle_rad = effective_angle_deg * PI / 180;
+        
+        // Calculate peak height using trigonometry
+        // For a roof that slopes from edges to center at angle 'effective_angle':
+        // peak_height = (profile_width / 2) * tan(effective_angle)
+        // Use tooth_width as approximate max profile width
+        profile_max_width = tooth_width * 0.5; // Approximate max width (most patterns are within this)
+        peak_height = (profile_max_width / 2) * tan(effective_angle_rad);
         
         // Calculate base height where roof starts (based on roof_depth)
         // roof_depth = 0 means roof starts near top, roof_depth = 1 means roof at base
@@ -968,7 +982,11 @@ module female_cavity_3d(pattern, height) {
         // Make it shorter to accommodate the male roof when roof is enabled
         if (roof_intensity > 0.01) {
             // Calculate the same dimensions as the male connector
-            peak_height = height * roof_intensity * 0.3;
+            // Use the same angle-based calculation
+            effective_angle_deg = socket_chamfer_angle * roof_intensity;
+            effective_angle_rad = effective_angle_deg * PI / 180;
+            profile_max_width = tooth_width * 0.5;
+            peak_height = (profile_max_width / 2) * tan(effective_angle_rad);
             max_base_height = height - peak_height;
             base_height = max_base_height * (1 - roof_depth);
             
