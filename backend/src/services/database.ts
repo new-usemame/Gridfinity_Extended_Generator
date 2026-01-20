@@ -10,7 +10,7 @@ import { BoxConfig, BaseplateConfig } from '../types/config.js';
 const usePostgres = !!process.env.DATABASE_URL;
 
 // SQLite setup (for local development)
-let sqliteDb: Database.Database | null = null;
+let sqliteDb: InstanceType<typeof Database> | null = null;
 if (!usePostgres) {
   const dbPath = process.env.DB_PATH || path.join(process.cwd(), 'data', 'gridfinity.db');
   const dataDir = path.dirname(dbPath);
