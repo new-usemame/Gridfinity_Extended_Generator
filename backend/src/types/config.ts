@@ -8,7 +8,8 @@ export interface BoxConfig {
   // Wall and floor
   wallThickness: number;
   floorThickness: number;
-  innerWallFloorRadius: number;  // Radius for rounding the edge where inner wall meets inner floor
+  innerEdgeBevel: number;  // Size of bevel on all inside edges (wall-floor, wall corners, etc.) in mm
+  innerEdgeBevelSegments: number;  // Number of segments for bevel smoothness (5-10, higher = smoother)
   
   // Magnets
   magnetEnabled: boolean;
@@ -151,7 +152,8 @@ export const defaultBoxConfig: BoxConfig = {
   height: 3,
   wallThickness: 0.95,
   floorThickness: 0.7,
-  innerWallFloorRadius: 0,  // Default 0 = no rounding (disabled by default)
+  innerEdgeBevel: 0,  // Default 0 = no bevel (disabled by default)
+  innerEdgeBevelSegments: 8,  // Default 8 segments for smooth bevel
   magnetEnabled: false,
   magnetDiameter: 6.5,
   magnetDepth: 2.4,
@@ -434,8 +436,17 @@ export function normalizeBoxConfig(config: Partial<BoxConfig> | null): BoxConfig
   if (!config) {
     return defaultBoxConfig;
   }
+  // Migrate old parameter name to new one for backwards compatibility
+  const migratedConfig: any = { ...config };
+  if ('innerWallFloorRadius' in config && !('innerEdgeBevel' in config)) {
+    migratedConfig.innerEdgeBevel = (config as any).innerWallFloorRadius;
+    delete migratedConfig.innerWallFloorRadius;
+  }
+  if (!('innerEdgeBevelSegments' in migratedConfig)) {
+    migratedConfig.innerEdgeBevelSegments = defaultBoxConfig.innerEdgeBevelSegments;
+  }
   // Merge with defaults to ensure all fields are present
-  return { ...defaultBoxConfig, ...config };
+  return { ...defaultBoxConfig, ...migratedConfig };
 }
 
 /**

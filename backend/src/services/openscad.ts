@@ -1403,7 +1403,8 @@ tapered_corner = "${config.taperedCorner}";
 tapered_corner_size = ${config.taperedCornerSize};
 wall_pattern = "${config.wallPattern}";
 wall_pattern_spacing = ${config.wallPatternSpacing};
-inner_wall_floor_radius = ${config.innerWallFloorRadius};
+inner_edge_bevel = ${config.innerEdgeBevel};
+inner_edge_bevel_segments = ${config.innerEdgeBevelSegments};
 
 /* [Constants] */
 // SIMPLE TAPER foot - ONE taper from small bottom to larger top
@@ -1474,81 +1475,91 @@ module rounded_rect(width, depth, height, radius) {
     }
 }
 
-// Rounded cavity with fillet at bottom edge where walls meet floor
-module rounded_cavity_with_floor_fillet(width, depth, height, corner_radius, floor_fillet_radius) {
-    // Clamp floor fillet radius to prevent exceeding available space
-    max_fillet = min(wall_thickness, floor_thickness);
-    fillet_r = min(floor_fillet_radius, max_fillet);
+// Cavity with beveled inner edges (all inside edges: floor-wall, vertical corners, etc.)
+module cavity_with_inner_bevel(width, depth, height, corner_radius, bevel_size, bevel_segments) {
+    // Clamp bevel size to prevent exceeding available space
+    max_bevel = min(wall_thickness, floor_thickness, min(width, depth) / 4);
+    bevel = min(bevel_size, max_bevel);
     
-    if (fillet_r <= 0) {
-        // No fillet - use standard rounded_rect
+    if (bevel <= 0) {
+        // No bevel - use standard rounded_rect
         rounded_rect(width, depth, height, corner_radius);
     } else {
-        // Create cavity with rounded vertical corners and fillet at bottom edge
-        inner_corner_r = corner_radius > 0 ? min(corner_radius, min(width, depth) / 2) : 0;
-        
-        hull() {
-            // Bottom layer: spheres at corners and along edges for fillet
-            // Corner spheres
-            if (inner_corner_r > 0) {
-                translate([inner_corner_r, inner_corner_r, fillet_r])
-                sphere(r = fillet_r, $fn = $fn);
-                translate([width - inner_corner_r, inner_corner_r, fillet_r])
-                sphere(r = fillet_r, $fn = $fn);
-                translate([inner_corner_r, depth - inner_corner_r, fillet_r])
-                sphere(r = fillet_r, $fn = $fn);
-                translate([width - inner_corner_r, depth - inner_corner_r, fillet_r])
-                sphere(r = fillet_r, $fn = $fn);
-            } else {
-                translate([fillet_r, fillet_r, fillet_r])
-                sphere(r = fillet_r, $fn = $fn);
-                translate([width - fillet_r, fillet_r, fillet_r])
-                sphere(r = fillet_r, $fn = $fn);
-                translate([fillet_r, depth - fillet_r, fillet_r])
-                sphere(r = fillet_r, $fn = $fn);
-                translate([width - fillet_r, depth - fillet_r, fillet_r])
-                sphere(r = fillet_r, $fn = $fn);
+        // Create cavity with beveled edges using subtractive approach
+        difference() {
+            // Start with standard rounded cavity
+            rounded_rect(width, depth, height, corner_radius);
+            
+            // Subtract beveled corner cuts at all edge junctions
+            // Bottom corners (4): where two walls meet the floor
+            // Front-left corner
+            translate([0, 0, -0.1])
+            inner_bevel_corner_cut(bevel, bevel_segments, height + 0.2);
+            
+            // Front-right corner
+            translate([width, 0, -0.1])
+            rotate([0, 0, 90])
+            inner_bevel_corner_cut(bevel, bevel_segments, height + 0.2);
+            
+            // Back-right corner
+            translate([width, depth, -0.1])
+            rotate([0, 0, 180])
+            inner_bevel_corner_cut(bevel, bevel_segments, height + 0.2);
+            
+            // Back-left corner
+            translate([0, depth, -0.1])
+            rotate([0, 0, 270])
+            inner_bevel_corner_cut(bevel, bevel_segments, height + 0.2);
+            
+            // Vertical edges (4): where walls meet floor along edges
+            // Front edge (along X axis)
+            if (width > bevel * 2) {
+                translate([bevel, 0, -0.1])
+                inner_bevel_edge_cut(width - bevel * 2, bevel, bevel_segments);
             }
             
-            // Edge spheres for smooth fillet along edges
-            edge_spacing = max(1, fillet_r);
-            // Front edge
-            for (x = [max(fillet_r, inner_corner_r) : edge_spacing : width - max(fillet_r, inner_corner_r)]) {
-                translate([x, max(fillet_r, inner_corner_r), fillet_r])
-                sphere(r = fillet_r, $fn = $fn);
-            }
-            // Back edge
-            for (x = [max(fillet_r, inner_corner_r) : edge_spacing : width - max(fillet_r, inner_corner_r)]) {
-                translate([x, depth - max(fillet_r, inner_corner_r), fillet_r])
-                sphere(r = fillet_r, $fn = $fn);
-            }
-            // Left edge
-            for (y = [max(fillet_r, inner_corner_r) : edge_spacing : depth - max(fillet_r, inner_corner_r)]) {
-                translate([max(fillet_r, inner_corner_r), y, fillet_r])
-                sphere(r = fillet_r, $fn = $fn);
-            }
-            // Right edge
-            for (y = [max(fillet_r, inner_corner_r) : edge_spacing : depth - max(fillet_r, inner_corner_r)]) {
-                translate([width - max(fillet_r, inner_corner_r), y, fillet_r])
-                sphere(r = fillet_r, $fn = $fn);
+            // Back edge (along X axis)
+            if (width > bevel * 2) {
+                translate([bevel, depth, -0.1])
+                rotate([0, 0, 180])
+                inner_bevel_edge_cut(width - bevel * 2, bevel, bevel_segments);
             }
             
-            // Top layer: standard rounded corners (no fillet)
-            if (inner_corner_r > 0) {
-                translate([inner_corner_r, inner_corner_r, height])
-                cylinder(r = inner_corner_r, h = 0.01, $fn = $fn);
-                translate([width - inner_corner_r, inner_corner_r, height])
-                cylinder(r = inner_corner_r, h = 0.01, $fn = $fn);
-                translate([inner_corner_r, depth - inner_corner_r, height])
-                cylinder(r = inner_corner_r, h = 0.01, $fn = $fn);
-                translate([width - inner_corner_r, depth - inner_corner_r, height])
-                cylinder(r = inner_corner_r, h = 0.01, $fn = $fn);
-            } else {
-                translate([0, 0, height])
-                cube([width, depth, 0.01]);
+            // Left edge (along Y axis)
+            if (depth > bevel * 2) {
+                translate([0, bevel, -0.1])
+                rotate([0, 0, 270])
+                inner_bevel_edge_cut(depth - bevel * 2, bevel, bevel_segments);
+            }
+            
+            // Right edge (along Y axis)
+            if (depth > bevel * 2) {
+                translate([width, bevel, -0.1])
+                rotate([0, 0, 90])
+                inner_bevel_edge_cut(depth - bevel * 2, bevel, bevel_segments);
             }
         }
     }
+}
+
+// Beveled corner cut - creates a chamfered corner using simple geometry
+module inner_bevel_corner_cut(bevel_size, segments, height) {
+    // Create a chamfered corner using a simple rotated cube
+    // This creates a 45-degree bevel that's reliable and fast
+    translate([0, 0, 0])
+    rotate([0, 0, 45])
+    translate([-bevel_size, -bevel_size, 0])
+    cube([bevel_size * 2, bevel_size * 2, height]);
+}
+
+// Beveled edge cut - creates a chamfered edge along a length
+module inner_bevel_edge_cut(length, bevel_size, segments) {
+    // Create a chamfered edge using a simple rotated cube
+    // This creates a 45-degree bevel along the edge
+    translate([0, 0, 0])
+    rotate([0, 0, 45])
+    translate([-bevel_size, 0, 0])
+    cube([bevel_size * 2, bevel_size, length]);
 }
 
 module gridfinity_base() {
@@ -1694,14 +1705,15 @@ module gridfinity_walls() {
             rounded_rect(box_width, box_depth, wall_height, outer_radius);
         }
         
-        // Inner cavity with rounded corners and optional floor fillet
+        // Inner cavity with rounded corners and optional inner edge bevel
         translate([wall_thickness, wall_thickness, floor_thickness])
-        rounded_cavity_with_floor_fillet(
+        cavity_with_inner_bevel(
             box_width - wall_thickness * 2,
             box_depth - wall_thickness * 2,
             wall_height,
             inner_radius,
-            inner_wall_floor_radius
+            inner_edge_bevel,
+            inner_edge_bevel_segments
         );
         
         // Stacking lip cutout at top

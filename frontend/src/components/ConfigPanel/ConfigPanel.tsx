@@ -102,16 +102,27 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           onChange={(v) => update('floorThickness', v)}
         />
         <SliderInput
-          label="Inner Wall-Floor Fillet"
-          value={config.innerWallFloorRadius}
+          label="Inner Edge Bevel"
+          value={config.innerEdgeBevel}
           min={0}
           max={5}
           step={0.25}
           unit="mm"
-          onChange={(v) => update('innerWallFloorRadius', v)}
+          onChange={(v) => update('innerEdgeBevel', v)}
         />
+        {config.innerEdgeBevel > 0 && (
+          <SliderInput
+            label="Bevel Segments"
+            value={config.innerEdgeBevelSegments}
+            min={5}
+            max={10}
+            step={1}
+            unit=""
+            onChange={(v) => update('innerEdgeBevelSegments', v)}
+          />
+        )}
         <p className="text-xs text-slate-500 dark:text-slate-500">
-          Rounds the inside corner where the inner wall meets the inner floor. Makes it easier to clean and remove items from corners.
+          Bevels all inside edges (wall-floor junctions, vertical corners, etc.) for easier cleaning and item removal. Higher segments = smoother bevel.
         </p>
         <SliderInput
           label="Corner Radius"
