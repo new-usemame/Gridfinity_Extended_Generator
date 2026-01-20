@@ -1544,6 +1544,11 @@ module gridfinity_walls() {
         }
     }
     
+    // Perfect Fit Lip: additive approach - add triangular chamfer on top
+    if (lip_style == "perfect_fit") {
+        perfect_fit_lip_additive(wall_height, outer_radius);
+    }
+    
     // Label tab
     if (label_enabled) {
         label_tab();
@@ -1645,53 +1650,8 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
         // No lip - flat top, no cutout needed
     }
     else if (lip_style == "perfect_fit") {
-        // Perfect Fit Lip: chamfers the OUTER TOP EDGE at the same angle and height as the foot
-        // The foot expands OUTWARD from small bottom to large top at foot_chamfer_angle
-        // The lip chamfers the OUTER edge INWARD at the same angle and height
-        // This creates a perfect match where the foot's top edge fits against the chamfered lip edge
-        
-        // Calculate chamfer inset from foot geometry (same calculation as foot)
-        // This determines how much the outer edge tapers inward at the top
-        chamfer_inset = foot_chamfer_height / tan(foot_chamfer_angle);
-        
-        // Create a tapered cutout that removes the outer top corner
-        // This creates a slanted/chamfered top edge on the outer wall
-        // The chamfer matches the foot's expansion profile exactly
-        translate([0, 0, wall_height - foot_chamfer_height])
-        difference() {
-            // Tapered hull: creates the shape to subtract
-            // Wide at bottom (just outside wall), narrow at top (inset by chamfer_inset)
-            hull() {
-                // Bottom: extends slightly beyond outer wall (ensures full cut)
-                translate([-0.1, -0.1, -0.1])
-                rounded_rect(
-                    box_width + 0.2,
-                    box_depth + 0.2,
-                    0.01,
-                    outer_radius + 0.1
-                );
-                
-                // Top: inset by chamfer_inset - this creates the slanted cut
-                // The angle matches foot_chamfer_angle exactly
-                translate([chamfer_inset, chamfer_inset, foot_chamfer_height + 0.1])
-                rounded_rect(
-                    box_width - chamfer_inset * 2,
-                    box_depth - chamfer_inset * 2,
-                    0.01,
-                    max(0.5, outer_radius - chamfer_inset)
-                );
-            }
-            
-            // Protect inner cavity - only cut the outer wall, not the interior
-            // This ensures the chamfer only affects the outer top edge
-            translate([wall_thickness, wall_thickness, -0.2])
-            rounded_rect(
-                inner_width,
-                inner_depth,
-                foot_chamfer_height + 0.4,
-                inner_wall_radius
-            );
-        }
+        // Perfect Fit Lip uses additive approach - no cutout needed here
+        // The lip is added in gridfinity_walls() after the difference() block
     }
     else {
         // Other lip styles: chamfers the OUTER top edge of the walls
@@ -1788,6 +1748,74 @@ module label_tab() {
     
     translate([(box_width - tab_width) / 2, -0.1, wall_height - tab_height - gf_lip_total_height])
     cube([tab_width, tab_depth + 0.1, tab_height]);
+}
+
+module perfect_fit_lip_additive(wall_height, outer_radius) {
+    // Additive Perfect Fit Lip: adds a triangular chamfered piece on top of the wall
+    // The triangle forms a right triangle with:
+    // - Base width: wall_thickness (the horizontal base of the triangle)
+    // - Angle: foot_chamfer_angle (the slope angle from horizontal)
+    // - Height: calculated to form a 90-degree right triangle
+    //   For a right triangle: tan(angle) = height / base
+    //   Therefore: height = base * tan(angle) = wall_thickness * tan(foot_chamfer_angle)
+    
+    // Calculate triangle height from wall thickness and angle
+    // This creates a right triangle where:
+    // - Base (adjacent) = wall_thickness
+    // - Height (opposite) = wall_thickness * tan(foot_chamfer_angle)
+    // - Angle = foot_chamfer_angle
+    // For a right triangle: tan(angle) = opposite / adjacent
+    // Therefore: height = base * tan(angle) = wall_thickness * tan(foot_chamfer_angle)
+    triangle_height = wall_thickness * tan(foot_chamfer_angle);
+    
+    // Calculate how far the triangle tapers inward at the top (the horizontal inset)
+    // The triangle tapers from base width (wall_thickness) at bottom to smaller at top
+    // For the triangle to form a proper right triangle with the given angle:
+    // The horizontal inset at the top = triangle_height / tan(foot_chamfer_angle)
+    // But since triangle_height = wall_thickness * tan(foot_chamfer_angle),
+    // the inset = (wall_thickness * tan(foot_chamfer_angle)) / tan(foot_chamfer_angle) = wall_thickness
+    // However, we want the triangle to taper, so we need to calculate the proper inset
+    // Actually, if the triangle base is wall_thickness and it tapers to a point (or smaller),
+    // the inset should be calculated to create the proper slope
+    // For a triangle that tapers from wall_thickness to 0 (a point):
+    // The inset at the top = triangle_height / tan(foot_chamfer_angle) = wall_thickness
+    // But we want it to match foot_chamfer_height, so let's use that instead
+    // Actually, let's use the foot geometry: the inset should match foot_bottom_inset
+    chamfer_inset = foot_chamfer_height / tan(foot_chamfer_angle);
+    
+    // The triangle extends around the perimeter of the wall top
+    // It starts at the outer edge and slopes inward at foot_chamfer_angle
+    translate([0, 0, wall_height])
+    difference() {
+        // Outer shape: extends from wall edge, height = triangle_height
+        rounded_rect(
+            box_width,
+            box_depth,
+            triangle_height,
+            outer_radius
+        );
+        
+        // Inner cut: creates the slanted triangular edge
+        // The cut removes material to create the chamfer
+        // At the top, the cut is inset by chamfer_inset (wall_thickness)
+        // This creates a triangle with base = wall_thickness, height = triangle_height
+        translate([chamfer_inset, chamfer_inset, triangle_height])
+        rounded_rect(
+            box_width - chamfer_inset * 2,
+            box_depth - chamfer_inset * 2,
+            0.01,
+            max(0.5, outer_radius - chamfer_inset)
+        );
+        
+        // Also remove the inner cavity area to keep it hollow
+        translate([wall_thickness, wall_thickness, -0.1])
+        rounded_rect(
+            box_width - wall_thickness * 2,
+            box_depth - wall_thickness * 2,
+            triangle_height + 0.2,
+            max(0, outer_radius - wall_thickness)
+        );
+    }
 }
 
 module dividers() {
