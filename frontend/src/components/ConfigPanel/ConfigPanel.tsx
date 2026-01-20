@@ -307,6 +307,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           label="Stacking Lip"
           value={config.lipStyle}
           options={[
+            { value: 'perfect_fit', label: 'Perfect Fit Lip' },
             { value: 'standard', label: 'Standard (Full)' },
             { value: 'reduced', label: 'Reduced' },
             { value: 'minimum', label: 'Minimum' },

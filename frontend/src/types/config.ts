@@ -35,7 +35,7 @@ export interface BoxConfig {
   dividersY: number;
   
   // Lip style
-  lipStyle: 'none' | 'standard' | 'reduced' | 'minimum';
+  lipStyle: 'perfect_fit' | 'none' | 'standard' | 'reduced' | 'minimum';
   
   // Base style
   flatBase: 'off' | 'stackable' | 'rounded';

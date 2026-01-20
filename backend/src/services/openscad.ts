@@ -1278,7 +1278,7 @@ magnet_easy_release = "${config.magnetEasyRelease}";
 screw_enabled = ${config.screwEnabled};
 screw_diameter = ${config.screwDiameter};
 // Map "standard" to "normal" for Gridfinity Extended compatibility
-lip_style = "${config.lipStyle === 'standard' ? 'normal' : config.lipStyle}";
+lip_style = "${config.lipStyle === 'standard' ? 'normal' : config.lipStyle === 'perfect_fit' ? 'perfect_fit' : config.lipStyle}";
 dividers_x = ${config.dividersX};
 dividers_y = ${config.dividersY};
 finger_slide = ${config.fingerSlide};
@@ -1634,8 +1634,7 @@ module wall_pattern_grid(width, height, depth, cell_size, spacing) {
 }
 
 // Custom foot-matched lip cutout module
-// Chamfers the OUTER TOP EDGE of the walls to match foot chamfer for stacking
-// The outer wall tapers inward at the same angle and height as the foot
+// Creates lip cutouts for different stacking styles
 module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
     // Calculate inner dimensions
     inner_wall_radius = max(0, outer_radius - wall_thickness);
@@ -1644,9 +1643,53 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
     
     if (lip_style == "none") {
         // No lip - flat top, no cutout needed
-    } 
+    }
+    else if (lip_style == "perfect_fit") {
+        // Perfect Fit Lip: creates an inward shelf that perfectly matches foot geometry
+        // The shelf tapers inward at the same angle and height as the foot expands outward
+        // This creates a perfect fit for stacking
+        
+        // Calculate shelf inset from foot geometry (same calculation as foot)
+        // foot_bottom_inset is how much the foot expands outward from bottom to top
+        // The shelf should taper inward by the same amount
+        shelf_inset = foot_chamfer_height / tan(foot_chamfer_angle);
+        
+        // Foot dimensions for reference
+        foot_full_size = grid_unit - clearance * 2;  // 41.5mm at top
+        foot_radius = feet_corner_radius > 0 ? feet_corner_radius : gf_corner_radius;
+        
+        // The perfect fit lip creates an inward shelf that the foot sits on
+        // Bottom of shelf: matches inner cavity (smooth transition)
+        // Top of shelf: tapers inward by shelf_inset (creates the ledge)
+        // The foot's top (foot_full_size) sits on this ledge
+        // The taper matches the foot's expansion profile exactly
+        
+        translate([0, 0, wall_height - foot_chamfer_height])
+        hull() {
+            // Bottom of shelf: flush with inner wall (matches main cavity)
+            // This ensures smooth transition from main cavity to lip shelf
+            translate([wall_thickness, wall_thickness, 0])
+            rounded_rect(
+                inner_width,
+                inner_depth,
+                0.01,
+                inner_wall_radius
+            );
+            
+            // Top of shelf: tapers INWARD by shelf_inset
+            // This creates the ledge that the foot's top sits on
+            // The taper angle matches foot_chamfer_angle exactly
+            translate([wall_thickness + shelf_inset, wall_thickness + shelf_inset, foot_chamfer_height])
+            rounded_rect(
+                max(1, inner_width - shelf_inset * 2),
+                max(1, inner_depth - shelf_inset * 2),
+                0.01,
+                max(0.5, inner_wall_radius - shelf_inset)
+            );
+        }
+    }
     else {
-        // Foot-matched lip: chamfers the OUTER top edge of the walls
+        // Other lip styles: chamfers the OUTER top edge of the walls
         // Uses foot_chamfer_angle and foot_chamfer_height directly
         
         // Calculate chamfer inset from foot geometry (same calculation as foot)
