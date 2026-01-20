@@ -1751,9 +1751,19 @@ module label_tab() {
 }
 
 module perfect_fit_lip_additive(wall_height, outer_radius) {
-    // Additive Perfect Fit Lip: adds a triangular chamfered ring on top of the wall
+    // Additive Perfect Fit Lip: adds a triangular chamfered ring ON TOP of the wall
+    // The triangle sits on top, pointing UP, and tapers INWARD as it goes up
+    // 
+    //     /|  <- triangle on top, pointing up, tapering inward
+    //    / |
+    //   /  |
+    //  /   |
+    // /____|  <- wall top edge (z=wall_height)
+    // |    |
+    // |    |  <- wall below
+    //
     // The triangle forms a right triangle with:
-    // - Base width: wall_thickness (the horizontal base of the triangle)
+    // - Base width: wall_thickness (the horizontal base of the triangle at the wall edge)
     // - Angle: foot_chamfer_angle (the slope angle from horizontal)
     // - Height: calculated to form a 90-degree right triangle
     //   For a right triangle: tan(angle) = height / base
@@ -1771,43 +1781,44 @@ module perfect_fit_lip_additive(wall_height, outer_radius) {
     // The horizontal inset at the top = triangle_height / tan(foot_chamfer_angle)
     // Since triangle_height = wall_thickness * tan(foot_chamfer_angle),
     // inset = (wall_thickness * tan(foot_chamfer_angle)) / tan(foot_chamfer_angle) = wall_thickness
-    // So the triangle tapers from full width at bottom to (full_width - wall_thickness*2) at top
+    // So the triangle tapers inward by wall_thickness at the top
     chamfer_inset = wall_thickness;
     
-    // Create a triangular ring that sits on top of the wall
-    // The ring follows the perimeter and creates the chamfered edge
+    // Create a triangular ring that sits ON TOP of the wall, pointing UP
+    // The triangle starts at the outer wall edge and tapers INWARD as it goes up
     translate([0, 0, wall_height])
     difference() {
-        // Outer shape: full box width/depth, height = triangle_height
-        rounded_rect(
-            box_width,
-            box_depth,
-            triangle_height,
-            outer_radius
-        );
-        
-        // Inner cut: creates the slanted triangular edge
-        // At bottom (z=0): starts at inner wall edge
-        // At top (z=triangle_height): tapers inward by chamfer_inset
+        // Outer shape: full box width/depth at bottom, tapers inward at top
+        // This creates the triangular ring on top
         hull() {
-            // Bottom: at inner wall edge (where triangle starts)
-            translate([wall_thickness, wall_thickness, 0])
+            // Bottom: at the outer wall edge (where triangle sits on wall, z=0)
+            translate([0, 0, 0])
             rounded_rect(
-                box_width - wall_thickness * 2,
-                box_depth - wall_thickness * 2,
+                box_width,
+                box_depth,
                 0.01,
-                max(0, outer_radius - wall_thickness)
+                outer_radius
             );
             
-            // Top: tapers inward to create the chamfer
-            translate([wall_thickness + chamfer_inset, wall_thickness + chamfer_inset, triangle_height])
+            // Top: tapers INWARD to create the chamfer (triangle points UP and INWARD)
+            translate([chamfer_inset, chamfer_inset, triangle_height])
             rounded_rect(
-                box_width - (wall_thickness + chamfer_inset) * 2,
-                box_depth - (wall_thickness + chamfer_inset) * 2,
+                box_width - chamfer_inset * 2,
+                box_depth - chamfer_inset * 2,
                 0.01,
-                max(0.5, outer_radius - wall_thickness - chamfer_inset)
+                max(0.5, outer_radius - chamfer_inset)
             );
         }
+        
+        // Inner cut: removes the inner cavity area to create the ring
+        // The ring only exists on the wall thickness area
+        translate([wall_thickness, wall_thickness, -0.1])
+        rounded_rect(
+            box_width - wall_thickness * 2,
+            box_depth - wall_thickness * 2,
+            triangle_height + 0.2,
+            max(0, outer_radius - wall_thickness)
+        );
     }
 }
 
