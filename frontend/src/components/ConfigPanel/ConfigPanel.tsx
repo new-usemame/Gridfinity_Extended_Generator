@@ -121,6 +121,22 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
         <p className="text-xs text-slate-500 dark:text-slate-500">
           Adds small chamfer where feet meet box walls to prevent printing overhangs.
         </p>
+        {config.preventBottomOverhangs && (
+          <>
+            <SliderInput
+              label="Chamfer Angle"
+              value={config.bottomOverhangChamferAngle}
+              min={30}
+              max={75}
+              step={1}
+              unit="°"
+              onChange={(v) => update('bottomOverhangChamferAngle', v)}
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-500">
+              45° = standard. Higher = steeper chamfer. Lower = gentler chamfer.
+            </p>
+          </>
+        )}
       </CollapsibleSection>
 
       {/* Feet Options Section */}
@@ -198,7 +214,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
             label="Bottom Corner Radius"
             value={config.footBottomCornerRadius}
             min={0}
-            max={5}
+            max={10}
             step={0.25}
             unit="mm"
             onChange={(v) => update('footBottomCornerRadius', v)}
@@ -1057,7 +1073,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
             label="Bottom Corner Radius"
             value={config.socketBottomCornerRadius}
             min={0}
-            max={5}
+            max={10}
             step={0.25}
             unit="mm"
             onChange={(v) => update('socketBottomCornerRadius', v)}

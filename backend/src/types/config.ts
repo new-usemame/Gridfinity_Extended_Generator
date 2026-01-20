@@ -54,6 +54,7 @@ export interface BoxConfig {
   
   // Bottom overhang prevention
   preventBottomOverhangs: boolean;  // Adds small chamfer where feet meet box walls
+  bottomOverhangChamferAngle: number;  // Angle in degrees for bottom overhang chamfer (45 = standard)
   
   // Feet options
   feetCornerRadius: number;
@@ -170,6 +171,7 @@ export const defaultBoxConfig: BoxConfig = {
   wallPatternSpacing: 2,
   cornerRadius: 3.75,
   preventBottomOverhangs: true,  // Enabled by default for better printing
+  bottomOverhangChamferAngle: 45,  // 45 degrees = standard chamfer
   feetCornerRadius: 3.75,
   footBottomCornerRadius: 0.5,  // Minimum safe value for bottom corner radius
   gridSize: 42,
