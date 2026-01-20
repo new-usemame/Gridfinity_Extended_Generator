@@ -35,7 +35,13 @@ export class OpenSCADService {
 
   // Generate Baseplate STL
   async generateBaseplate(config: BaseplateConfig): Promise<{ stlUrl: string; scadContent: string; filename: string }> {
+    // #region agent log
+    fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'openscad.ts:37',message:'generateBaseplate entry',data:{sizingMode:config.sizingMode,targetWidthMm:config.targetWidthMm,targetDepthMm:config.targetDepthMm,width:config.width,depth:config.depth,gridSize:config.gridSize},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     const scadContent = this.generateBaseplateScad(config);
+    // #region agent log
+    fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'openscad.ts:40',message:'SCAD content generated',data:{scadSize:scadContent.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     return this.renderScad(scadContent, 'baseplate');
   }
 
@@ -1906,6 +1912,9 @@ module dividers() {
       paddingNearY = calc.paddingNearY;
       paddingFarY = calc.paddingFarY;
       useFillMode = true;
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'openscad.ts:1900',message:'Grid calculated from mm',data:{widthUnits,depthUnits,outerWidthMm,outerDepthMm,totalCells:Math.ceil(widthUnits)*Math.ceil(depthUnits)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
     } else {
       // Standard grid units mode
       widthUnits = config.width;
@@ -1917,6 +1926,9 @@ module dividers() {
       paddingNearY = 0;
       paddingFarY = 0;
       useFillMode = false;
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'openscad.ts:1919',message:'Grid from units',data:{widthUnits,depthUnits,outerWidthMm,outerDepthMm,totalCells:widthUnits*depthUnits},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
     }
     
     // Determine position alignment for SCAD
@@ -2222,13 +2234,28 @@ module screw_holes() {
 
     // Write SCAD file
     fs.writeFileSync(scadFilePath, scadContent);
+    // #region agent log
+    const scadFileSize = fs.statSync(scadFilePath).size;
+    fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'openscad.ts:2224',message:'SCAD file written',data:{scadFilename,scadFileSize,scadContentLength:scadContent.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
 
+    const timeoutMs = 120000; // 2 minute timeout
+    const startTime = Date.now();
+    // Run OpenSCAD to generate STL
+    const openscadCmd = process.env.OPENSCAD_PATH || 'openscad';
+    const cmd = `${openscadCmd} -o "${stlFilePath}" "${scadFilePath}"`;
     try {
-      // Run OpenSCAD to generate STL
-      const openscadCmd = process.env.OPENSCAD_PATH || 'openscad';
-      const cmd = `${openscadCmd} -o "${stlFilePath}" "${scadFilePath}"`;
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'openscad.ts:2231',message:'OpenSCAD command starting',data:{cmd,timeoutMs,scadFileSize},timestamp:startTime,sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       
-      await execAsync(cmd, { timeout: 120000 }); // 2 minute timeout
+      await execAsync(cmd, { timeout: timeoutMs });
+
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'openscad.ts:2234',message:'OpenSCAD command completed',data:{duration,stlFilename},timestamp:endTime,sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
 
       // Clean up SCAD file
       fs.unlinkSync(scadFilePath);
@@ -2239,6 +2266,13 @@ module screw_holes() {
         filename: stlFilename
       };
     } catch (error) {
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      // #region agent log
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorName = error instanceof Error ? error.name : 'Unknown';
+      fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'openscad.ts:2241',message:'OpenSCAD command failed',data:{errorName,errorMsg,duration,timeoutMs,cmd},timestamp:endTime,sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       // Clean up on error
       if (fs.existsSync(scadFilePath)) {
         fs.unlinkSync(scadFilePath);
