@@ -20,11 +20,6 @@ router.post('/', async (req: Request, res: Response) => {
       result = await openscadService.generateBox(config as BoxConfig);
     } else if (type === 'baseplate') {
       const baseplateConfig = config as BaseplateConfig;
-      // #region agent log
-      const logData0 = {location:'generate.ts:22',message:'Baseplate generation request',data:{sizingMode:baseplateConfig.sizingMode,targetWidthMm:baseplateConfig.targetWidthMm,targetDepthMm:baseplateConfig.targetDepthMm,width:baseplateConfig.width,depth:baseplateConfig.depth,splitEnabled:baseplateConfig.splitEnabled},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E,F'};
-      console.error('[DEBUG]', JSON.stringify(logData0));
-      fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData0)}).catch(()=>{});
-      // #endregion
       // Check if splitting is enabled and needed
       if (baseplateConfig.splitEnabled) {
         // Use segment generation for split baseplates
