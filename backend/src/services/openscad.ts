@@ -920,28 +920,27 @@ module male_tooth_3d(pattern, height) {
         linear_extrude(height = base_height)
         edge_tooth_male(pattern);
         
-        // Peaked roof: create a roof that slopes from profile edges to center peak
-        // To avoid overhangs, we use a hull that connects the actual profile shape to a center peak
-        // The peak runs along the center (x=0) and length (y-direction)
-        // Most patterns are symmetric and have max width around tooth_width/2
-        // We use the actual profile shape at base_height and hull to a center peak line
-        
-        // Get approximate profile bounds - most patterns are within tooth_width/2
-        // For safety, we'll use a slightly smaller width to ensure no overhangs
-        profile_max_width = tooth_width * 0.45; // Slightly less than half to ensure no overhangs
-        
-        hull() {
-            // Use the actual profile shape at the roof start height
-            // This ensures the roof starts flush with the profile edges
-            translate([0, 0, base_height])
-            linear_extrude(height = 0.01)
+        // Peaked roof: create a slanted roof using intersection
+        // We create a simple slanted roof shape and intersect it with the profile
+        // This ensures the roof follows the profile shape without weird sides
+        translate([0, 0, base_height])
+        intersection() {
+            // The actual profile shape (constrains the roof to profile bounds)
+            linear_extrude(height = peak_height + 0.1)
             edge_tooth_male(pattern);
             
-            // Center peak line (runs along y-direction at x=0)
-            // This creates a "^" shaped roof that slopes from edges to center
-            for (y = [0 : tooth_depth/10 : tooth_depth]) {
-                translate([0, y, base_height + peak_height])
-                cylinder(r = 0.05, h = 0.01, $fn = 8);
+            // Simple slanted roof: hull between profile base and center peak
+            hull() {
+                // Base: full profile width at roof start
+                translate([0, 0, 0])
+                linear_extrude(height = 0.01)
+                edge_tooth_male(pattern);
+                
+                // Peak: center line running along the length
+                for (y = [0 : tooth_depth/20 : tooth_depth]) {
+                    translate([0, y, peak_height])
+                    cylinder(r = 0.05, h = 0.01, $fn = 8);
+                }
             }
         }
     } else {
