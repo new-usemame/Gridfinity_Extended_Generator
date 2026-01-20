@@ -198,15 +198,14 @@ export function Features() {
             </div>
 
             <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-6">
-              <h3 className="text-2xl font-semibold text-slate-900 dark:text-white mb-3">Generation Modes</h3>
+              <h3 className="text-2xl font-semibold text-slate-900 dark:text-white mb-3">Server Generation</h3>
               <p className="text-slate-700 dark:text-slate-300 mb-3">
-                Choose between server-side or local generation.
+                Fast server-side generation for all models.
               </p>
               <ul className="list-disc list-inside text-slate-700 dark:text-slate-300 space-y-1">
-                <li>Server mode: Faster generation, requires internet</li>
-                <li>Local mode: Generate entirely in your browser using WASM</li>
-                <li>Automatic fallback if local generation fails</li>
-                <li>Progress indicators for both modes</li>
+                <li>Fast generation with server-side processing</li>
+                <li>Handles complex models efficiently</li>
+                <li>Progress indicators during generation</li>
               </ul>
             </div>
 

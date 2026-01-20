@@ -127,8 +127,7 @@ export function About() {
             <ul className="list-disc list-inside text-slate-700 dark:text-slate-300 space-y-2 mb-4">
               <li><strong className="text-slate-900 dark:text-white">Comprehensive Documentation:</strong> Detailed explanations of all features and how to use them</li>
               <li><strong className="text-slate-900 dark:text-white">Web Interface:</strong> Easy-to-use browser-based interface with real-time preview</li>
-              <li><strong className="text-slate-900 dark:text-white">Local Generation:</strong> WASM support for generating STLs entirely in your browser</li>
-              <li><strong className="text-slate-900 dark:text-white">Server Generation:</strong> Faster server-side generation for complex models</li>
+              <li><strong className="text-slate-900 dark:text-white">Server Generation:</strong> Fast server-side generation for complex models</li>
               <li><strong className="text-slate-900 dark:text-white">SEO-Friendly Pages:</strong> Multiple pages explaining Gridfinity, features, and comparisons</li>
               <li><strong className="text-slate-900 dark:text-white">Donation System:</strong> Built-in crypto donation support to fund development</li>
             </ul>
@@ -151,8 +150,7 @@ export function About() {
               <strong className="text-white">Backend:</strong> Node.js with Express. Uses OpenSCAD CLI for STL generation.
             </p>
             <p className="text-slate-700 dark:text-slate-300 text-lg leading-relaxed mb-4">
-              <strong className="text-white">STL Generation:</strong> Supports both server-side generation (using 
-              OpenSCAD installed on the server) and client-side generation (using OpenSCAD WASM in the browser).
+              <strong className="text-white">STL Generation:</strong> Server-side generation using OpenSCAD installed on the server.
             </p>
             <p className="text-slate-700 dark:text-slate-300 text-lg leading-relaxed mb-4">
               <strong className="text-white">OpenSCAD Base:</strong> All SCAD generation is based on the Gridfinity 

@@ -1275,7 +1275,8 @@ magnet_depth = ${config.magnetDepth};
 magnet_easy_release = "${config.magnetEasyRelease}";
 screw_enabled = ${config.screwEnabled};
 screw_diameter = ${config.screwDiameter};
-lip_style = "${config.lipStyle}";
+// Map "standard" to "normal" for Gridfinity Extended compatibility
+lip_style = "${config.lipStyle === 'standard' ? 'normal' : config.lipStyle}";
 dividers_x = ${config.dividersX};
 dividers_y = ${config.dividersY};
 finger_slide = ${config.fingerSlide};

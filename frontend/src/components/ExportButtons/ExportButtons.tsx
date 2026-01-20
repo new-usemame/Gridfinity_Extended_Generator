@@ -1,13 +1,10 @@
 import React from 'react';
-import { MultiSegmentResult, SplitResult, SegmentGenerationResult, BaseplateConfig, GenerationMode } from '../../types/config';
-import { generateSegmentScad, calculateSplitInfo } from '../../services/scadGenerator';
-import { generateLocalStl, revokeLocalStlUrl } from '../../services/openscadWasm';
+import { MultiSegmentResult, SplitResult, SegmentGenerationResult, BaseplateConfig } from '../../types/config';
 
 interface MultiSegmentExportButtonsProps {
   result: MultiSegmentResult;
   splitInfo: SplitResult;
   baseplateConfig: BaseplateConfig; // Need config to regenerate segments
-  generationMode?: GenerationMode; // Optional - defaults to server for backwards compatibility
 }
 
 interface ExportButtonsProps {
@@ -94,18 +91,9 @@ export function ExportButtons({ stlUrl, scadContent, filename }: ExportButtonsPr
 }
 
 // Multi-segment export buttons with individual downloads
-export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig, generationMode = 'server' }: MultiSegmentExportButtonsProps) {
+export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig }: MultiSegmentExportButtonsProps) {
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [generatingSegment, setGeneratingSegment] = React.useState<string | null>(null);
-
-  // Generate segment locally using WASM
-  const generateSegmentLocally = async (segmentX: number, segmentY: number): Promise<string> => {
-    const localSplitInfo = calculateSplitInfo(baseplateConfig);
-    const segmentInfo = localSplitInfo.segments[segmentY][segmentX];
-    const scadContent = generateSegmentScad(baseplateConfig, segmentInfo);
-    const localResult = await generateLocalStl(scadContent, `segment_${segmentX}_${segmentY}.stl`);
-    return localResult.stlUrl;
-  };
 
   const downloadAllSequentially = async () => {
     setIsGenerating(true);
@@ -141,49 +129,32 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig, 
     }
     
     try {
-      let downloadUrl: string;
+      // Request the server to generate this specific segment
+      const response = await fetch('/api/generate/segment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          config: baseplateConfig,
+          segmentX: segment.segmentX,
+          segmentY: segment.segmentY
+        })
+      });
       
-      if (generationMode === 'local') {
-        // Generate locally using WASM
-        downloadUrl = await generateSegmentLocally(segment.segmentX, segment.segmentY);
-        
-        // Download the file
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = `segment_${segment.segmentX}_${segment.segmentY}.stl`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Clean up blob URL after download
-        setTimeout(() => revokeLocalStlUrl(downloadUrl), 1000);
+      let downloadUrl: string;
+      if (!response.ok) {
+        // Fallback to the preview URL
+        downloadUrl = segment.stlUrl;
       } else {
-        // Request the server to generate this specific segment
-        const response = await fetch('/api/generate/segment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            config: baseplateConfig,
-            segmentX: segment.segmentX,
-            segmentY: segment.segmentY
-          })
-        });
-        
-        if (!response.ok) {
-          // Fallback to the preview URL
-          downloadUrl = segment.stlUrl;
-        } else {
-          const data = await response.json();
-          downloadUrl = data.stlUrl;
-        }
-        
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = `segment_${segment.segmentX}_${segment.segmentY}.stl`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const data = await response.json();
+        downloadUrl = data.stlUrl;
       }
+      
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `segment_${segment.segmentX}_${segment.segmentY}.stl`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (err) {
       console.error('Failed to generate segment:', err);
       // Fallback to preview URL

@@ -9,16 +9,11 @@ import type { SavedConfigsDropdownRef } from '../../components/SavedConfigsDropd
 import { AuthModal } from '../../components/AuthModal/AuthModal';
 import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
 import { useAuth } from '../../contexts/AuthContext';
-import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, GenerationResult, MultiSegmentResult, GenerationMode } from '../../types/config';
-import { generateBoxScad, generateBaseplateScad, generateCombinedPreviewScad, generateSegmentScad, calculateSplitInfo } from '../../services/scadGenerator';
-import { generateLocalStl, revokeLocalStlUrl, isWasmSupported, isWasmLoaded } from '../../services/openscadWasm';
+import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, GenerationResult, MultiSegmentResult } from '../../types/config';
 import { compareConfigs } from '../../utils/configComparison';
 
 export function Generator() {
   const { user, token } = useAuth();
-  const [generationMode, setGenerationMode] = useState<GenerationMode>('server');
-  const [isWasmReady, setIsWasmReady] = useState(false);
-  const [wasmLoadingStatus, setWasmLoadingStatus] = useState<string | null>(null);
   const hasInitiallyGenerated = useRef(false);
   const [boxConfig, setBoxConfig] = useState<BoxConfig>(defaultBoxConfig);
   const [baseplateConfig, setBaseplateConfig] = useState<BaseplateConfig>(defaultBaseplateConfig);
@@ -29,9 +24,6 @@ export function Generator() {
   const [pendingSave, setPendingSave] = useState(false);
   const [savedPreferences, setSavedPreferences] = useState<any[]>([]);
   const savedConfigsDropdownRef = useRef<SavedConfigsDropdownRef>(null);
-  
-  // Track blob URLs for cleanup
-  const blobUrlsRef = useRef<string[]>([]);
 
   // Sync socket chamfer with foot chamfer when enabled
   const handleBoxConfigChange = useCallback((config: BoxConfig) => {
@@ -62,12 +54,6 @@ export function Generator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeEditor, setActiveEditor] = useState<'box' | 'baseplate'>('box');
-
-  // Cleanup blob URLs on unmount or when generating new ones
-  const cleanupBlobUrls = useCallback(() => {
-    blobUrlsRef.current.forEach(url => revokeLocalStlUrl(url));
-    blobUrlsRef.current = [];
-  }, []);
 
   // Server-side generation
   const handleServerGenerate = useCallback(async () => {
@@ -104,95 +90,21 @@ export function Generator() {
     }
   }, [boxConfig, baseplateConfig]);
 
-  // Local (WASM) generation
-  const handleLocalGenerate = useCallback(async () => {
-    // Clean up previous blob URLs
-    cleanupBlobUrls();
-    
-    if (!isWasmReady) {
-      setWasmLoadingStatus('Loading OpenSCAD WASM...');
-    }
-
-    // Generate both box and baseplate locally
-    const boxScad = generateBoxScad(boxConfig);
-    const baseplateScad = generateBaseplateScad(baseplateConfig);
-    
-    setWasmLoadingStatus('Generating box STL...');
-    const boxLocalResult = await generateLocalStl(boxScad, 'box.stl');
-    blobUrlsRef.current.push(boxLocalResult.stlUrl);
-    setBoxResult({
-      stlUrl: boxLocalResult.stlUrl,
-      scadContent: boxLocalResult.scadContent,
-      filename: boxLocalResult.filename
-    });
-
-    // Check if baseplate needs splitting
-    if (baseplateConfig.splitEnabled) {
-      setWasmLoadingStatus('Generating segmented baseplate...');
-      const splitInfo = calculateSplitInfo(baseplateConfig);
-      const combinedScad = generateCombinedPreviewScad(baseplateConfig, splitInfo);
-      const combinedResult = await generateLocalStl(combinedScad, 'baseplate_preview.stl');
-      blobUrlsRef.current.push(combinedResult.stlUrl);
-
-      const segments = [];
-      for (let sy = 0; sy < splitInfo.segmentsY; sy++) {
-        for (let sx = 0; sx < splitInfo.segmentsX; sx++) {
-          const segmentInfo = splitInfo.segments[sy][sx];
-          const segmentScad = generateSegmentScad(baseplateConfig, segmentInfo);
-          segments.push({
-            stlUrl: combinedResult.stlUrl,
-            scadContent: segmentScad,
-            filename: `baseplate_segment_${sx}_${sy}.stl`,
-            segmentX: sx,
-            segmentY: sy
-          });
-        }
-      }
-
-      setMultiSegmentResult({ segments, connector: null, splitInfo });
-      if (segments.length > 0) {
-        setBaseplateResult(segments[0]);
-      }
-    } else {
-      setWasmLoadingStatus('Generating baseplate STL...');
-      const baseplateLocalResult = await generateLocalStl(baseplateScad, 'baseplate.stl');
-      blobUrlsRef.current.push(baseplateLocalResult.stlUrl);
-      setBaseplateResult({
-        stlUrl: baseplateLocalResult.stlUrl,
-        scadContent: baseplateLocalResult.scadContent,
-        filename: baseplateLocalResult.filename
-      });
-    }
-
-    setIsWasmReady(true);
-    setWasmLoadingStatus(null);
-  }, [boxConfig, baseplateConfig, isWasmReady, cleanupBlobUrls]);
-
   const handleGenerate = useCallback(async () => {
     setIsGenerating(true);
     setError(null);
     setMultiSegmentResult(null);
 
     try {
-      if (generationMode === 'local') {
-        await handleLocalGenerate();
-      } else {
-        await handleServerGenerate();
-      }
+      await handleServerGenerate();
     } catch (err) {
       console.error('Generation error:', err);
       const errorMessage = err instanceof Error ? err.message : String(err);
-      // If local generation fails, suggest falling back to server
-      if (generationMode === 'local') {
-        setError(`Local generation failed: ${errorMessage}. Try switching to Server mode.`);
-      } else {
-        setError(errorMessage || 'An error occurred');
-      }
+      setError(errorMessage || 'An error occurred');
     } finally {
       setIsGenerating(false);
-      setWasmLoadingStatus(null);
     }
-  }, [generationMode, handleLocalGenerate, handleServerGenerate]);
+  }, [handleServerGenerate]);
 
   // Auto-generate on initial load
   useEffect(() => {
@@ -201,13 +113,6 @@ export function Generator() {
       handleGenerate();
     }
   }, [handleGenerate]);
-
-  // Cleanup blob URLs on unmount
-  useEffect(() => {
-    return () => {
-      cleanupBlobUrls();
-    };
-  }, [cleanupBlobUrls]);
 
   // Handle loading preferences
   const handleLoadPreference = useCallback((boxConfig: BoxConfig | null, baseplateConfig: BaseplateConfig | null) => {
@@ -332,9 +237,6 @@ export function Generator() {
     URL.revokeObjectURL(url);
   };
 
-  // Check WASM support
-  const wasmSupported = isWasmSupported();
-
   return (
     <div className="h-screen flex flex-col bg-white dark:bg-slate-950 grid-pattern">
       {/* Generator Controls Header */}
@@ -424,51 +326,6 @@ export function Generator() {
             {/* Visual Separator */}
             <div className="h-6 w-px bg-slate-300 dark:bg-slate-700"></div>
 
-            {/* Generation Mode Toggle */}
-            <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 rounded-lg p-0.5">
-              <button
-                onClick={() => setGenerationMode('server')}
-                disabled={isGenerating}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                  generationMode === 'server'
-                    ? 'bg-slate-300 dark:bg-slate-700 text-slate-900 dark:text-white'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-                title="Generate on server (faster, requires connection)"
-              >
-                <span className="flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
-                  </svg>
-                  Server
-                </span>
-              </button>
-              <button
-                onClick={() => setGenerationMode('local')}
-                disabled={isGenerating || !wasmSupported}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                  generationMode === 'local'
-                    ? 'bg-cyan-500 dark:bg-cyan-600 text-white'
-                    : wasmSupported 
-                      ? 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                      : 'text-slate-400 dark:text-slate-600 cursor-not-allowed'
-                }`}
-                title={wasmSupported 
-                  ? "Generate locally in browser (no server needed, slower first time)"
-                  : "WebAssembly not supported in this browser"
-                }
-              >
-                <span className="flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Local
-                  {isWasmLoaded() && <span className="w-1.5 h-1.5 rounded-full bg-green-400 ml-1"></span>}
-                </span>
-              </button>
-            </div>
-
             {/* Generate Button */}
             <button
               onClick={handleGenerate}
@@ -476,9 +333,7 @@ export function Generator() {
               className={`px-6 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
                 isGenerating
                   ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
-                  : generationMode === 'local'
-                    ? 'bg-gradient-to-r from-cyan-500 to-cyan-400 dark:from-cyan-600 dark:to-cyan-500 text-white hover:from-cyan-400 hover:to-cyan-300 dark:hover:from-cyan-500 dark:hover:to-cyan-400 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40'
-                    : 'bg-gradient-to-r from-green-600 to-green-500 dark:from-green-500 dark:to-green-400 text-white hover:from-green-500 hover:to-green-400 dark:hover:from-green-400 dark:hover:to-green-300 shadow-lg shadow-green-500/25 hover:shadow-green-500/40'
+                  : 'bg-gradient-to-r from-green-600 to-green-500 dark:from-green-500 dark:to-green-400 text-white hover:from-green-500 hover:to-green-400 dark:hover:from-green-400 dark:hover:to-green-300 shadow-lg shadow-green-500/25 hover:shadow-green-500/40'
               }`}
             >
               {isGenerating ? (
@@ -487,13 +342,12 @@ export function Generator() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  {wasmLoadingStatus || 'Generating...'}
+                  Generating...
                 </span>
               ) : (
                 `Generate STL`
               )}
             </button>
-            </div>
           </div>
         </div>
       </header>
@@ -645,7 +499,6 @@ export function Generator() {
               result={multiSegmentResult}
               splitInfo={multiSegmentResult.splitInfo}
               baseplateConfig={baseplateConfig}
-              generationMode={generationMode}
             />
           </div>
         ) : baseplateResult && (

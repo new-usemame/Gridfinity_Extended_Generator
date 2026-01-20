@@ -77,14 +77,6 @@ export function Comparison() {
                 <td className="px-6 py-4 text-center text-red-600 dark:text-red-400">✗</td>
                 <td className="px-6 py-4 text-center text-green-600 dark:text-green-400">✓</td>
               </tr>
-              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
-                <td className="px-6 py-4 font-medium">Local Generation (WASM)</td>
-                <td className="px-6 py-4 text-center text-green-600 dark:text-green-400">✓</td>
-                <td className="px-6 py-4 text-center text-red-600 dark:text-red-400">✗</td>
-                <td className="px-6 py-4 text-center text-red-600 dark:text-red-400">✗</td>
-                <td className="px-6 py-4 text-center text-red-600 dark:text-red-400">✗</td>
-                <td className="px-6 py-4 text-center text-red-600 dark:text-red-400">✗</td>
-              </tr>
               <tr className="border-b border-slate-200 dark:border-slate-800">
                 <td className="px-6 py-4 font-medium">Comprehensive Docs</td>
                 <td className="px-6 py-4 text-center text-green-600 dark:text-green-400">✓</td>
@@ -202,10 +194,6 @@ export function Comparison() {
                 Extended including fractional sizes, wall cutouts, patterns, and more.
               </li>
               <li>
-                <strong className="text-slate-900 dark:text-white">✓ Local Generation:</strong> Generate STLs entirely in your browser 
-                using WASM—no server required, works offline.
-              </li>
-              <li>
                 <strong className="text-white">✓ Comprehensive Documentation:</strong> Multiple pages explaining 
                 Gridfinity, features, comparisons, and usage—not just a tool, but a resource.
               </li>
@@ -232,7 +220,7 @@ export function Comparison() {
           <div className="space-y-4 text-slate-700 dark:text-slate-300">
             <p>
               <strong className="text-slate-900 dark:text-white">Our Generator:</strong> Best for users who want all Extended features 
-              with a great web interface, local generation capability, and comprehensive documentation.
+              with a great web interface and comprehensive documentation.
             </p>
             <p>
               <strong className="text-slate-900 dark:text-white">MakerWorld:</strong> Good if you already use MakerWorld and want 

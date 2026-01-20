@@ -426,5 +426,3 @@ export function calculateGridFromMm(
   };
 }
 
-// Generation mode - server or local (browser WASM)
-export type GenerationMode = 'server' | 'local';

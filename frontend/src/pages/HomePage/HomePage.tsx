@@ -87,14 +87,6 @@ export function HomePage() {
     fetchUserFeedback();
   };
 
-  const handleWriteFeedbackClick = () => {
-    if (!user) {
-      setIsAuthModalOpen(true);
-    } else {
-      setIsFeedbackModalOpen(true);
-    }
-  };
-
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -232,7 +224,7 @@ export function HomePage() {
             <ul className="list-disc list-inside text-slate-700 dark:text-slate-300 space-y-2 mb-4">
               <li><strong className="text-slate-900 dark:text-white">Comprehensive Documentation:</strong> Detailed explanations of Gridfinity Extended and all features</li>
               <li><strong className="text-slate-900 dark:text-white">Real-time 3D Preview:</strong> See your designs before generating STL files</li>
-              <li><strong className="text-slate-900 dark:text-white">Local & Server Generation:</strong> Generate STLs in your browser (WASM) or on the server</li>
+              <li><strong className="text-slate-900 dark:text-white">Server Generation:</strong> Fast server-side generation for all models</li>
               <li><strong className="text-slate-900 dark:text-white">All Extended Features:</strong> Full support for fractional sizes, wall cutouts, patterns, and more</li>
               <li><strong className="text-slate-900 dark:text-white">Better UX:</strong> Intuitive interface with clear explanations and tooltips</li>
               <li><strong className="text-slate-900 dark:text-white">Donation Support:</strong> Built-in crypto donation system to support development</li>
