@@ -6,9 +6,9 @@ import { BoxConfig, BaseplateConfig } from '../types/config.js';
 const router = Router();
 
 // Get all saved preferences for current user
-router.get('/', authenticateToken, (req: AuthRequest, res: Response) => {
+router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const preferences = preferencesDb.findAllByUserId(req.userId!);
+    const preferences = await preferencesDb.findAllByUserId(req.userId!);
     res.json({ preferences });
   } catch (error) {
     console.error('Get preferences error:', error);
@@ -17,14 +17,14 @@ router.get('/', authenticateToken, (req: AuthRequest, res: Response) => {
 });
 
 // Get a specific preference
-router.get('/:id', authenticateToken, (req: AuthRequest, res: Response) => {
+router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       return res.status(400).json({ error: 'Invalid preference ID' });
     }
 
-    const preference = preferencesDb.findById(id, req.userId!);
+    const preference = await preferencesDb.findById(id, req.userId!);
     if (!preference) {
       return res.status(404).json({ error: 'Preference not found' });
     }
@@ -37,7 +37,7 @@ router.get('/:id', authenticateToken, (req: AuthRequest, res: Response) => {
 });
 
 // Save a new preference
-router.post('/', authenticateToken, (req: AuthRequest, res: Response) => {
+router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { name, boxConfig, baseplateConfig } = req.body;
 
@@ -53,14 +53,14 @@ router.post('/', authenticateToken, (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Invalid baseplate config' });
     }
 
-    const id = preferencesDb.create(
+    const id = await preferencesDb.create(
       req.userId!,
       name.trim(),
       boxConfig as BoxConfig | null,
       baseplateConfig as BaseplateConfig | null
     );
 
-    const preference = preferencesDb.findById(id, req.userId!);
+    const preference = await preferencesDb.findById(id, req.userId!);
     res.status(201).json({ preference });
   } catch (error: any) {
     if (error.message && error.message.includes('UNIQUE constraint')) {
@@ -72,7 +72,7 @@ router.post('/', authenticateToken, (req: AuthRequest, res: Response) => {
 });
 
 // Update an existing preference
-router.put('/:id', authenticateToken, (req: AuthRequest, res: Response) => {
+router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
@@ -86,12 +86,12 @@ router.put('/:id', authenticateToken, (req: AuthRequest, res: Response) => {
     }
 
     // Check if preference exists and belongs to user
-    const existing = preferencesDb.findById(id, req.userId!);
+    const existing = await preferencesDb.findById(id, req.userId!);
     if (!existing) {
       return res.status(404).json({ error: 'Preference not found' });
     }
 
-    preferencesDb.update(
+    await preferencesDb.update(
       id,
       req.userId!,
       name.trim(),
@@ -99,7 +99,7 @@ router.put('/:id', authenticateToken, (req: AuthRequest, res: Response) => {
       baseplateConfig as BaseplateConfig | null
     );
 
-    const preference = preferencesDb.findById(id, req.userId!);
+    const preference = await preferencesDb.findById(id, req.userId!);
     res.json({ preference });
   } catch (error: any) {
     if (error.message && error.message.includes('UNIQUE constraint')) {
@@ -111,7 +111,7 @@ router.put('/:id', authenticateToken, (req: AuthRequest, res: Response) => {
 });
 
 // Delete a preference
-router.delete('/:id', authenticateToken, (req: AuthRequest, res: Response) => {
+router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
@@ -119,12 +119,12 @@ router.delete('/:id', authenticateToken, (req: AuthRequest, res: Response) => {
     }
 
     // Check if preference exists and belongs to user
-    const existing = preferencesDb.findById(id, req.userId!);
+    const existing = await preferencesDb.findById(id, req.userId!);
     if (!existing) {
       return res.status(404).json({ error: 'Preference not found' });
     }
 
-    preferencesDb.delete(id, req.userId!);
+    await preferencesDb.delete(id, req.userId!);
     res.json({ success: true });
   } catch (error) {
     console.error('Delete preference error:', error);

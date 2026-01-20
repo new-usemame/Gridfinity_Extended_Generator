@@ -184,7 +184,7 @@ export const SavedConfigsDropdown = forwardRef<SavedConfigsDropdownRef, SavedCon
         <button
           ref={buttonRef}
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-300 rounded-lg transition-colors"
           title="Saved configurations"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -205,7 +205,7 @@ export const SavedConfigsDropdown = forwardRef<SavedConfigsDropdownRef, SavedCon
       {isOpen && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed w-80 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-[9999] overflow-hidden"
+          className="fixed w-80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-[9999] overflow-hidden"
           style={{
             top: `${dropdownPosition.top}px`,
             right: `${dropdownPosition.right}px`,
@@ -218,7 +218,7 @@ export const SavedConfigsDropdown = forwardRef<SavedConfigsDropdownRef, SavedCon
                   setShowSaveDialog(true);
                   setIsOpen(false);
                 }}
-                className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-2"
+                className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -228,9 +228,9 @@ export const SavedConfigsDropdown = forwardRef<SavedConfigsDropdownRef, SavedCon
             </div>
 
             {isLoading ? (
-              <div className="p-4 text-center text-slate-400 text-sm">Loading...</div>
+              <div className="p-4 text-center text-slate-600 dark:text-slate-400 text-sm">Loading...</div>
             ) : preferences.length === 0 ? (
-              <div className="p-4 text-center text-slate-400 text-sm">No saved configurations</div>
+              <div className="p-4 text-center text-slate-600 dark:text-slate-400 text-sm">No saved configurations</div>
             ) : (
               <div className="p-2 space-y-1">
                 {preferences.map((pref) => {
@@ -243,16 +243,16 @@ export const SavedConfigsDropdown = forwardRef<SavedConfigsDropdownRef, SavedCon
                   return (
                     <div
                       key={pref.id}
-                      className={`group flex items-center justify-between px-3 py-2 hover:bg-slate-700 rounded-lg transition-colors ${
-                        isActive ? 'bg-slate-700/50' : ''
+                      className={`group flex items-center justify-between px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors ${
+                        isActive ? 'bg-slate-100/50 dark:bg-slate-700/50' : ''
                       }`}
                     >
                       <button
                         onClick={() => handleLoad(pref)}
-                        className="flex-1 text-left text-sm text-slate-300 hover:text-white flex items-center gap-2"
+                        className="flex-1 text-left text-sm text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-2"
                       >
                         {isActive && (
-                          <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <svg className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                           </svg>
                         )}
@@ -260,7 +260,7 @@ export const SavedConfigsDropdown = forwardRef<SavedConfigsDropdownRef, SavedCon
                       </button>
                     <button
                       onClick={() => handleDelete(pref.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:text-red-300 transition-opacity"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-opacity"
                       title="Delete"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -286,16 +286,16 @@ export const SavedConfigsDropdown = forwardRef<SavedConfigsDropdownRef, SavedCon
           }}
         >
           <div
-            className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-xl font-bold text-white mb-4">Save Configuration</h3>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Save Configuration</h3>
             <input
               type="text"
               value={saveName}
               onChange={(e) => setSaveName(e.target.value)}
               placeholder="Configuration name"
-              className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white mb-4 focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white mb-4 focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-500"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -310,7 +310,7 @@ export const SavedConfigsDropdown = forwardRef<SavedConfigsDropdownRef, SavedCon
               <button
                 onClick={handleSave}
                 disabled={!saveName.trim() || isSaving}
-                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-green-600 dark:bg-green-500 hover:bg-green-500 dark:hover:bg-green-400 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? 'Saving...' : 'Save'}
               </button>
@@ -319,7 +319,7 @@ export const SavedConfigsDropdown = forwardRef<SavedConfigsDropdownRef, SavedCon
                   setShowSaveDialog(false);
                   setSaveName('');
                 }}
-                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium"
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg font-medium"
               >
                 Cancel
               </button>

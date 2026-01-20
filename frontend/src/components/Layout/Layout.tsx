@@ -29,7 +29,7 @@ export function Layout({ children }: LayoutProps) {
                 </svg>
               </div>
               <div>
-                <h1 className="text-xl font-display font-semibold text-slate-900 dark:text-white">Gridfinity Generator</h1>
+                <h1 className="text-xl font-display font-semibold text-slate-900 dark:text-white">Gridfinity Gen (beta)</h1>
                 <p className="text-xs text-slate-500 dark:text-slate-500 font-display">Customizable storage solutions</p>
               </div>
             </Link>
@@ -50,7 +50,7 @@ export function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
-              <h3 className="text-slate-900 dark:text-white font-semibold mb-4">Gridfinity Generator</h3>
+              <h3 className="text-slate-900 dark:text-white font-semibold mb-4">Gridfinity Generator (beta)</h3>
               <p className="text-slate-600 dark:text-slate-400 text-sm">
                 A fully configurable web-based Gridfinity generator for creating customizable storage bins and baseplates.
               </p>
@@ -110,7 +110,7 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-800 text-center text-sm text-slate-500 dark:text-slate-500">
-            <p>&copy; {new Date().getFullYear()} Gridfinity Generator. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Gridfinity Generator (beta). All rights reserved.</p>
           </div>
         </div>
       </footer>

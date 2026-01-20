@@ -1,8 +1,8 @@
-# Gridfinity Generator
+# Gridfinity Generator (beta)
 
 A fully configurable web-based Gridfinity generator for creating customizable storage bins and baseplates. Generate STL files for 3D printing directly in your browser.
 
-![Gridfinity Generator](https://img.shields.io/badge/Gridfinity-Generator-22c55e?style=for-the-badge)
+![Gridfinity Generator](https://img.shields.io/badge/Gridfinity-Generator%20%28beta%29-22c55e?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge)
 
 ## Features

@@ -51,6 +51,17 @@ This guide covers deploying the Gridfinity Generator to Railway and setting up t
    railway up
    ```
 
+### Database Setup (Railway)
+
+**IMPORTANT**: The application requires a persistent database. On Railway, you must add a PostgreSQL service:
+
+1. In your Railway project dashboard, click **"+ New"** → **"Database"** → **"Add PostgreSQL"**
+2. Railway will automatically create a PostgreSQL service and set the `DATABASE_URL` environment variable
+3. The application will automatically detect `DATABASE_URL` and use PostgreSQL instead of SQLite
+4. The database schema will be created automatically on first startup
+
+**Note**: Without a PostgreSQL service, data will be lost on every server restart because the container filesystem is ephemeral.
+
 ### Environment Variables (Railway)
 
 Set these in the Railway dashboard under Variables:
@@ -60,6 +71,8 @@ Set these in the Railway dashboard under Variables:
 | `NODE_ENV` | `production` | Node environment |
 | `PORT` | `3001` | Server port (Railway sets this automatically) |
 | `OPENSCAD_PATH` | `openscad` | Path to OpenSCAD (default works with Docker) |
+| `DATABASE_URL` | *(auto-set)* | PostgreSQL connection string (automatically set when you add PostgreSQL service) |
+| `JWT_SECRET` | *(generate)* | Secret key for JWT tokens (generate a random string) |
 
 ### Custom Domain (Optional)
 

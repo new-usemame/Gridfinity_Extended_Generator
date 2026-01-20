@@ -5,6 +5,7 @@ import { generateRouter } from './routes/generate.js';
 import { filesRouter } from './routes/files.js';
 import { authRouter } from './routes/auth.js';
 import { preferencesRouter } from './routes/preferences.js';
+import { feedbackRouter } from './routes/feedback.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -21,6 +22,7 @@ app.use('/api/generate', generateRouter);
 app.use('/api/files', filesRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/preferences', preferencesRouter);
+app.use('/api/feedback', feedbackRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

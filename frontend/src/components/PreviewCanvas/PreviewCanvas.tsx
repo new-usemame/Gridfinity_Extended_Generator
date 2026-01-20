@@ -91,7 +91,9 @@ export function PreviewCanvas({
     positionControlStyle.right = 'auto';
     positionControlStyle.left = `${padding}px`;
   } else {
-    positionControlStyle.right = `${padding}px`;
+    // Position on right, but ensure it never overflows
+    const maxRight = availableWidth - controlWidth - padding;
+    positionControlStyle.right = `${Math.max(padding, maxRight)}px`;
     positionControlStyle.left = 'auto';
   }
   
@@ -106,13 +108,13 @@ export function PreviewCanvas({
   }
 
   return (
-    <div ref={containerRef} className="w-full h-full bg-gradient-to-b from-slate-900 to-slate-950 relative">
+    <div ref={containerRef} className="w-full h-full bg-gradient-to-b from-slate-100 to-white dark:from-slate-900 dark:to-slate-950 relative">
       {/* Loading Overlay */}
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-10">
           <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
-            <p className="text-slate-400 text-sm">Generating STL...</p>
+            <div className="w-16 h-16 border-4 border-green-500/30 dark:border-green-500/30 border-t-green-500 dark:border-t-green-500 rounded-full animate-spin" />
+            <p className="text-slate-700 dark:text-slate-400 text-sm">Generating STL...</p>
           </div>
         </div>
       )}
@@ -121,13 +123,13 @@ export function PreviewCanvas({
       {!hasModel && !isLoading && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <div className="text-center">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-slate-800 flex items-center justify-center">
-              <svg className="w-10 h-10 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
+              <svg className="w-10 h-10 text-slate-600 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
             </div>
-            <h3 className="text-slate-400 font-medium mb-2">No Model Generated</h3>
-            <p className="text-slate-500 text-sm max-w-xs">
+            <h3 className="text-slate-600 dark:text-slate-400 font-medium mb-2">No Model Generated</h3>
+            <p className="text-slate-600 dark:text-slate-500 text-sm max-w-xs">
               {isCombinedView 
                 ? 'Configure both box and baseplate, then click "Generate STL" to preview.'
                 : 'Configure your Gridfinity box or baseplate, then click "Generate STL" to preview.'}

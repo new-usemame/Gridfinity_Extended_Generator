@@ -19,14 +19,14 @@ router.post('/signup', async (req: Request, res: Response) => {
     }
 
     // Check if user already exists
-    const existingUser = userDb.findByEmail(email);
+    const existingUser = await userDb.findByEmail(email);
     if (existingUser) {
       return res.status(409).json({ error: 'User with this email already exists' });
     }
 
     // Hash password and create user
     const passwordHash = await authService.hashPassword(password);
-    const userId = userDb.create(email, passwordHash);
+    const userId = await userDb.create(email, passwordHash);
 
     // Generate token
     const token = authService.generateToken(userId, email);
@@ -54,7 +54,7 @@ router.post('/signin', async (req: Request, res: Response) => {
     }
 
     // Find user
-    const user = userDb.findByEmail(email);
+    const user = await userDb.findByEmail(email);
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -82,8 +82,8 @@ router.post('/signin', async (req: Request, res: Response) => {
 });
 
 // Get current user
-router.get('/me', authenticateToken, (req: AuthRequest, res: Response) => {
-  const user = userDb.findById(req.userId!);
+router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const user = await userDb.findById(req.userId!);
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }

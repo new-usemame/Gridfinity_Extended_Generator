@@ -351,7 +351,7 @@ export function Generator() {
               </svg>
             </div>
             <div>
-              <h1 className="text-xl font-display font-semibold text-slate-900 dark:text-white">Gridfinity Generator</h1>
+              <h1 className="text-xl font-display font-semibold text-slate-900 dark:text-white">Gridfinity Gen (beta)</h1>
               <p className="text-xs text-slate-500 dark:text-slate-500 font-display">Customizable storage solutions</p>
             </div>
           </Link>
