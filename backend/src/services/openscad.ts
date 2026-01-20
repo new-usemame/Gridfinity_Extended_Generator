@@ -1306,10 +1306,19 @@ foot_taper_height = foot_chamfer_height;
 foot_bottom_inset = foot_chamfer_height / tan(foot_chamfer_angle);
 // Total base height (foot taper only, no extra lip)
 base_height = foot_taper_height;
-stacking_lip_height = 4.4;
 gf_corner_radius = 3.75;  // Standard Gridfinity corner radius
 clearance = 0.25;  // Gap from grid edge
 $fn = 32;
+
+// Gridfinity Extended lip constants (matching gridfinity_constants.scad)
+// Standard lip profile: lower taper → riser → upper taper → lip
+gf_lip_lower_taper_height = 0.7;    // 45° lower taper
+gf_lip_riser_height = 1.8;          // Vertical riser section
+gf_lip_upper_taper_height = 1.9;   // 45° upper taper
+gf_lip_height = 1.2;                // Top lip section
+gf_lip_total_height = 4.4;          // Total lip height (0.7 + 1.8 + 1.9 = 4.4, lip is part of upper taper)
+// For reduced lip: only upper taper (1.9mm)
+// For minimum lip: minimal chamfer (~1.2mm)
 
 /* [Calculated] */
 box_width = width_units * grid_unit;
@@ -1498,12 +1507,9 @@ module gridfinity_walls() {
         );
         
         // Stacking lip cutout at top
-        if (lip_style != "none") {
-            lip_h = lip_style == "reduced" ? stacking_lip_height * 0.6 : 
-                    lip_style == "minimum" ? stacking_lip_height * 0.4 : stacking_lip_height;
-            translate([0, 0, wall_height - lip_h])
-            stacking_lip_cutout(lip_h, outer_radius);
-        }
+        // All lip styles are handled by the stacking_lip_cutout module
+        // including "none" (which does nothing)
+        stacking_lip_cutout(lip_style, wall_height, outer_radius);
         
         // Finger slide
         if (finger_slide) {
@@ -1561,23 +1567,23 @@ module wall_pattern_cutouts(wall_height) {
     
     // Front wall pattern
     translate([pattern_border, -0.1, pattern_border])
-    wall_pattern_grid(box_width - pattern_border * 2, wall_height - pattern_border * 2 - stacking_lip_height, pattern_depth + 0.1, pattern_cell, spacing);
+    wall_pattern_grid(box_width - pattern_border * 2, wall_height - pattern_border * 2 - gf_lip_total_height, pattern_depth + 0.1, pattern_cell, spacing);
     
     // Back wall pattern  
     translate([pattern_border, box_depth - pattern_depth, pattern_border])
-    wall_pattern_grid(box_width - pattern_border * 2, wall_height - pattern_border * 2 - stacking_lip_height, pattern_depth + 0.1, pattern_cell, spacing);
+    wall_pattern_grid(box_width - pattern_border * 2, wall_height - pattern_border * 2 - gf_lip_total_height, pattern_depth + 0.1, pattern_cell, spacing);
     
     // Left wall pattern
     translate([-0.1, pattern_border, pattern_border])
     rotate([0, 90, 0])
     rotate([0, 0, 90])
-    wall_pattern_grid(box_depth - pattern_border * 2, wall_height - pattern_border * 2 - stacking_lip_height, pattern_depth + 0.1, pattern_cell, spacing);
+    wall_pattern_grid(box_depth - pattern_border * 2, wall_height - pattern_border * 2 - gf_lip_total_height, pattern_depth + 0.1, pattern_cell, spacing);
     
     // Right wall pattern
     translate([box_width - pattern_depth, pattern_border, pattern_border])
     rotate([0, 90, 0])
     rotate([0, 0, 90])
-    wall_pattern_grid(box_depth - pattern_border * 2, wall_height - pattern_border * 2 - stacking_lip_height, pattern_depth + 0.1, pattern_cell, spacing);
+    wall_pattern_grid(box_depth - pattern_border * 2, wall_height - pattern_border * 2 - gf_lip_total_height, pattern_depth + 0.1, pattern_cell, spacing);
 }
 
 module wall_pattern_grid(width, height, depth, cell_size, spacing) {
@@ -1610,13 +1616,159 @@ module wall_pattern_grid(width, height, depth, cell_size, spacing) {
     }
 }
 
-module stacking_lip_cutout(lip_h, radius) {
-    inset = 1.9;
-    inner_r = max(0, radius - inset);
-    difference() {
-        rounded_rect(box_width, box_depth, lip_h + 1, radius);
-        translate([inset, inset, 0])
-        rounded_rect(box_width - inset * 2, box_depth - inset * 2, lip_h + 1, inner_r);
+// Gridfinity Extended lip cutout module
+// Creates proper tapered lip structure for 3D printing (all tapers at 45°)
+// The lip is cut from the top of the wall to create the stacking feature
+module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
+    // Calculate inner dimensions
+    inner_wall_radius = max(0, outer_radius - wall_thickness);
+    inner_width = box_width - wall_thickness * 2;
+    inner_depth = box_depth - wall_thickness * 2;
+    
+    // Calculate inner lip radius (accounts for tapers reducing the corner radius)
+    inner_lip_radius = max(0, outer_radius - gf_lip_lower_taper_height - gf_lip_upper_taper_height);
+    
+    // Calculate lip support thickness based on style
+    lip_support_thickness = (lip_style == "reduced") 
+        ? gf_lip_upper_taper_height - wall_thickness
+        : gf_lip_upper_taper_height + gf_lip_lower_taper_height - wall_thickness;
+    
+    if (lip_style == "none") {
+        // No lip - flat top, no cutout needed
+    } 
+    else if (lip_style == "minimum") {
+        // Minimum lip: removes entire lip area (similar to "none" but with minimal chamfer)
+        // Just removes the top section to create a flush edge
+        translate([0, 0, wall_height - gf_lip_total_height])
+        translate([wall_thickness, wall_thickness, 0])
+        rounded_rect(
+            inner_width,
+            inner_depth,
+            gf_lip_total_height + 0.1,
+            inner_wall_radius
+        );
+    } 
+    else if (lip_style == "reduced") {
+        // Reduced lip: only upper taper (1.9mm) with reduced support
+        // Creates a simpler lip structure for easier access
+        lower_taper_z = gf_lip_lower_taper_height;
+        upper_taper_height = gf_lip_upper_taper_height;
+        
+        translate([0, 0, wall_height - upper_taper_height - lower_taper_z])
+        union() {
+            // Lower section: remove vertical wall up to lower taper
+            translate([wall_thickness, wall_thickness, 0])
+            rounded_rect(
+                inner_width,
+                inner_depth,
+                lower_taper_z + 0.1,
+                inner_wall_radius
+            );
+            
+            // Upper taper section: 45° taper from inner_wall_radius outward
+            // At 45°, the inset equals the height
+            taper_inset = upper_taper_height; // 45°: tan(45°) = 1
+            translate([0, 0, lower_taper_z])
+            hull() {
+                // Bottom of taper: inner wall radius
+                translate([wall_thickness, wall_thickness, 0])
+                rounded_rect(
+                    inner_width,
+                    inner_depth,
+                    0.01,
+                    inner_wall_radius
+                );
+                // Top of taper: expanded outward by taper_inset
+                translate([wall_thickness - taper_inset, wall_thickness - taper_inset, upper_taper_height])
+                rounded_rect(
+                    inner_width + taper_inset * 2,
+                    inner_depth + taper_inset * 2,
+                    0.01,
+                    max(0, inner_wall_radius + taper_inset)
+                );
+            }
+        }
+    } 
+    else {
+        // Normal/Standard lip: full structure with all tapers
+        // Structure: lower taper (0.7mm) → riser (1.8mm) → upper taper (1.9mm) → lip (1.2mm)
+        // Total height: 0.7 + 1.8 + 1.9 = 4.4mm (lip is part of upper taper)
+        // The cutout expands outward from inner_wall_radius to create the lip recess
+        
+        lower_taper_height = gf_lip_lower_taper_height;
+        riser_height = gf_lip_riser_height;
+        upper_taper_height = gf_lip_upper_taper_height;
+        lip_height = gf_lip_height;
+        
+        // Calculate the radius at the top of the upper taper (where lip starts)
+        // This is the outer radius minus the upper taper height (45°: inset = height)
+        lip_top_radius = max(0, outer_radius - upper_taper_height);
+        
+        translate([0, 0, wall_height - gf_lip_total_height])
+        union() {
+            // Upper taper + lip section: 45° taper expanding outward
+            // This creates the main lip recess that boxes stack into
+            upper_taper_inset = upper_taper_height; // 45°: tan(45°) = 1
+            translate([0, 0, lower_taper_height + riser_height])
+            hull() {
+                // Bottom of upper taper: starts at inner_wall_radius
+                translate([wall_thickness, wall_thickness, 0])
+                rounded_rect(
+                    inner_width,
+                    inner_depth,
+                    0.01,
+                    inner_wall_radius
+                );
+                // Top of upper taper: expands outward to lip_top_radius
+                translate([wall_thickness - upper_taper_inset, wall_thickness - upper_taper_inset, upper_taper_height])
+                rounded_rect(
+                    inner_width + upper_taper_inset * 2,
+                    inner_depth + upper_taper_inset * 2,
+                    0.01,
+                    max(0, inner_wall_radius + upper_taper_inset)
+                );
+                // Lip section: continues at lip_top_radius
+                translate([wall_thickness - upper_taper_inset, wall_thickness - upper_taper_inset, upper_taper_height + lip_height])
+                rounded_rect(
+                    inner_width + upper_taper_inset * 2,
+                    inner_depth + upper_taper_inset * 2,
+                    0.01,
+                    max(0, inner_wall_radius + upper_taper_inset)
+                );
+            }
+            
+            // Riser section: vertical wall between lower and upper tapers
+            translate([wall_thickness, wall_thickness, lower_taper_height])
+            rounded_rect(
+                inner_width,
+                inner_depth,
+                riser_height + 0.1,
+                inner_wall_radius
+            );
+            
+            // Lower taper section: 45° taper from inner_wall_radius outward
+            // This creates the support structure transition
+            lower_taper_inset = lower_taper_height; // 45°: tan(45°) = 1
+            translate([0, 0, 0])
+            hull() {
+                // Bottom: inner wall radius
+                translate([wall_thickness, wall_thickness, 0])
+                rounded_rect(
+                    inner_width,
+                    inner_depth,
+                    0.01,
+                    inner_wall_radius
+                );
+                // Top: transitions outward (prepares for riser)
+                translate([wall_thickness - lower_taper_inset, wall_thickness - lower_taper_inset, lower_taper_height])
+                rounded_rect(
+                    inner_width + lower_taper_inset * 2,
+                    inner_depth + lower_taper_inset * 2,
+                    0.01,
+                    max(0, inner_wall_radius + lower_taper_inset)
+                );
+            }
+        }
     }
 }
 
@@ -1667,7 +1819,7 @@ module label_tab() {
     tab_height = 12;
     tab_depth = 1.2;
     
-    translate([(box_width - tab_width) / 2, -0.1, wall_height - tab_height - stacking_lip_height])
+    translate([(box_width - tab_width) / 2, -0.1, wall_height - tab_height - gf_lip_total_height])
     cube([tab_width, tab_depth + 0.1, tab_height]);
 }
 
@@ -1675,7 +1827,7 @@ module dividers() {
     wall_height = box_height - base_height;
     inner_width = box_width - wall_thickness * 2;
     inner_depth = box_depth - wall_thickness * 2;
-    divider_height = wall_height - floor_thickness - stacking_lip_height;
+    divider_height = wall_height - floor_thickness - gf_lip_total_height;
     
     // X dividers (vertical walls along Y axis)
     if (dividers_x > 0) {

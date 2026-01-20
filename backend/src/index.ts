@@ -35,6 +35,19 @@ if (process.env.NODE_ENV === 'production') {
   const frontendPath = path.join(process.cwd(), 'public');
   console.log(`Serving frontend from: ${frontendPath}`);
   app.use(express.static(frontendPath));
+  
+  // Serve sitemap.xml with correct content type
+  app.get('/sitemap.xml', (_req, res) => {
+    const sitemapPath = path.join(frontendPath, 'sitemap.xml');
+    res.type('application/xml');
+    res.sendFile(sitemapPath, (err) => {
+      if (err) {
+        console.error('Error serving sitemap.xml:', err);
+        res.status(404).send('Sitemap not found');
+      }
+    });
+  });
+  
   app.get('*', (_req, res) => {
     const indexPath = path.join(frontendPath, 'index.html');
     res.sendFile(indexPath, (err) => {
