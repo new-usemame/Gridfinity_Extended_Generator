@@ -29,7 +29,7 @@ export function PreviewCanvas({
   baseplateConfig
 }: PreviewCanvasProps) {
   const [boxZOffset, setBoxZOffset] = useState(0); // mm offset for box position
-  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Reset offset when switching views
@@ -39,35 +39,53 @@ export function PreviewCanvas({
     }
   }, [isCombinedView]);
 
-  // Handle window resize to reposition Position Control
+  // Track container size using ResizeObserver
   useEffect(() => {
-    const handleResize = () => {
-      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    if (!containerRef.current) return;
+
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setContainerSize({ width: rect.width, height: rect.height });
+      }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    // Initial size
+    updateSize();
+
+    // Use ResizeObserver to track container size changes
+    const resizeObserver = new ResizeObserver(() => {
+      updateSize();
+    });
+
+    resizeObserver.observe(containerRef.current);
+
+    // Also listen to window resize as fallback
+    window.addEventListener('resize', updateSize);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateSize);
+    };
   }, []);
 
   const hasModel = isCombinedView 
     ? (boxStlUrl && baseplateStlUrl)
     : stlUrl;
 
-  // Calculate Position Control position based on window size
+  // Calculate Position Control position based on container size
   // Position it in the top-right, but move it if there's not enough space
   const positionControlStyle: React.CSSProperties = {};
   const controlWidth = 256; // w-64 = 16rem = 256px
   const controlHeight = 150; // Approximate height
   const padding = 16; // 1rem = 16px
-  const sidebarWidth = 384; // w-96 = 24rem = 384px
   const exportButtonsHeight = 200; // Approximate height of export buttons area at bottom
   
-  // Check if there's enough space on the right side
-  // Account for sidebar and padding
-  const availableWidth = windowSize.width - sidebarWidth - padding * 2;
-  // Account for header, export buttons, and padding
-  const availableHeight = windowSize.height - exportButtonsHeight - padding * 2;
+  // Use container dimensions instead of window dimensions
+  const availableWidth = containerSize.width;
+  const availableHeight = containerSize.height;
   
+  // Check if there's enough space on the right side
   if (availableWidth < controlWidth + padding * 2) {
     // Not enough horizontal space, position on left side instead
     positionControlStyle.right = 'auto';
@@ -77,6 +95,7 @@ export function PreviewCanvas({
     positionControlStyle.left = 'auto';
   }
   
+  // Check if there's enough vertical space
   if (availableHeight < controlHeight + padding * 2) {
     // Not enough vertical space, move down (but above export buttons)
     positionControlStyle.top = 'auto';
