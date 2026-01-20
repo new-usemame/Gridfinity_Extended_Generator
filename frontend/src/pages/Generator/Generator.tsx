@@ -34,8 +34,31 @@ export function Generator() {
 
   // Sync socket chamfer with foot chamfer when enabled
   // Always sync bottom corner radius between foot and socket
+  // Bidirectional sync between lip and foot chamfer controls
   const handleBoxConfigChange = useCallback((config: BoxConfig) => {
-    setBoxConfig(config);
+    setBoxConfig(prevConfig => {
+      // Detect which property changed and sync accordingly
+      const updates: Partial<BoxConfig> = { ...config };
+      
+      // Bidirectional sync: if lip chamfer changed, update foot chamfer
+      if (config.lipChamferAngle !== prevConfig.lipChamferAngle) {
+        updates.footChamferAngle = config.lipChamferAngle;
+      }
+      if (config.lipChamferHeight !== prevConfig.lipChamferHeight) {
+        updates.footChamferHeight = config.lipChamferHeight;
+      }
+      
+      // Bidirectional sync: if foot chamfer changed, update lip chamfer
+      if (config.footChamferAngle !== prevConfig.footChamferAngle) {
+        updates.lipChamferAngle = config.footChamferAngle;
+      }
+      if (config.footChamferHeight !== prevConfig.footChamferHeight) {
+        updates.lipChamferHeight = config.footChamferHeight;
+      }
+      
+      return { ...prevConfig, ...updates };
+    });
+    
     setBaseplateConfig(prev => {
       const updates: Partial<BaseplateConfig> = {
         socketBottomCornerRadius: config.footBottomCornerRadius,

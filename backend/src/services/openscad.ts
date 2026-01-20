@@ -1292,6 +1292,8 @@ foot_bottom_corner_radius = ${config.footBottomCornerRadius};
 grid_unit = ${config.gridSize};
 foot_chamfer_angle = ${config.footChamferAngle};
 foot_chamfer_height = ${config.footChamferHeight};
+lip_chamfer_angle = ${config.lipChamferAngle};
+lip_chamfer_height = ${config.lipChamferHeight};
 flat_base = "${config.flatBase}";
 efficient_floor = "${config.efficientFloor}";
 tapered_corner = "${config.taperedCorner}";
@@ -1313,15 +1315,21 @@ gf_corner_radius = 3.75;  // Standard Gridfinity corner radius
 clearance = 0.25;  // Gap from grid edge
 $fn = 32;
 
-// Gridfinity Extended lip constants (matching gridfinity_constants.scad)
+// Gridfinity Extended lip constants - user-controlled angle and height
 // Standard lip profile: lower taper → riser → upper taper → lip
-gf_lip_lower_taper_height = 0.7;    // 45° lower taper
-gf_lip_riser_height = 1.8;          // Vertical riser section
-gf_lip_upper_taper_height = 1.9;   // 45° upper taper
-gf_lip_height = 1.2;                // Top lip section
-gf_lip_total_height = 4.4;          // Total lip height (0.7 + 1.8 + 1.9 = 4.4, lip is part of upper taper)
-// For reduced lip: only upper taper (1.9mm)
-// For minimum lip: minimal chamfer (~1.2mm)
+// Proportions: lower taper ~16%, riser ~41%, upper taper ~43% of total (excluding lip)
+// Lip height is separate and fixed at 1.2mm
+gf_lip_riser_height = 1.8;          // Vertical riser section (fixed)
+gf_lip_height = 1.2;                // Top lip section (fixed)
+// Calculate taper heights proportionally from total height
+// Total taper height = lip_chamfer_height - riser_height - lip_height
+gf_lip_taper_total = lip_chamfer_height - gf_lip_riser_height - gf_lip_height;
+// Distribute taper heights: lower ~16%, upper ~43% (ratio 0.7:1.9 ≈ 0.27:0.73)
+gf_lip_lower_taper_height = gf_lip_taper_total * 0.27;
+gf_lip_upper_taper_height = gf_lip_taper_total * 0.73;
+gf_lip_total_height = lip_chamfer_height;  // Use user-controlled total height
+// Taper angle (same for both upper and lower tapers)
+gf_lip_taper_angle = lip_chamfer_angle;
 
 /* [Calculated] */
 box_width = width_units * grid_unit;
@@ -1620,7 +1628,7 @@ module wall_pattern_grid(width, height, depth, cell_size, spacing) {
 }
 
 // Gridfinity Extended lip cutout module
-// Creates proper tapered lip structure for 3D printing (all tapers at 45°)
+// Creates proper tapered lip structure for 3D printing (user-controlled angle)
 // The lip is cut from the top of the wall to create the stacking feature
 module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
     // Calculate inner dimensions
@@ -1668,9 +1676,9 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
                 inner_wall_radius
             );
             
-            // Upper taper section: 45° taper from inner_wall_radius outward
-            // At 45°, the inset equals the height
-            taper_inset = upper_taper_height; // 45°: tan(45°) = 1
+            // Upper taper section: user-controlled angle taper from inner_wall_radius outward
+            // Calculate inset from angle: inset = height / tan(angle)
+            taper_inset = upper_taper_height / tan(gf_lip_taper_angle);
             translate([0, 0, lower_taper_z])
             hull() {
                 // Bottom of taper: inner wall radius
@@ -1703,15 +1711,16 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
         upper_taper_height = gf_lip_upper_taper_height;
         lip_height = gf_lip_height;
         
+        // Calculate the upper taper inset from angle: inset = height / tan(angle)
+        upper_taper_inset = upper_taper_height / tan(gf_lip_taper_angle);
         // Calculate the radius at the top of the upper taper (where lip starts)
-        // This is the outer radius minus the upper taper height (45°: inset = height)
-        lip_top_radius = max(0, outer_radius - upper_taper_height);
+        // This is the outer radius minus the upper taper inset
+        lip_top_radius = max(0, outer_radius - upper_taper_inset);
         
         translate([0, 0, wall_height - gf_lip_total_height])
         union() {
-            // Upper taper + lip section: 45° taper expanding outward
+            // Upper taper + lip section: user-controlled angle taper expanding outward
             // This creates the main lip recess that boxes stack into
-            upper_taper_inset = upper_taper_height; // 45°: tan(45°) = 1
             translate([0, 0, lower_taper_height + riser_height])
             hull() {
                 // Bottom of upper taper: starts at inner_wall_radius
@@ -1749,9 +1758,10 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
                 inner_wall_radius
             );
             
-            // Lower taper section: 45° taper from inner_wall_radius outward
+            // Lower taper section: user-controlled angle taper from inner_wall_radius outward
             // This creates the support structure transition
-            lower_taper_inset = lower_taper_height; // 45°: tan(45°) = 1
+            // Calculate inset from angle: inset = height / tan(angle)
+            lower_taper_inset = lower_taper_height / tan(gf_lip_taper_angle);
             translate([0, 0, 0])
             hull() {
                 // Bottom: inner wall radius

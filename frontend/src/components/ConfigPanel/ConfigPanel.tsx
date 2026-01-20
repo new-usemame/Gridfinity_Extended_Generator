@@ -165,6 +165,34 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
         </div>
         
         <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+          <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">LIP CHAMFER</h4>
+          <SliderInput
+            label="Lip Angle"
+            value={config.lipChamferAngle}
+            min={30}
+            max={75}
+            step={1}
+            unit="°"
+            onChange={(v) => update('lipChamferAngle', v)}
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-500">
+            45° = standard. Higher = steeper taper. Lower = gentler taper.
+          </p>
+          <SliderInput
+            label="Chamfer Height"
+            value={config.lipChamferHeight}
+            min={2}
+            max={8}
+            step={0.25}
+            unit="mm"
+            onChange={(v) => update('lipChamferHeight', v)}
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-500">
+            Total height of the lip chamfer. Standard: 4.4mm.
+          </p>
+        </div>
+        
+        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
           <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">FOOT CORNER RADIUS</h4>
           <SliderInput
             label="Bottom Corner Radius"

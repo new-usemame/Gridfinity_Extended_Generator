@@ -63,6 +63,10 @@ export interface BoxConfig {
   // Foot chamfer - simple angle and height controls
   footChamferAngle: number;   // Angle in degrees (45 = standard, higher = steeper)
   footChamferHeight: number;  // Total height of the chamfered foot in mm
+  
+  // Lip chamfer - angle and height controls (syncs with foot chamfer)
+  lipChamferAngle: number;   // Angle in degrees (45 = standard, higher = steeper)
+  lipChamferHeight: number;  // Total height of the lip chamfer in mm
 }
 
 // Baseplate Configuration
@@ -170,7 +174,9 @@ export const defaultBoxConfig: BoxConfig = {
   footBottomCornerRadius: 0.5,  // Minimum safe value for bottom corner radius
   gridSize: 42,
   footChamferAngle: 45,      // 45 degrees = standard Gridfinity
-  footChamferHeight: 4.75    // Standard total height: 0.8 + 1.8 + 2.15 = 4.75mm
+  footChamferHeight: 4.75,   // Standard total height: 0.8 + 1.8 + 2.15 = 4.75mm
+  lipChamferAngle: 45,       // 45 degrees = standard Gridfinity (matches foot)
+  lipChamferHeight: 4.4      // Standard total height: 0.7 + 1.8 + 1.9 = 4.4mm
 };
 
 export const defaultBaseplateConfig: BaseplateConfig = {
