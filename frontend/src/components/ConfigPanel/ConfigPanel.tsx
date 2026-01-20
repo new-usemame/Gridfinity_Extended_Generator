@@ -102,6 +102,18 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           onChange={(v) => update('floorThickness', v)}
         />
         <SliderInput
+          label="Inner Wall-Floor Fillet"
+          value={config.innerWallFloorRadius}
+          min={0}
+          max={5}
+          step={0.25}
+          unit="mm"
+          onChange={(v) => update('innerWallFloorRadius', v)}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-500">
+          Rounds the inside corner where the inner wall meets the inner floor. Makes it easier to clean and remove items from corners.
+        </p>
+        <SliderInput
           label="Corner Radius"
           value={config.cornerRadius}
           min={0}

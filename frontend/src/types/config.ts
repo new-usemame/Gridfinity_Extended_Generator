@@ -8,6 +8,7 @@ export interface BoxConfig {
   // Wall and floor
   wallThickness: number;
   floorThickness: number;
+  innerWallFloorRadius: number;  // Radius for rounding the edge where inner wall meets inner floor
   
   // Magnets
   magnetEnabled: boolean;
@@ -150,6 +151,7 @@ export const defaultBoxConfig: BoxConfig = {
   height: 3,
   wallThickness: 0.95,
   floorThickness: 0.7,
+  innerWallFloorRadius: 0,  // Default 0 = no rounding (disabled by default)
   magnetEnabled: false,
   magnetDiameter: 6.5,
   magnetDepth: 2.4,

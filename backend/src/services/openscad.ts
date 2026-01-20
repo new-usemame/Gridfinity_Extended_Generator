@@ -1403,6 +1403,7 @@ tapered_corner = "${config.taperedCorner}";
 tapered_corner_size = ${config.taperedCornerSize};
 wall_pattern = "${config.wallPattern}";
 wall_pattern_spacing = ${config.wallPatternSpacing};
+inner_wall_floor_radius = ${config.innerWallFloorRadius};
 
 /* [Constants] */
 // SIMPLE TAPER foot - ONE taper from small bottom to larger top
@@ -1469,6 +1470,83 @@ module rounded_rect(width, depth, height, radius) {
             cylinder(r = r, h = height);
             translate([width - r, depth - r, 0])
             cylinder(r = r, h = height);
+        }
+    }
+}
+
+// Rounded cavity with fillet at bottom edge where walls meet floor
+module rounded_cavity_with_floor_fillet(width, depth, height, corner_radius, floor_fillet_radius) {
+    // Clamp floor fillet radius to prevent exceeding available space
+    max_fillet = min(wall_thickness, floor_thickness);
+    fillet_r = min(floor_fillet_radius, max_fillet);
+    
+    if (fillet_r <= 0) {
+        // No fillet - use standard rounded_rect
+        rounded_rect(width, depth, height, corner_radius);
+    } else {
+        // Create cavity with rounded vertical corners and fillet at bottom edge
+        inner_corner_r = corner_radius > 0 ? min(corner_radius, min(width, depth) / 2) : 0;
+        
+        hull() {
+            // Bottom layer: spheres at corners and along edges for fillet
+            // Corner spheres
+            if (inner_corner_r > 0) {
+                translate([inner_corner_r, inner_corner_r, fillet_r])
+                sphere(r = fillet_r, $fn = $fn);
+                translate([width - inner_corner_r, inner_corner_r, fillet_r])
+                sphere(r = fillet_r, $fn = $fn);
+                translate([inner_corner_r, depth - inner_corner_r, fillet_r])
+                sphere(r = fillet_r, $fn = $fn);
+                translate([width - inner_corner_r, depth - inner_corner_r, fillet_r])
+                sphere(r = fillet_r, $fn = $fn);
+            } else {
+                translate([fillet_r, fillet_r, fillet_r])
+                sphere(r = fillet_r, $fn = $fn);
+                translate([width - fillet_r, fillet_r, fillet_r])
+                sphere(r = fillet_r, $fn = $fn);
+                translate([fillet_r, depth - fillet_r, fillet_r])
+                sphere(r = fillet_r, $fn = $fn);
+                translate([width - fillet_r, depth - fillet_r, fillet_r])
+                sphere(r = fillet_r, $fn = $fn);
+            }
+            
+            // Edge spheres for smooth fillet along edges
+            edge_spacing = max(1, fillet_r);
+            // Front edge
+            for (x = [max(fillet_r, inner_corner_r) : edge_spacing : width - max(fillet_r, inner_corner_r)]) {
+                translate([x, max(fillet_r, inner_corner_r), fillet_r])
+                sphere(r = fillet_r, $fn = $fn);
+            }
+            // Back edge
+            for (x = [max(fillet_r, inner_corner_r) : edge_spacing : width - max(fillet_r, inner_corner_r)]) {
+                translate([x, depth - max(fillet_r, inner_corner_r), fillet_r])
+                sphere(r = fillet_r, $fn = $fn);
+            }
+            // Left edge
+            for (y = [max(fillet_r, inner_corner_r) : edge_spacing : depth - max(fillet_r, inner_corner_r)]) {
+                translate([max(fillet_r, inner_corner_r), y, fillet_r])
+                sphere(r = fillet_r, $fn = $fn);
+            }
+            // Right edge
+            for (y = [max(fillet_r, inner_corner_r) : edge_spacing : depth - max(fillet_r, inner_corner_r)]) {
+                translate([width - max(fillet_r, inner_corner_r), y, fillet_r])
+                sphere(r = fillet_r, $fn = $fn);
+            }
+            
+            // Top layer: standard rounded corners (no fillet)
+            if (inner_corner_r > 0) {
+                translate([inner_corner_r, inner_corner_r, height])
+                cylinder(r = inner_corner_r, h = 0.01, $fn = $fn);
+                translate([width - inner_corner_r, inner_corner_r, height])
+                cylinder(r = inner_corner_r, h = 0.01, $fn = $fn);
+                translate([inner_corner_r, depth - inner_corner_r, height])
+                cylinder(r = inner_corner_r, h = 0.01, $fn = $fn);
+                translate([width - inner_corner_r, depth - inner_corner_r, height])
+                cylinder(r = inner_corner_r, h = 0.01, $fn = $fn);
+            } else {
+                translate([0, 0, height])
+                cube([width, depth, 0.01]);
+            }
         }
     }
 }
@@ -1616,13 +1694,14 @@ module gridfinity_walls() {
             rounded_rect(box_width, box_depth, wall_height, outer_radius);
         }
         
-        // Inner cavity with rounded corners
+        // Inner cavity with rounded corners and optional floor fillet
         translate([wall_thickness, wall_thickness, floor_thickness])
-        rounded_rect(
+        rounded_cavity_with_floor_fillet(
             box_width - wall_thickness * 2,
             box_depth - wall_thickness * 2,
             wall_height,
-            inner_radius
+            inner_radius,
+            inner_wall_floor_radius
         );
         
         // Stacking lip cutout at top
