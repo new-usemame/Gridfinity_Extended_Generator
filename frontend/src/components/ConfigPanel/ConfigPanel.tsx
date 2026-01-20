@@ -718,7 +718,15 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
               <ToggleInput
                 label="Enable Interlocking Edges"
                 value={config.connectorEnabled}
-                onChange={(v) => update('connectorEnabled', v)}
+                onChange={(v) => {
+                  const updates: Partial<BaseplateConfig> = { connectorEnabled: v };
+                  // When enabling, preselect the first edge pattern (wineglass)
+                  if (v && !config.edgePattern) {
+                    updates.edgePattern = 'wineglass';
+                    updates.toothDepth = 6; // Default tooth depth for wineglass
+                  }
+                  onChange({ ...config, ...updates });
+                }}
               />
               <p className="text-xs text-slate-500 dark:text-slate-500">
                 Add male/female interlocking edges between segments - snaps together without separate connectors.

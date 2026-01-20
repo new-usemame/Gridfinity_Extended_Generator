@@ -212,8 +212,8 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   printerBedDepth: 220,
   connectorEnabled: true,      // Enable interlocking edges by default when splitting
   connectorTolerance: 0.3,     // Standard FDM tolerance
-  edgePattern: 'dovetail',     // Default to classic dovetail pattern
-  toothDepth: 3,               // 3mm tooth depth
+  edgePattern: 'wineglass',    // Default to first option (Wine Glass pattern)
+  toothDepth: 6,               // 6mm tooth depth (default for wineglass)
   toothWidth: 6,               // 6mm tooth width at base
   concaveDepth: 50,            // 50% concave swoop depth (0=shallow, 100=deep)
   edgeOverrides: []            // Empty - use automatic male/female assignment
