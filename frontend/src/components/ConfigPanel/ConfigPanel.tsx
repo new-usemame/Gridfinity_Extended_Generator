@@ -124,7 +124,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
       </CollapsibleSection>
 
       {/* Feet Options Section */}
-      <CollapsibleSection title="Feet (Base)" icon="🦶">
+      <CollapsibleSection title="Feet (Base)" icon="👣">
         <SelectInput
           label="Base Style"
           value={config.flatBase}
