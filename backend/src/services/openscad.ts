@@ -1634,8 +1634,8 @@ module wall_pattern_grid(width, height, depth, cell_size, spacing) {
 }
 
 // Custom foot-matched lip cutout module
-// Creates a simple chamfer that exactly matches the foot chamfer geometry for perfect stacking
-// The lip is cut from the top of the wall to create the stacking feature
+// Creates a tapered shelf that extends INWARD into the cavity for the foot to sit on
+// The shelf angle and height match the foot chamfer for perfect stacking
 module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
     // Calculate inner dimensions
     inner_wall_radius = max(0, outer_radius - wall_thickness);
@@ -1646,29 +1646,24 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
         // No lip - flat top, no cutout needed
     } 
     else {
-        // Simple foot-matched chamfer for all stacking styles
-        // Uses foot_chamfer_angle and foot_chamfer_height directly to match foot geometry
+        // Foot-matched lip: creates an INWARD shelf that the foot sits ON
+        // The shelf extends INTO the cavity, keeping the wall solid
+        // Uses foot_chamfer_angle and foot_chamfer_height directly
         
-        // Calculate chamfer inset from foot geometry (same calculation as foot)
-        // This determines how far the recess expands outward to create the cavity
-        chamfer_inset = foot_chamfer_height / tan(foot_chamfer_angle);
+        // Calculate shelf inset from foot geometry (same calculation as foot)
+        // This is how much the shelf extends inward from the wall
+        shelf_inset = foot_chamfer_height / tan(foot_chamfer_angle);
         
-        // Foot dimensions at the top (where it will sit in the recess)
-        foot_full_size = grid_unit - clearance * 2;  // 41.5mm at top
-        foot_radius = feet_corner_radius > 0 ? feet_corner_radius : gf_corner_radius;
-        
-        // The recess creates a cavity for the foot to fit into
-        // The foot expands from smaller bottom to larger top at foot_chamfer_angle
-        // The recess should match this geometry: larger at bottom, smaller at top (inverse of foot)
-        // At the top of the recess, we need space for the foot's top size
-        // The recess expands outward as we go down to create clearance
+        // The lip creates a tapered shelf that extends INTO the box cavity
+        // Bottom of shelf: flush with inner wall (matches main cavity)
+        // Top of shelf: contracted inward by shelf_inset (creates the ledge)
+        // The foot sits ON this ledge, with its taper matching the shelf's taper
         
         translate([0, 0, wall_height - foot_chamfer_height])
         hull() {
-            // Top of recess: inner wall dimensions (where foot's top will sit)
-            // The foot's top is foot_full_size, positioned with clearance offset
-            // The inner dimensions should provide adequate clearance
-            translate([wall_thickness, wall_thickness, foot_chamfer_height])
+            // Bottom of lip area: matches inner cavity dimensions
+            // This ensures smooth transition from main cavity to lip
+            translate([wall_thickness, wall_thickness, 0])
             rounded_rect(
                 inner_width,
                 inner_depth,
@@ -1676,15 +1671,15 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
                 inner_wall_radius
             );
             
-            // Bottom of recess: expanded outward by chamfer_inset
-            // This creates the tapered cavity that matches the foot's expansion profile
-            // The expansion matches the foot's angle and height for perfect fit
-            translate([wall_thickness - chamfer_inset, wall_thickness - chamfer_inset, 0])
+            // Top of lip area: contracted INWARD by shelf_inset
+            // This creates the shelf/ledge that the foot sits on
+            // The taper matches the foot's expansion profile
+            translate([wall_thickness + shelf_inset, wall_thickness + shelf_inset, foot_chamfer_height])
             rounded_rect(
-                inner_width + chamfer_inset * 2,
-                inner_depth + chamfer_inset * 2,
+                max(1, inner_width - shelf_inset * 2),
+                max(1, inner_depth - shelf_inset * 2),
                 0.01,
-                max(0, inner_wall_radius + chamfer_inset)
+                max(0.5, inner_wall_radius - shelf_inset)
             );
         }
     }
