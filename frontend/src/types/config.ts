@@ -162,7 +162,7 @@ export const defaultBoxConfig: BoxConfig = {
   labelWidth: 100,
   dividersX: 0,
   dividersY: 0,
-  lipStyle: 'standard',
+  lipStyle: 'perfect_fit',
   flatBase: 'off',
   efficientFloor: 'off',
   taperedCorner: 'none',

@@ -1645,45 +1645,51 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
         // No lip - flat top, no cutout needed
     }
     else if (lip_style == "perfect_fit") {
-        // Perfect Fit Lip: creates an inward-tapered recess that perfectly matches foot geometry
-        // The foot expands OUTWARD from small bottom to large top
-        // The lip recess tapers INWARD from large bottom to small top (inverse of foot)
-        // This creates a perfect fit where the foot's top slots into the lip's recess
+        // Perfect Fit Lip: chamfers the OUTER TOP EDGE at the same angle and height as the foot
+        // The foot expands OUTWARD from small bottom to large top at foot_chamfer_angle
+        // The lip chamfers the OUTER edge INWARD at the same angle and height
+        // This creates a perfect match where the foot's top edge fits against the chamfered lip edge
         
-        // Calculate taper inset from foot geometry (same calculation as foot)
-        // foot_bottom_inset is how much the foot expands outward from bottom to top
-        // The lip recess should taper inward by the same amount
-        lip_taper_inset = foot_chamfer_height / tan(foot_chamfer_angle);
+        // Calculate chamfer inset from foot geometry (same calculation as foot)
+        // This determines how much the outer edge tapers inward at the top
+        chamfer_inset = foot_chamfer_height / tan(foot_chamfer_angle);
         
-        // Foot dimensions for reference
-        foot_full_size = grid_unit - clearance * 2;  // 41.5mm at top (where foot sits)
-        
-        // Create an inward-tapered recess that the foot slots into
-        // Bottom of recess: matches inner wall (smooth transition from main cavity)
-        // Top of recess: tapers inward by lip_taper_inset (creates the shelf/ledge)
-        // The foot's top (foot_full_size) sits on this tapered ledge
-        // The taper angle and height exactly match the foot's expansion profile
+        // Create a tapered cutout that removes the outer top corner
+        // This creates a slanted/chamfered top edge on the outer wall
+        // The chamfer matches the foot's expansion profile exactly
         translate([0, 0, wall_height - foot_chamfer_height])
-        hull() {
-            // Bottom of lip recess: flush with inner wall (matches main cavity)
-            // This is the "from" point - where the recess starts
-            translate([wall_thickness, wall_thickness, 0])
+        difference() {
+            // Tapered hull: creates the shape to subtract
+            // Wide at bottom (just outside wall), narrow at top (inset by chamfer_inset)
+            hull() {
+                // Bottom: extends slightly beyond outer wall (ensures full cut)
+                translate([-0.1, -0.1, -0.1])
+                rounded_rect(
+                    box_width + 0.2,
+                    box_depth + 0.2,
+                    0.01,
+                    outer_radius + 0.1
+                );
+                
+                // Top: inset by chamfer_inset - this creates the slanted cut
+                // The angle matches foot_chamfer_angle exactly
+                translate([chamfer_inset, chamfer_inset, foot_chamfer_height + 0.1])
+                rounded_rect(
+                    box_width - chamfer_inset * 2,
+                    box_depth - chamfer_inset * 2,
+                    0.01,
+                    max(0.5, outer_radius - chamfer_inset)
+                );
+            }
+            
+            // Protect inner cavity - only cut the outer wall, not the interior
+            // This ensures the chamfer only affects the outer top edge
+            translate([wall_thickness, wall_thickness, -0.2])
             rounded_rect(
                 inner_width,
                 inner_depth,
-                0.01,
+                foot_chamfer_height + 0.4,
                 inner_wall_radius
-            );
-            
-            // Top of lip recess: tapers INWARD by lip_taper_inset
-            // This is the "to" point - creates the slanted shelf
-            // The foot's top will sit on this tapered surface
-            translate([wall_thickness + lip_taper_inset, wall_thickness + lip_taper_inset, foot_chamfer_height])
-            rounded_rect(
-                max(1, inner_width - lip_taper_inset * 2),
-                max(1, inner_depth - lip_taper_inset * 2),
-                0.01,
-                max(0.5, inner_wall_radius - lip_taper_inset)
             );
         }
     }
