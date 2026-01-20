@@ -113,6 +113,7 @@ export interface BaseplateConfig {
   // Socket chamfer - simple angle and height controls (should match foot for proper fit)
   socketChamferAngle: number;   // Angle in degrees (should match footChamferAngle)
   socketChamferHeight: number;  // Total height of socket in mm (should match footChamferHeight)
+  socketBottomCornerRadius: number;  // Corner radius of the bottom of the socket (syncs with foot bottom corner radius)
   syncSocketWithFoot: boolean;  // Auto-sync socket dimensions with foot dimensions
   
   // Printer bed splitting - split large baseplates into printable segments
@@ -196,6 +197,7 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   gridSize: 42,
   socketChamferAngle: 45,      // Should match footChamferAngle for proper fit
   socketChamferHeight: 4.75,   // Should match footChamferHeight for proper fit
+  socketBottomCornerRadius: 0.5,  // Matches foot bottom corner radius default
   syncSocketWithFoot: true,    // Auto-sync with foot by default
   splitEnabled: false,
   printerBedWidth: 220,        // Common printer bed size (Ender 3, Prusa, etc.)

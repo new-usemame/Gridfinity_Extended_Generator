@@ -1025,6 +1025,18 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
           <p className="text-xs text-slate-500 dark:text-slate-500">
             Should match foot chamfer height. Standard: 4.75mm.
           </p>
+          <SliderInput
+            label="Bottom Corner Radius"
+            value={config.socketBottomCornerRadius}
+            min={0}
+            max={5}
+            step={0.25}
+            unit="mm"
+            onChange={(v) => update('socketBottomCornerRadius', v)}
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-500">
+            Corner radius of the bottom of the socket where the foot intersects. Automatically syncs with the foot's bottom corner radius.
+          </p>
         </div>
       </CollapsibleSection>
     </div>

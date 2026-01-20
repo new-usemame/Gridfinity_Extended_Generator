@@ -23,6 +23,7 @@ export function Generator() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [pendingSave, setPendingSave] = useState(false);
+  const [pendingSaveAfterAuth, setPendingSaveAfterAuth] = useState(false);
   const [savedPreferences, setSavedPreferences] = useState<any[]>([]);
   const savedConfigsDropdownRef = useRef<SavedConfigsDropdownRef>(null);
   const [isJsonDropdownOpen, setIsJsonDropdownOpen] = useState(false);
@@ -32,28 +33,36 @@ export function Generator() {
   const [jsonDropdownPosition, setJsonDropdownPosition] = useState({ top: 0, right: 0 });
 
   // Sync socket chamfer with foot chamfer when enabled
+  // Always sync bottom corner radius between foot and socket
   const handleBoxConfigChange = useCallback((config: BoxConfig) => {
     setBoxConfig(config);
-    if (baseplateConfig.syncSocketWithFoot) {
-      setBaseplateConfig({
-        ...baseplateConfig,
-        socketChamferAngle: config.footChamferAngle,
-        socketChamferHeight: config.footChamferHeight,
-      });
-    }
-  }, [baseplateConfig]);
+    setBaseplateConfig(prev => {
+      const updates: Partial<BaseplateConfig> = {
+        socketBottomCornerRadius: config.footBottomCornerRadius,
+      };
+      // Sync socket chamfer with foot chamfer when enabled
+      if (prev.syncSocketWithFoot) {
+        updates.socketChamferAngle = config.footChamferAngle;
+        updates.socketChamferHeight = config.footChamferHeight;
+      }
+      return { ...prev, ...updates };
+    });
+  }, []);
 
   const handleBaseplateConfigChange = useCallback((config: BaseplateConfig) => {
     setBaseplateConfig(config);
-    // If sync is enabled, also update box config to match (for consistency)
-    if (config.syncSocketWithFoot) {
-      setBoxConfig({
-        ...boxConfig,
-        footChamferAngle: config.socketChamferAngle,
-        footChamferHeight: config.socketChamferHeight,
-      });
-    }
-  }, [boxConfig]);
+    setBoxConfig(prev => {
+      const updates: Partial<BoxConfig> = {
+        footBottomCornerRadius: config.socketBottomCornerRadius,
+      };
+      // If sync is enabled, also update box config to match (for consistency)
+      if (config.syncSocketWithFoot) {
+        updates.footChamferAngle = config.socketChamferAngle;
+        updates.footChamferHeight = config.socketChamferHeight;
+      }
+      return { ...prev, ...updates };
+    });
+  }, []);
   const [boxResult, setBoxResult] = useState<GenerationResult | null>(null);
   const [baseplateResult, setBaseplateResult] = useState<GenerationResult | null>(null);
   const [multiSegmentResult, setMultiSegmentResult] = useState<MultiSegmentResult | null>(null);
@@ -147,6 +156,14 @@ export function Generator() {
       setShowSaveDialog(true);
     }
   }, [user, token, pendingSave]);
+
+  // Open save dialog after successful login when triggered from download
+  useEffect(() => {
+    if (user && token && pendingSaveAfterAuth) {
+      setPendingSaveAfterAuth(false);
+      setShowSaveDialog(true);
+    }
+  }, [user, token, pendingSaveAfterAuth]);
 
   // Handle saving preference
   const handleSave = async () => {
@@ -360,7 +377,7 @@ export function Generator() {
   }, [isJsonDropdownOpen]);
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-slate-950 grid-pattern">
+    <div className="h-screen flex flex-col overflow-hidden bg-white dark:bg-slate-950 grid-pattern">
       {/* Generator Controls Header */}
       <header className="flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm relative z-50">
         <div className="px-4 py-3 flex items-center justify-between">
@@ -531,6 +548,7 @@ export function Generator() {
         onClose={() => {
           setIsAuthModalOpen(false);
           setPendingSave(false);
+          // If user just signed in and we have pending save after auth, it will be handled by useEffect
         }} 
       />
 
@@ -626,7 +644,7 @@ export function Generator() {
         </aside>
 
         {/* Preview Area */}
-        <main className="flex-1 flex flex-col min-h-0 pb-56">
+        <main className="flex-1 flex flex-col min-h-0">
           {/* Error Message */}
           {error && (
             <div className="m-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-xl text-red-700 dark:text-red-400 text-sm">
@@ -662,6 +680,13 @@ export function Generator() {
               stlUrl={boxResult.stlUrl}
               scadContent={boxResult.scadContent}
               filename={boxResult.filename}
+              isConfigSaved={!!matchingConfig}
+              user={user}
+              onSaveRequest={handleSaveClick}
+              onAuthRequest={() => {
+                setPendingSaveAfterAuth(true);
+                setIsAuthModalOpen(true);
+              }}
             />
           </div>
         )}
@@ -672,6 +697,13 @@ export function Generator() {
               result={multiSegmentResult}
               splitInfo={multiSegmentResult.splitInfo}
               baseplateConfig={baseplateConfig}
+              isConfigSaved={!!matchingConfig}
+              user={user}
+              onSaveRequest={handleSaveClick}
+              onAuthRequest={() => {
+                setPendingSaveAfterAuth(true);
+                setIsAuthModalOpen(true);
+              }}
             />
           </div>
         ) : baseplateResult && (
@@ -681,6 +713,13 @@ export function Generator() {
               stlUrl={baseplateResult.stlUrl}
               scadContent={baseplateResult.scadContent}
               filename={baseplateResult.filename}
+              isConfigSaved={!!matchingConfig}
+              user={user}
+              onSaveRequest={handleSaveClick}
+              onAuthRequest={() => {
+                setPendingSaveAfterAuth(true);
+                setIsAuthModalOpen(true);
+              }}
             />
           </div>
         )}

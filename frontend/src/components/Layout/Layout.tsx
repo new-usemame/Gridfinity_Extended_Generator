@@ -46,6 +46,7 @@ export function Layout({ children }: LayoutProps) {
         {children}
       </main>
 
+      {!isGeneratorPage && (
       <footer className="border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 py-8 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -114,6 +115,7 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </footer>
+      )}
     </div>
   );
 }

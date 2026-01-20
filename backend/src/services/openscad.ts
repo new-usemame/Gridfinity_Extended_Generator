@@ -149,6 +149,7 @@ grid_unit = ${gridSize};
 corner_radius = ${config.cornerRadius};
 socket_chamfer_angle = ${config.socketChamferAngle};
 socket_chamfer_height = ${config.socketChamferHeight};
+socket_bottom_corner_radius = ${config.socketBottomCornerRadius};
 edge_pattern = "${edgePattern}";
 style = "${config.style}";
 magnet_diameter = ${config.magnetDiameter};
@@ -328,7 +329,7 @@ module grid_socket() {
     socket_corner_radius = 3.75;
     bottom_width = socket_width - socket_bottom_inset * 2;
     bottom_depth = socket_depth_size - socket_bottom_inset * 2;
-    bottom_radius = max(0.5, socket_corner_radius - socket_bottom_inset);
+    bottom_radius = socket_bottom_corner_radius;
     
     translate([clearance, clearance, -0.1]) {
         hull() {
@@ -927,6 +928,7 @@ corner_radius = ${config.cornerRadius};
 grid_unit = ${gridSize};
 socket_chamfer_angle = ${config.socketChamferAngle};
 socket_chamfer_height = ${config.socketChamferHeight};
+socket_bottom_corner_radius = ${config.socketBottomCornerRadius};
 edge_pattern = "${edgePattern}";
 
 /* [Edge Settings] */
@@ -1020,7 +1022,7 @@ module grid_socket() {
     
     bottom_width = socket_width - socket_bottom_inset * 2;
     bottom_depth = socket_depth_size - socket_bottom_inset * 2;
-    bottom_radius = max(0.5, socket_corner_radius - socket_bottom_inset);
+    bottom_radius = socket_bottom_corner_radius;
     
     translate([clearance, clearance, -0.1]) {
         hull() {
@@ -1931,6 +1933,7 @@ corner_radius = ${config.cornerRadius};
 grid_unit = ${config.gridSize};
 socket_chamfer_angle = ${config.socketChamferAngle};
 socket_chamfer_height = ${config.socketChamferHeight};
+socket_bottom_corner_radius = ${config.socketBottomCornerRadius};
 
 /* [Constants - Official Gridfinity Spec] */
 clearance = 0.25;  // Gap between bin and socket walls
@@ -2073,7 +2076,7 @@ module grid_socket(cell_width = grid_unit, cell_depth = grid_unit) {
     // socket_bottom_inset is pre-calculated: height / tan(angle)
     bottom_width = socket_width - socket_bottom_inset * 2;
     bottom_depth = socket_depth_size - socket_bottom_inset * 2;
-    bottom_radius = max(0.5, socket_corner_radius - socket_bottom_inset);
+    bottom_radius = socket_bottom_corner_radius;
     
     // The socket is an open hole with ONE simple taper
     translate([clearance, clearance, -0.1]) {
