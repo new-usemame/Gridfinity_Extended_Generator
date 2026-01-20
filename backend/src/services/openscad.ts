@@ -1645,49 +1645,45 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
         // No lip - flat top, no cutout needed
     }
     else if (lip_style == "perfect_fit") {
-        // Perfect Fit Lip: chamfers the OUTER TOP EDGE of the wall to perfectly match foot geometry
-        // The outer wall tapers inward at the same angle and height as the foot expands outward
-        // This creates a perfect fit for stacking
+        // Perfect Fit Lip: creates an inward-tapered recess that perfectly matches foot geometry
+        // The foot expands OUTWARD from small bottom to large top
+        // The lip recess tapers INWARD from large bottom to small top (inverse of foot)
+        // This creates a perfect fit where the foot's top slots into the lip's recess
         
-        // Calculate chamfer inset from foot geometry (same calculation as foot)
-        // This is how much the outer edge tapers inward at the top
-        chamfer_inset = foot_chamfer_height / tan(foot_chamfer_angle);
+        // Calculate taper inset from foot geometry (same calculation as foot)
+        // foot_bottom_inset is how much the foot expands outward from bottom to top
+        // The lip recess should taper inward by the same amount
+        lip_taper_inset = foot_chamfer_height / tan(foot_chamfer_angle);
         
-        // Chamfer the outer wall at the top
-        // Creates a tapered shape that, when subtracted, removes the outer corner
-        // Result: outer wall slopes inward from (wall_height - foot_chamfer_height) to wall_height
-        // The chamfer angle and height exactly match the foot's expansion profile
+        // Foot dimensions for reference
+        foot_full_size = grid_unit - clearance * 2;  // 41.5mm at top (where foot sits)
+        
+        // Create an inward-tapered recess that the foot slots into
+        // Bottom of recess: matches inner wall (smooth transition from main cavity)
+        // Top of recess: tapers inward by lip_taper_inset (creates the shelf/ledge)
+        // The foot's top (foot_full_size) sits on this tapered ledge
+        // The taper angle and height exactly match the foot's expansion profile
         translate([0, 0, wall_height - foot_chamfer_height])
-        difference() {
-            // Tapered hull: wide at bottom (outside wall), narrow at top (inside wall)
-            hull() {
-                // Bottom: just outside the outer wall (removes nothing here)
-                translate([-0.1, -0.1, 0])
-                rounded_rect(
-                    box_width + 0.2,
-                    box_depth + 0.2,
-                    0.01,
-                    outer_radius + 0.1
-                );
-                
-                // Top: inset by chamfer_inset (creates the chamfer)
-                // This matches the foot's expansion profile exactly
-                translate([chamfer_inset, chamfer_inset, foot_chamfer_height])
-                rounded_rect(
-                    box_width - chamfer_inset * 2,
-                    box_depth - chamfer_inset * 2,
-                    0.01,
-                    max(0.5, outer_radius - chamfer_inset)
-                );
-            }
-            
-            // Protect inner cavity - only cut the outer wall, not the interior
-            translate([wall_thickness, wall_thickness, -0.1])
+        hull() {
+            // Bottom of lip recess: flush with inner wall (matches main cavity)
+            // This is the "from" point - where the recess starts
+            translate([wall_thickness, wall_thickness, 0])
             rounded_rect(
                 inner_width,
                 inner_depth,
-                foot_chamfer_height + 0.2,
+                0.01,
                 inner_wall_radius
+            );
+            
+            // Top of lip recess: tapers INWARD by lip_taper_inset
+            // This is the "to" point - creates the slanted shelf
+            // The foot's top will sit on this tapered surface
+            translate([wall_thickness + lip_taper_inset, wall_thickness + lip_taper_inset, foot_chamfer_height])
+            rounded_rect(
+                max(1, inner_width - lip_taper_inset * 2),
+                max(1, inner_depth - lip_taper_inset * 2),
+                0.01,
+                max(0.5, inner_wall_radius - lip_taper_inset)
             );
         }
     }
