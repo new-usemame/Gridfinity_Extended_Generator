@@ -8,8 +8,7 @@ export interface BoxConfig {
   // Wall and floor
   wallThickness: number;
   floorThickness: number;
-  innerEdgeBevel: number;  // Size of bevel on all inside edges (wall-floor, wall corners, etc.) in mm
-  innerEdgeBevelSegments: number;  // Number of segments for bevel smoothness (5-10, higher = smoother)
+  innerEdgeBevel: boolean;  // Bevel the floor-wall edge using the same radius and style as inner corners
   
   // Magnets
   magnetEnabled: boolean;
@@ -152,8 +151,7 @@ export const defaultBoxConfig: BoxConfig = {
   height: 3,
   wallThickness: 0.95,
   floorThickness: 0.7,
-  innerEdgeBevel: 0,  // Default 0 = no bevel (disabled by default)
-  innerEdgeBevelSegments: 8,  // Default 8 segments for smooth bevel
+  innerEdgeBevel: false,  // Default false = no bevel (disabled by default)
   magnetEnabled: false,
   magnetDiameter: 6.5,
   magnetDepth: 2.4,
@@ -436,14 +434,17 @@ export function normalizeBoxConfig(config: Partial<BoxConfig> | null): BoxConfig
   if (!config) {
     return defaultBoxConfig;
   }
-  // Migrate old parameter name to new one for backwards compatibility
+  // Migrate old parameter names to new one for backwards compatibility
   const migratedConfig: any = { ...config };
+  // Migrate innerWallFloorRadius (number) to innerEdgeBevel (boolean)
   if ('innerWallFloorRadius' in config && !('innerEdgeBevel' in config)) {
-    migratedConfig.innerEdgeBevel = (config as any).innerWallFloorRadius;
+    // If old value was > 0, enable bevel; otherwise disable
+    migratedConfig.innerEdgeBevel = (config as any).innerWallFloorRadius > 0;
     delete migratedConfig.innerWallFloorRadius;
   }
-  if (!('innerEdgeBevelSegments' in migratedConfig)) {
-    migratedConfig.innerEdgeBevelSegments = defaultBoxConfig.innerEdgeBevelSegments;
+  // Remove old innerEdgeBevelSegments if present (no longer needed)
+  if ('innerEdgeBevelSegments' in migratedConfig) {
+    delete migratedConfig.innerEdgeBevelSegments;
   }
   // Merge with defaults to ensure all fields are present
   return { ...defaultBoxConfig, ...migratedConfig };

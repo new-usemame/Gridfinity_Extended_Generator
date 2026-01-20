@@ -1404,7 +1404,6 @@ tapered_corner_size = ${config.taperedCornerSize};
 wall_pattern = "${config.wallPattern}";
 wall_pattern_spacing = ${config.wallPatternSpacing};
 inner_edge_bevel = ${config.innerEdgeBevel};
-inner_edge_bevel_segments = ${config.innerEdgeBevelSegments};
 
 /* [Constants] */
 // SIMPLE TAPER foot - ONE taper from small bottom to larger top
@@ -1475,91 +1474,39 @@ module rounded_rect(width, depth, height, radius) {
     }
 }
 
-// Cavity with beveled inner edges (all inside edges: floor-wall, vertical corners, etc.)
-module cavity_with_inner_bevel(width, depth, height, corner_radius, bevel_size, bevel_segments) {
-    // Clamp bevel size to prevent exceeding available space
-    max_bevel = min(wall_thickness, floor_thickness, min(width, depth) / 4);
-    bevel = min(bevel_size, max_bevel);
-    
-    if (bevel <= 0) {
+// Cavity with optional floor-wall edge bevel (using same radius as inner corners)
+module cavity_with_inner_bevel(width, depth, height, corner_radius, bevel_enabled) {
+    if (!bevel_enabled || corner_radius <= 0) {
         // No bevel - use standard rounded_rect
         rounded_rect(width, depth, height, corner_radius);
     } else {
-        // Create cavity with beveled edges using subtractive approach
-        difference() {
-            // Start with standard rounded cavity
-            rounded_rect(width, depth, height, corner_radius);
+        // Create cavity with rounded vertical corners AND rounded floor-wall edge
+        // Use the same corner radius and style as the vertical corners
+        r = min(corner_radius, min(width, depth) / 2);
+        
+        // Use hull of spheres/cylinders similar to rounded_rect, but include floor rounding
+        hull() {
+            // Bottom corners with floor rounding (spheres at floor level)
+            translate([r, r, r])
+            sphere(r = r, $fn = $fn);
+            translate([width - r, r, r])
+            sphere(r = r, $fn = $fn);
+            translate([r, depth - r, r])
+            sphere(r = r, $fn = $fn);
+            translate([width - r, depth - r, r])
+            sphere(r = r, $fn = $fn);
             
-            // Subtract beveled corner cuts at all edge junctions
-            // Bottom corners (4): where two walls meet the floor
-            // Front-left corner
-            translate([0, 0, -0.1])
-            inner_bevel_corner_cut(bevel, bevel_segments, height + 0.2);
-            
-            // Front-right corner
-            translate([width, 0, -0.1])
-            rotate([0, 0, 90])
-            inner_bevel_corner_cut(bevel, bevel_segments, height + 0.2);
-            
-            // Back-right corner
-            translate([width, depth, -0.1])
-            rotate([0, 0, 180])
-            inner_bevel_corner_cut(bevel, bevel_segments, height + 0.2);
-            
-            // Back-left corner
-            translate([0, depth, -0.1])
-            rotate([0, 0, 270])
-            inner_bevel_corner_cut(bevel, bevel_segments, height + 0.2);
-            
-            // Vertical edges (4): where walls meet floor along edges
-            // Front edge (along X axis)
-            if (width > bevel * 2) {
-                translate([bevel, 0, -0.1])
-                inner_bevel_edge_cut(width - bevel * 2, bevel, bevel_segments);
-            }
-            
-            // Back edge (along X axis)
-            if (width > bevel * 2) {
-                translate([bevel, depth, -0.1])
-                rotate([0, 0, 180])
-                inner_bevel_edge_cut(width - bevel * 2, bevel, bevel_segments);
-            }
-            
-            // Left edge (along Y axis)
-            if (depth > bevel * 2) {
-                translate([0, bevel, -0.1])
-                rotate([0, 0, 270])
-                inner_bevel_edge_cut(depth - bevel * 2, bevel, bevel_segments);
-            }
-            
-            // Right edge (along Y axis)
-            if (depth > bevel * 2) {
-                translate([width, bevel, -0.1])
-                rotate([0, 0, 90])
-                inner_bevel_edge_cut(depth - bevel * 2, bevel, bevel_segments);
-            }
+            // Top corners (cylinders like rounded_rect)
+            translate([r, r, height])
+            cylinder(r = r, h = 0.01, $fn = $fn);
+            translate([width - r, r, height])
+            cylinder(r = r, h = 0.01, $fn = $fn);
+            translate([r, depth - r, height])
+            cylinder(r = r, h = 0.01, $fn = $fn);
+            translate([width - r, depth - r, height])
+            cylinder(r = r, h = 0.01, $fn = $fn);
         }
     }
-}
-
-// Beveled corner cut - creates a chamfered corner using simple geometry
-module inner_bevel_corner_cut(bevel_size, segments, height) {
-    // Create a chamfered corner using a simple rotated cube
-    // This creates a 45-degree bevel that's reliable and fast
-    translate([0, 0, 0])
-    rotate([0, 0, 45])
-    translate([-bevel_size, -bevel_size, 0])
-    cube([bevel_size * 2, bevel_size * 2, height]);
-}
-
-// Beveled edge cut - creates a chamfered edge along a length
-module inner_bevel_edge_cut(length, bevel_size, segments) {
-    // Create a chamfered edge using a simple rotated cube
-    // This creates a 45-degree bevel along the edge
-    translate([0, 0, 0])
-    rotate([0, 0, 45])
-    translate([-bevel_size, 0, 0])
-    cube([bevel_size * 2, bevel_size, length]);
 }
 
 module gridfinity_base() {
@@ -1705,15 +1652,14 @@ module gridfinity_walls() {
             rounded_rect(box_width, box_depth, wall_height, outer_radius);
         }
         
-        // Inner cavity with rounded corners and optional inner edge bevel
+        // Inner cavity with rounded corners and optional floor-wall edge bevel
         translate([wall_thickness, wall_thickness, floor_thickness])
         cavity_with_inner_bevel(
             box_width - wall_thickness * 2,
             box_depth - wall_thickness * 2,
             wall_height,
             inner_radius,
-            inner_edge_bevel,
-            inner_edge_bevel_segments
+            inner_edge_bevel
         );
         
         // Stacking lip cutout at top

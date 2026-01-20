@@ -101,28 +101,13 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           unit="mm"
           onChange={(v) => update('floorThickness', v)}
         />
-        <SliderInput
-          label="Inner Edge Bevel"
+        <ToggleInput
+          label="Bevel Floor-Wall Edge"
           value={config.innerEdgeBevel}
-          min={0}
-          max={5}
-          step={0.25}
-          unit="mm"
           onChange={(v) => update('innerEdgeBevel', v)}
         />
-        {config.innerEdgeBevel > 0 && (
-          <SliderInput
-            label="Bevel Segments"
-            value={config.innerEdgeBevelSegments}
-            min={5}
-            max={10}
-            step={1}
-            unit=""
-            onChange={(v) => update('innerEdgeBevelSegments', v)}
-          />
-        )}
         <p className="text-xs text-slate-500 dark:text-slate-500">
-          Bevels all inside edges (wall-floor junctions, vertical corners, etc.) for easier cleaning and item removal. Higher segments = smoother bevel.
+          Applies the same corner radius style to the floor-wall edge junction, matching the existing inner corner radius for a consistent look.
         </p>
         <SliderInput
           label="Corner Radius"
