@@ -51,6 +51,7 @@ export class OpenSCADService {
 
   // Generate multi-segment baseplate with connectors
   async generateBaseplateSegments(config: BaseplateConfig): Promise<MultiSegmentResult> {
+    // Use longer timeout for combined preview (large models can take 5+ minutes)
     // Calculate total grid units based on sizing mode
     let totalGridUnitsX: number;
     let totalGridUnitsY: number;
@@ -83,7 +84,8 @@ export class OpenSCADService {
 
     // Generate a combined preview SCAD (faster - single render)
     const combinedScad = this.generateCombinedPreviewScad(config, splitInfo);
-    const combinedResult = await this.renderScad(combinedScad, 'baseplate_preview');
+    // Use 10 minute timeout for large combined previews
+    const combinedResult = await this.renderScad(combinedScad, 'baseplate_preview', 600000);
     
     // Create segment entries for the combined result
     // Each segment gets the same STL URL (combined preview) but different position info
@@ -192,10 +194,12 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             
             // Right edge teeth (male or female depending on type)
             if (right_edge == "male") {
-                for (i = [1 : max(1, depth_units) - 1]) {
-                    translate([plate_width, i * grid_unit, 0])
-                    rotate([0, 0, -90])
-                    male_tooth_3d(edge_pattern, plate_height);
+                if (depth_units > 1) {
+                    for (i = [1 : max(1, depth_units) - 1]) {
+                        translate([plate_width, i * grid_unit, 0])
+                        rotate([0, 0, -90])
+                        male_tooth_3d(edge_pattern, plate_height);
+                    }
                 }
                 if (depth_units == 1) {
                     translate([plate_width, 0.5 * grid_unit, 0])
@@ -206,9 +210,11 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             
             // Back edge teeth
             if (back_edge == "male") {
-                for (i = [1 : max(1, width_units) - 1]) {
-                    translate([i * grid_unit, plate_depth, 0])
-                    male_tooth_3d(edge_pattern, plate_height);
+                if (width_units > 1) {
+                    for (i = [1 : max(1, width_units) - 1]) {
+                        translate([i * grid_unit, plate_depth, 0])
+                        male_tooth_3d(edge_pattern, plate_height);
+                    }
                 }
                 if (width_units == 1) {
                     translate([0.5 * grid_unit, plate_depth, 0])
@@ -218,10 +224,12 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             
             // Left edge male teeth (if overridden to male)
             if (left_edge == "male") {
-                for (i = [1 : max(1, depth_units) - 1]) {
-                    translate([0, i * grid_unit, 0])
-                    rotate([0, 0, -90])
-                    male_tooth_3d(edge_pattern, plate_height);
+                if (depth_units > 1) {
+                    for (i = [1 : max(1, depth_units) - 1]) {
+                        translate([0, i * grid_unit, 0])
+                        rotate([0, 0, -90])
+                        male_tooth_3d(edge_pattern, plate_height);
+                    }
                 }
                 if (depth_units == 1) {
                     translate([0, 0.5 * grid_unit, 0])
@@ -232,9 +240,11 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             
             // Front edge male teeth (if overridden to male)
             if (front_edge == "male") {
-                for (i = [1 : max(1, width_units) - 1]) {
-                    translate([i * grid_unit, 0, 0])
-                    male_tooth_3d(edge_pattern, plate_height);
+                if (width_units > 1) {
+                    for (i = [1 : max(1, width_units) - 1]) {
+                        translate([i * grid_unit, 0, 0])
+                        male_tooth_3d(edge_pattern, plate_height);
+                    }
                 }
                 if (width_units == 1) {
                     translate([0.5 * grid_unit, 0, 0])
@@ -253,10 +263,12 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         
         // Left edge cavities
         if (left_edge == "female") {
-            for (i = [1 : max(1, depth_units) - 1]) {
-                translate([0, i * grid_unit, 0])
-                rotate([0, 0, -90])
-                female_cavity_3d(edge_pattern, plate_height);
+            if (depth_units > 1) {
+                for (i = [1 : max(1, depth_units) - 1]) {
+                    translate([0, i * grid_unit, 0])
+                    rotate([0, 0, -90])
+                    female_cavity_3d(edge_pattern, plate_height);
+                }
             }
             if (depth_units == 1) {
                 translate([0, 0.5 * grid_unit, 0])
@@ -267,9 +279,11 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         
         // Front edge cavities
         if (front_edge == "female") {
-            for (i = [1 : max(1, width_units) - 1]) {
-                translate([i * grid_unit, 0, 0])
-                female_cavity_3d(edge_pattern, plate_height);
+            if (width_units > 1) {
+                for (i = [1 : max(1, width_units) - 1]) {
+                    translate([i * grid_unit, 0, 0])
+                    female_cavity_3d(edge_pattern, plate_height);
+                }
             }
             if (width_units == 1) {
                 translate([0.5 * grid_unit, 0, 0])
@@ -279,10 +293,12 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         
         // Right edge cavities (if overridden to female)
         if (right_edge == "female") {
-            for (i = [1 : max(1, depth_units) - 1]) {
-                translate([plate_width, i * grid_unit, 0])
-                rotate([0, 0, -90])
-                female_cavity_3d(edge_pattern, plate_height);
+            if (depth_units > 1) {
+                for (i = [1 : max(1, depth_units) - 1]) {
+                    translate([plate_width, i * grid_unit, 0])
+                    rotate([0, 0, -90])
+                    female_cavity_3d(edge_pattern, plate_height);
+                }
             }
             if (depth_units == 1) {
                 translate([plate_width, 0.5 * grid_unit, 0])
@@ -293,9 +309,11 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         
         // Back edge cavities (if overridden to female)
         if (back_edge == "female") {
-            for (i = [1 : max(1, width_units) - 1]) {
-                translate([i * grid_unit, plate_depth, 0])
-                female_cavity_3d(edge_pattern, plate_height);
+            if (width_units > 1) {
+                for (i = [1 : max(1, width_units) - 1]) {
+                    translate([i * grid_unit, plate_depth, 0])
+                    female_cavity_3d(edge_pattern, plate_height);
+                }
             }
             if (width_units == 1) {
                 translate([0.5 * grid_unit, plate_depth, 0])
@@ -2233,7 +2251,7 @@ module screw_holes() {
   }
 
   // Render SCAD to STL
-  private async renderScad(scadContent: string, prefix: string): Promise<{ stlUrl: string; scadContent: string; filename: string }> {
+  private async renderScad(scadContent: string, prefix: string, timeoutMs: number = 300000): Promise<{ stlUrl: string; scadContent: string; filename: string }> {
     const id = uuidv4().substring(0, 8);
     const scadFilename = `${prefix}_${id}.scad`;
     const stlFilename = `${prefix}_${id}.stl`;
@@ -2255,12 +2273,12 @@ module screw_holes() {
       const openscadCmd = process.env.OPENSCAD_PATH || 'openscad';
       const cmd = `${openscadCmd} -o "${stlFilePath}" "${scadFilePath}"`;
       // #region agent log
-      const logData4 = {location:'openscad.ts:2230',message:'OpenSCAD command start',data:{cmd,timeout:120000,stlFilePath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E,F'};
+      const logData4 = {location:'openscad.ts:2230',message:'OpenSCAD command start',data:{cmd,timeout:timeoutMs,stlFilePath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E,F'};
       console.error('[DEBUG]', JSON.stringify(logData4));
       fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData4)}).catch(()=>{});
       // #endregion
       
-      await execAsync(cmd, { timeout: 120000 }); // 2 minute timeout
+      await execAsync(cmd, { timeout: timeoutMs }); // Configurable timeout (default 5 minutes for large models)
 
       const elapsedTime = Date.now() - startTime;
       // #region agent log
@@ -2284,7 +2302,7 @@ module screw_holes() {
       const errorDetails = error instanceof Error ? {message:error.message,stack:error.stack,name:error.name} : {error:String(error)};
       const stlExists = fs.existsSync(stlFilePath);
       const stlFileSize = stlExists ? fs.statSync(stlFilePath).size : 0;
-      const logData6 = {location:'openscad.ts:2241',message:'OpenSCAD command error',data:{elapsedTimeMs:elapsedTime,elapsedTimeSec:(elapsedTime/1000).toFixed(2),error:errorDetails,stlExists,stlFileSizeBytes:stlFileSize,timeoutExceeded:elapsedTime>=120000},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E,F'};
+      const logData6 = {location:'openscad.ts:2241',message:'OpenSCAD command error',data:{elapsedTimeMs:elapsedTime,elapsedTimeSec:(elapsedTime/1000).toFixed(2),error:errorDetails,stlExists,stlFileSizeBytes:stlFileSize,timeoutExceeded:elapsedTime>=timeoutMs,configuredTimeout:timeoutMs},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,C,D,E,F'};
       console.error('[DEBUG]', JSON.stringify(logData6));
       fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData6)}).catch(()=>{});
       // #endregion
