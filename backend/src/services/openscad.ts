@@ -1634,8 +1634,8 @@ module wall_pattern_grid(width, height, depth, cell_size, spacing) {
 }
 
 // Custom foot-matched lip cutout module
-// Creates a tapered shelf that extends INWARD into the cavity for the foot to sit on
-// The shelf angle and height match the foot chamfer for perfect stacking
+// Chamfers the OUTER TOP EDGE of the walls to match foot chamfer for stacking
+// The outer wall tapers inward at the same angle and height as the foot
 module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
     // Calculate inner dimensions
     inner_wall_radius = max(0, outer_radius - wall_thickness);
@@ -1646,40 +1646,46 @@ module stacking_lip_cutout(lip_style, wall_height, outer_radius) {
         // No lip - flat top, no cutout needed
     } 
     else {
-        // Foot-matched lip: creates an INWARD shelf that the foot sits ON
-        // The shelf extends INTO the cavity, keeping the wall solid
+        // Foot-matched lip: chamfers the OUTER top edge of the walls
         // Uses foot_chamfer_angle and foot_chamfer_height directly
         
-        // Calculate shelf inset from foot geometry (same calculation as foot)
-        // This is how much the shelf extends inward from the wall
-        shelf_inset = foot_chamfer_height / tan(foot_chamfer_angle);
+        // Calculate chamfer inset from foot geometry (same calculation as foot)
+        // This is how much the outer edge tapers inward at the top
+        chamfer_inset = foot_chamfer_height / tan(foot_chamfer_angle);
         
-        // The lip creates a tapered shelf that extends INTO the box cavity
-        // Bottom of shelf: flush with inner wall (matches main cavity)
-        // Top of shelf: contracted inward by shelf_inset (creates the ledge)
-        // The foot sits ON this ledge, with its taper matching the shelf's taper
-        
+        // Chamfer the outer wall at the top
+        // Creates a tapered shape that, when subtracted, removes the outer corner
+        // Result: outer wall slopes inward from (wall_height - foot_chamfer_height) to wall_height
         translate([0, 0, wall_height - foot_chamfer_height])
-        hull() {
-            // Bottom of lip area: matches inner cavity dimensions
-            // This ensures smooth transition from main cavity to lip
-            translate([wall_thickness, wall_thickness, 0])
+        difference() {
+            // Tapered hull: wide at bottom (outside wall), narrow at top (inside wall)
+            hull() {
+                // Bottom: just outside the outer wall (removes nothing here)
+                translate([-0.1, -0.1, 0])
+                rounded_rect(
+                    box_width + 0.2,
+                    box_depth + 0.2,
+                    0.01,
+                    outer_radius + 0.1
+                );
+                
+                // Top: inset by chamfer_inset (creates the chamfer)
+                translate([chamfer_inset, chamfer_inset, foot_chamfer_height])
+                rounded_rect(
+                    box_width - chamfer_inset * 2,
+                    box_depth - chamfer_inset * 2,
+                    0.01,
+                    max(0.5, outer_radius - chamfer_inset)
+                );
+            }
+            
+            // Protect inner cavity - only cut the outer wall, not the interior
+            translate([wall_thickness, wall_thickness, -0.1])
             rounded_rect(
                 inner_width,
                 inner_depth,
-                0.01,
+                foot_chamfer_height + 0.2,
                 inner_wall_radius
-            );
-            
-            // Top of lip area: contracted INWARD by shelf_inset
-            // This creates the shelf/ledge that the foot sits on
-            // The taper matches the foot's expansion profile
-            translate([wall_thickness + shelf_inset, wall_thickness + shelf_inset, foot_chamfer_height])
-            rounded_rect(
-                max(1, inner_width - shelf_inset * 2),
-                max(1, inner_depth - shelf_inset * 2),
-                0.01,
-                max(0.5, inner_wall_radius - shelf_inset)
             );
         }
     }
