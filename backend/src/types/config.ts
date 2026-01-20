@@ -135,6 +135,7 @@ export interface BaseplateConfig {
   toothDepth: number;           // Overall height of the tooth (mm) - stretches/compresses the shape
   toothWidth: number;           // Width of each tooth at base (mm)
   concaveDepth: number;         // How deep the concave swoop curves inward (0-100%, default 50%)
+  wineglassAspectRatio: number; // Aspect ratio for wineglass bulb (0.5-2.0, 1.0=circular, <1.0=taller, >1.0=wider)
   
   // Custom edge overrides (optional - overrides automatic male/female assignment)
   edgeOverrides: SegmentEdgeOverride[];
@@ -216,6 +217,7 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   toothDepth: 6,               // 6mm tooth depth (default for wineglass)
   toothWidth: 6,               // 6mm tooth width at base
   concaveDepth: 50,            // 50% concave swoop depth (0=shallow, 100=deep)
+  wineglassAspectRatio: 1.0,   // 1.0 = circular (default)
   edgeOverrides: []            // Empty - use automatic male/female assignment
 };
 

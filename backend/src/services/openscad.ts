@@ -417,6 +417,7 @@ module grid_socket() {
     const toothDepth = config.toothDepth;
     const toothWidth = config.toothWidth;
     const concaveDepth = config.concaveDepth ?? 50; // 0-100% depth of concave swoop
+    const wineglassAspectRatio = config.wineglassAspectRatio ?? 1.0; // Aspect ratio for wineglass bulb (0.5-2.0)
     
     return `
 // ===========================================
@@ -428,6 +429,7 @@ tooth_depth = ${toothDepth};
 tooth_width = ${toothWidth};
 edge_tolerance = ${tolerance};
 concave_depth = ${concaveDepth / 100}; // 0.0 to 1.0 (how deep the concave swoop is)
+wineglass_aspect_ratio = ${wineglassAspectRatio}; // Aspect ratio for wineglass bulb (0.5-2.0, 1.0=circular)
 
 // --- PATTERN 1: DOVETAIL (Trapezoidal) ---
 // Classic woodworking dovetail - wider at tip than base
@@ -818,16 +820,19 @@ module wineglass_male_2d() {
         }
         
         // Upper stem: waist flares out and connects INTO the bulb
+        // Account for aspect ratio when connecting to bulb
         hull() {
             translate([-waist_hw, waist_y]) circle(r = 0.08, $fn = 12);
             translate([waist_hw, waist_y]) circle(r = 0.08, $fn = 12);
-            // Connect to points on the bulb circle itself
-            translate([-bulb_r * 0.7, bulb_center_y - bulb_r * 0.5]) circle(r = 0.15, $fn = 12);
-            translate([bulb_r * 0.7, bulb_center_y - bulb_r * 0.5]) circle(r = 0.15, $fn = 12);
+            // Connect to points on the bulb (scaled by aspect ratio)
+            translate([-bulb_r * 0.7 * wineglass_aspect_ratio, bulb_center_y - bulb_r * 0.5]) circle(r = 0.15, $fn = 12);
+            translate([bulb_r * 0.7 * wineglass_aspect_ratio, bulb_center_y - bulb_r * 0.5]) circle(r = 0.15, $fn = 12);
         }
         
         // Bulb (rounded top) - positioned to overlap with upper stem
+        // Scale to make circular (1.0) or ovular based on aspect ratio
         translate([0, bulb_center_y])
+        scale([wineglass_aspect_ratio, 1])
         circle(r = bulb_r, $fn = 32);
     }
 }
@@ -851,15 +856,17 @@ module wineglass_female_2d() {
         }
         
         // Upper stem connects into bulb
+        // Account for aspect ratio when connecting to bulb
         hull() {
             translate([-waist_hw, waist_y]) circle(r = 0.08, $fn = 12);
             translate([waist_hw, waist_y]) circle(r = 0.08, $fn = 12);
-            translate([-bulb_r * 0.7, bulb_center_y - bulb_r * 0.5]) circle(r = 0.15, $fn = 12);
-            translate([bulb_r * 0.7, bulb_center_y - bulb_r * 0.5]) circle(r = 0.15, $fn = 12);
+            translate([-bulb_r * 0.7 * wineglass_aspect_ratio, bulb_center_y - bulb_r * 0.5]) circle(r = 0.15, $fn = 12);
+            translate([bulb_r * 0.7 * wineglass_aspect_ratio, bulb_center_y - bulb_r * 0.5]) circle(r = 0.15, $fn = 12);
         }
         
         // Bulb cavity
         translate([0, bulb_center_y])
+        scale([wineglass_aspect_ratio, 1])
         circle(r = bulb_r, $fn = 32);
     }
 }

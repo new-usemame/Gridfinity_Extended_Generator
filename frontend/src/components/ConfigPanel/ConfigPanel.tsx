@@ -693,8 +693,8 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
               <NumberInput
                 label="Bed Width"
                 value={config.printerBedWidth}
-                min={100}
-                max={500}
+                min={50}
+                max={1000}
                 step={5}
                 unit="mm"
                 onChange={(v) => update('printerBedWidth', v)}
@@ -702,8 +702,8 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
               <NumberInput
                 label="Bed Depth"
                 value={config.printerBedDepth}
-                min={100}
-                max={500}
+                min={50}
+                max={1000}
                 step={5}
                 unit="mm"
                 onChange={(v) => update('printerBedDepth', v)}
@@ -771,8 +771,8 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                   <SliderInput
                     label="Tooth Depth"
                     value={config.toothDepth}
-                    min={2}
-                    max={12}
+                    min={1}
+                    max={20}
                     step={0.5}
                     unit="mm"
                     onChange={(v) => update('toothDepth', v)}
@@ -784,8 +784,8 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                   <SliderInput
                     label="Tooth Width"
                     value={config.toothWidth}
-                    min={4}
-                    max={12}
+                    min={2}
+                    max={20}
                     step={0.5}
                     unit="mm"
                     onChange={(v) => update('toothWidth', v)}
@@ -814,11 +814,29 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                     </>
                   )}
                   
+                  {/* Show aspect ratio slider only for wineglass pattern */}
+                  {config.edgePattern === 'wineglass' && (
+                    <>
+                      <SliderInput
+                        label="Bulb Shape (Circular vs Ovular)"
+                        value={config.wineglassAspectRatio ?? 1.0}
+                        min={0.5}
+                        max={2.0}
+                        step={0.1}
+                        unit=""
+                        onChange={(v) => update('wineglassAspectRatio', v)}
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-500">
+                        1.0 = circular, &lt;1.0 = taller (ovular vertically), &gt;1.0 = wider (ovular horizontally).
+                      </p>
+                    </>
+                  )}
+                  
                   <SliderInput
                     label="Fit Tolerance"
                     value={config.connectorTolerance}
-                    min={0.1}
-                    max={0.6}
+                    min={0.05}
+                    max={1.0}
                     step={0.05}
                     unit="mm"
                     onChange={(v) => update('connectorTolerance', v)}
