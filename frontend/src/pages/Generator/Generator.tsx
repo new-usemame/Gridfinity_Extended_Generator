@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { ConfigPanel } from '../../components/ConfigPanel/ConfigPanel';
 import { PreviewCanvas } from '../../components/PreviewCanvas/PreviewCanvas';
@@ -24,6 +25,11 @@ export function Generator() {
   const [pendingSave, setPendingSave] = useState(false);
   const [savedPreferences, setSavedPreferences] = useState<any[]>([]);
   const savedConfigsDropdownRef = useRef<SavedConfigsDropdownRef>(null);
+  const [isJsonDropdownOpen, setIsJsonDropdownOpen] = useState(false);
+  const jsonDropdownRef = useRef<HTMLDivElement>(null);
+  const jsonButtonRef = useRef<HTMLButtonElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [jsonDropdownPosition, setJsonDropdownPosition] = useState({ top: 0, right: 0 });
 
   // Sync socket chamfer with foot chamfer when enabled
   const handleBoxConfigChange = useCallback((config: BoxConfig) => {
@@ -220,7 +226,7 @@ export function Generator() {
   );
 
   // Handle downloading configuration
-  const handleDownloadConfig = () => {
+  const handleDownloadJSON = () => {
     const config = {
       boxConfig,
       baseplateConfig,
@@ -235,7 +241,123 @@ export function Generator() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    setIsJsonDropdownOpen(false);
   };
+
+  // Detect file type from file
+  const detectFileType = (file: File): string => {
+    // Check file extension
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    if (extension) {
+      return extension;
+    }
+    // Check MIME type
+    if (file.type) {
+      return file.type;
+    }
+    return 'unknown';
+  };
+
+  // Handle loading configuration from file
+  const handleLoadConfig = () => {
+    fileInputRef.current?.click();
+    setIsJsonDropdownOpen(false);
+  };
+
+  // Handle file input change
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Reset input
+    event.target.value = '';
+
+    // Detect file type
+    const fileType = detectFileType(file);
+    const isJson = fileType === 'json' || 
+                   fileType === 'application/json' || 
+                   fileType === 'text/json' ||
+                   file.name.toLowerCase().endsWith('.json');
+
+    if (!isJson) {
+      // Show file type in error message
+      const typeName = fileType === 'unknown' ? 'unknown type' : fileType.toUpperCase();
+      alert(`This file is a ${typeName}, not JSON`);
+      return;
+    }
+
+    // Read file
+    try {
+      const text = await file.text();
+      const config = JSON.parse(text);
+
+      // Validate config structure
+      if (!config || typeof config !== 'object') {
+        alert('Invalid JSON file: root must be an object');
+        return;
+      }
+
+      // Validate and load boxConfig
+      if (config.boxConfig) {
+        if (typeof config.boxConfig !== 'object') {
+          alert('Invalid JSON file: boxConfig must be an object');
+          return;
+        }
+        // Merge with defaults to ensure all fields are present
+        setBoxConfig({ ...defaultBoxConfig, ...config.boxConfig });
+      } else {
+        alert('Invalid JSON file: missing boxConfig');
+        return;
+      }
+
+      // Validate and load baseplateConfig
+      if (config.baseplateConfig) {
+        if (typeof config.baseplateConfig !== 'object') {
+          alert('Invalid JSON file: baseplateConfig must be an object');
+          return;
+        }
+        // Merge with defaults to ensure all fields are present
+        setBaseplateConfig({ ...defaultBaseplateConfig, ...config.baseplateConfig });
+      } else {
+        alert('Invalid JSON file: missing baseplateConfig');
+        return;
+      }
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        alert('Invalid JSON file: could not parse JSON');
+      } else {
+        alert(`Error loading file: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  };
+
+  // Update JSON dropdown position when opening
+  useEffect(() => {
+    if (isJsonDropdownOpen && jsonButtonRef.current) {
+      const rect = jsonButtonRef.current.getBoundingClientRect();
+      setJsonDropdownPosition({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+  }, [isJsonDropdownOpen]);
+
+  // Close JSON dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (jsonDropdownRef.current && !jsonDropdownRef.current.contains(event.target as Node) &&
+          jsonButtonRef.current && !jsonButtonRef.current.contains(event.target as Node)) {
+        setIsJsonDropdownOpen(false);
+      }
+    };
+
+    if (isJsonDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isJsonDropdownOpen]);
 
   return (
     <div className="h-screen flex flex-col bg-white dark:bg-slate-950 grid-pattern">
@@ -311,17 +433,68 @@ export function Generator() {
               Save
             </button>
 
-            {/* Download Configuration Button */}
-            <button
-              onClick={handleDownloadConfig}
-              className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2 border border-slate-300 dark:border-slate-700"
-              title="Download configuration as JSON file"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Download Config
-            </button>
+            {/* JSON Dropdown */}
+            <div className="relative">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,application/json"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <button
+                ref={jsonButtonRef}
+                onClick={() => setIsJsonDropdownOpen(!isJsonDropdownOpen)}
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-300 rounded-lg transition-colors flex items-center gap-2"
+                title="JSON configuration options"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <span className="text-sm font-medium">JSON</span>
+                <svg
+                  className={`w-4 h-4 transition-transform ${isJsonDropdownOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+
+            {isJsonDropdownOpen && createPortal(
+              <div
+                ref={jsonDropdownRef}
+                className="fixed w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-[9999] overflow-hidden"
+                style={{
+                  top: `${jsonDropdownPosition.top}px`,
+                  right: `${jsonDropdownPosition.right}px`,
+                }}
+              >
+                <div className="p-2">
+                  <button
+                    onClick={handleDownloadJSON}
+                    className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download JSON
+                  </button>
+                  <button
+                    onClick={handleLoadConfig}
+                    className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    Load JSON
+                  </button>
+                </div>
+              </div>,
+              document.body
+            )}
 
             {/* Visual Separator */}
             <div className="h-6 w-px bg-slate-300 dark:bg-slate-700"></div>
