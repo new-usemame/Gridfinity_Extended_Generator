@@ -908,38 +908,51 @@ module edge_tooth_female(pattern) {
 // 3D male tooth (extruded with optional peaked roof)
 module male_tooth_3d(pattern, height) {
     if (roof_intensity > 0.01) {
-        // Calculate base height where roof starts (based on roof_depth)
-        // roof_depth = 0 means roof starts at top, roof_depth = 1 means roof at base
-        base_height = height * (1 - roof_depth);
+        // Calculate peak height first
         peak_height = height * roof_intensity * 0.3; // Peak height based on intensity
         
-        // Ensure peak doesn't exceed total height
-        peak_height = min(peak_height, height - base_height);
+        // Calculate base height where roof starts (based on roof_depth)
+        // roof_depth = 0 means roof starts near top, roof_depth = 1 means roof at base
+        // We need to ensure base_height + peak_height <= height
+        max_base_height = height - peak_height;
+        base_height = max_base_height * (1 - roof_depth);
         
         // Base extrusion up to where roof starts
         linear_extrude(height = base_height)
         edge_tooth_male(pattern);
         
-        // Peaked roof: create a slanted roof using intersection
-        // We create a simple slanted roof shape and intersect it with the profile
-        // This ensures the roof follows the profile shape without weird sides
+        // Peaked roof: create a slanted roof using multiple cross-sections
+        // Each cross-section is the profile scaled down in width toward the center
+        // This creates a smooth "^" shaped roof that follows the profile
         translate([0, 0, base_height])
-        intersection() {
-            // The actual profile shape (constrains the roof to profile bounds)
-            linear_extrude(height = peak_height + 0.1)
-            edge_tooth_male(pattern);
+        num_sections = 12;
+        for (i = [0 : 1 : num_sections - 1]) {
+            h_ratio = i / num_sections;
+            h_current = peak_height * h_ratio;
+            h_next = peak_height * ((i + 1) / num_sections);
+            scale_current = 1.0 - h_ratio; // Scale from 1.0 (full width) to 0.0 (center point)
+            scale_next = 1.0 - ((i + 1) / num_sections);
             
-            // Simple slanted roof: hull between profile base and center peak
+            // Hull between current and next cross-section
             hull() {
-                // Base: full profile width at roof start
-                translate([0, 0, 0])
+                // Current cross-section: scaled profile
+                translate([0, 0, h_current])
                 linear_extrude(height = 0.01)
+                scale([scale_current, 1]) // Scale width (x) toward center, keep length (y)
                 edge_tooth_male(pattern);
                 
-                // Peak: center line running along the length
-                for (y = [0 : tooth_depth/20 : tooth_depth]) {
-                    translate([0, y, peak_height])
-                    cylinder(r = 0.05, h = 0.01, $fn = 8);
+                // Next cross-section: more scaled profile (or center peak for last section)
+                if (i < num_sections - 1) {
+                    translate([0, 0, h_next])
+                    linear_extrude(height = 0.01)
+                    scale([scale_next, 1])
+                    edge_tooth_male(pattern);
+                } else {
+                    // Final section: center peak line
+                    for (y = [0 : tooth_depth/20 : tooth_depth]) {
+                        translate([0, y, peak_height])
+                        cylinder(r = 0.05, h = 0.01, $fn = 8);
+                    }
                 }
             }
         }
