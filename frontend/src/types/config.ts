@@ -137,6 +137,7 @@ export interface BaseplateConfig {
   concaveDepth: number;         // How deep the concave swoop curves inward (0-100%, default 50%)
   wineglassAspectRatio: number; // Aspect ratio for wineglass bulb (0.5-2.0, 1.0=circular, <1.0=taller, >1.0=wider)
   connectorRoofIntensity: number; // Peak intensity for connector roof (0-100%, 0=flat, 100=maximum peak)
+  connectorRoofDepth: number;  // How far down from top the roof starts (0-100%, 0=roof at top, 100=roof at base)
   
   // Custom edge overrides (optional - overrides automatic male/female assignment)
   edgeOverrides: SegmentEdgeOverride[];
@@ -220,6 +221,7 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   concaveDepth: 50,            // 50% concave swoop depth (0=shallow, 100=deep)
   wineglassAspectRatio: 1.0,   // 1.0 = circular (default)
   connectorRoofIntensity: 0,   // 0 = flat (default), higher = more peaked roof
+  connectorRoofDepth: 0,       // 0 = roof at top (default), higher = roof starts lower
   edgeOverrides: []            // Empty - use automatic male/female assignment
 };
 
