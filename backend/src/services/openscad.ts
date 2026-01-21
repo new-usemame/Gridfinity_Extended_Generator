@@ -46,6 +46,9 @@ export class OpenSCADService {
     let totalGridUnitsX: number;
     let totalGridUnitsY: number;
     
+    let actualWidthMm: number | undefined;
+    let actualDepthMm: number | undefined;
+    
     if (config.sizingMode === 'fill_area_mm') {
       const calc = calculateGridFromMm(
         config.targetWidthMm,
@@ -57,9 +60,15 @@ export class OpenSCADService {
       );
       totalGridUnitsX = Math.floor(calc.gridUnitsX); // Only use full cells for splitting
       totalGridUnitsY = Math.floor(calc.gridUnitsY);
+      // Pass actual physical dimensions for accurate splitting check
+      actualWidthMm = config.targetWidthMm;
+      actualDepthMm = config.targetDepthMm;
     } else {
       totalGridUnitsX = Math.floor(config.width);
       totalGridUnitsY = Math.floor(config.depth);
+      // In grid_units mode, actual size is grid units * gridSize
+      actualWidthMm = totalGridUnitsX * config.gridSize;
+      actualDepthMm = totalGridUnitsY * config.gridSize;
     }
 
     // Calculate split
@@ -69,7 +78,9 @@ export class OpenSCADService {
       config.printerBedWidth,
       config.printerBedDepth,
       config.gridSize,
-      config.connectorEnabled
+      config.connectorEnabled,
+      actualWidthMm,
+      actualDepthMm
     );
 
     // Generate a combined preview SCAD (faster - single render)
@@ -379,6 +390,9 @@ module grid_socket() {
     let totalGridUnitsX: number;
     let totalGridUnitsY: number;
     
+    let actualWidthMm: number | undefined;
+    let actualDepthMm: number | undefined;
+    
     if (config.sizingMode === 'fill_area_mm') {
       const calc = calculateGridFromMm(
         config.targetWidthMm,
@@ -390,9 +404,15 @@ module grid_socket() {
       );
       totalGridUnitsX = Math.floor(calc.gridUnitsX);
       totalGridUnitsY = Math.floor(calc.gridUnitsY);
+      // Pass actual physical dimensions for accurate splitting check
+      actualWidthMm = config.targetWidthMm;
+      actualDepthMm = config.targetDepthMm;
     } else {
       totalGridUnitsX = Math.floor(config.width);
       totalGridUnitsY = Math.floor(config.depth);
+      // In grid_units mode, actual size is grid units * gridSize
+      actualWidthMm = totalGridUnitsX * config.gridSize;
+      actualDepthMm = totalGridUnitsY * config.gridSize;
     }
 
     const splitInfo = splitBaseplateForPrinter(
@@ -401,7 +421,9 @@ module grid_socket() {
       config.printerBedWidth,
       config.printerBedDepth,
       config.gridSize,
-      config.connectorEnabled
+      config.connectorEnabled,
+      actualWidthMm,
+      actualDepthMm
     );
 
     // Get segment info
@@ -1383,6 +1405,7 @@ screw_diameter = ${config.screwDiameter};
 lip_style = "${config.lipStyle === 'standard' ? 'normal' : config.lipStyle === 'perfect_fit' ? 'perfect_fit' : config.lipStyle}";
 dividers_x = ${config.dividersX};
 dividers_y = ${config.dividersY};
+divider_floor_bevel = ${config.dividerFloorBevel};
 finger_slide = ${config.fingerSlide};
 finger_slide_style = "${config.fingerSlideStyle}";
 finger_slide_radius = ${config.fingerSlideRadius};
@@ -1990,13 +2013,15 @@ module dividers() {
     inner_width = box_width - wall_thickness * 2;
     inner_depth = box_depth - wall_thickness * 2;
     divider_height = wall_height - floor_thickness - gf_lip_total_height;
+    divider_thickness = 1.2;
+    inner_radius = max(0, corner_radius - wall_thickness);
     
     // X dividers (vertical walls along Y axis)
     if (dividers_x > 0) {
         spacing = inner_width / (dividers_x + 1);
         for (i = [1:dividers_x]) {
-            translate([wall_thickness + i * spacing - 0.6, wall_thickness, floor_thickness])
-            cube([1.2, inner_depth, divider_height]);
+            translate([wall_thickness + i * spacing - divider_thickness/2, wall_thickness, floor_thickness])
+            divider_with_bevel(divider_thickness, inner_depth, divider_height, inner_radius, divider_floor_bevel);
         }
     }
     
@@ -2004,8 +2029,43 @@ module dividers() {
     if (dividers_y > 0) {
         spacing = inner_depth / (dividers_y + 1);
         for (i = [1:dividers_y]) {
-            translate([wall_thickness, wall_thickness + i * spacing - 0.6, floor_thickness])
-            cube([inner_width, 1.2, divider_height]);
+            translate([wall_thickness, wall_thickness + i * spacing - divider_thickness/2, floor_thickness])
+            rotate([0, 0, 90])
+            divider_with_bevel(divider_thickness, inner_width, divider_height, inner_radius, divider_floor_bevel);
+        }
+    }
+}
+
+// Divider with optional floor bevel (using same corner radius style)
+module divider_with_bevel(thickness, length, height, corner_radius, bevel_enabled) {
+    if (!bevel_enabled || corner_radius <= 0) {
+        // No bevel - use simple cube
+        cube([thickness, length, height]);
+    } else {
+        // Create divider with beveled floor edge using same radius as corners
+        r = min(corner_radius, min(thickness, length) / 2);
+        
+        // Use hull of spheres/cylinders similar to cavity bevel
+        hull() {
+            // Bottom corners with floor rounding (spheres at floor level)
+            translate([r, r, r])
+            sphere(r = r, $fn = $fn);
+            translate([thickness - r, r, r])
+            sphere(r = r, $fn = $fn);
+            translate([r, length - r, r])
+            sphere(r = r, $fn = $fn);
+            translate([thickness - r, length - r, r])
+            sphere(r = r, $fn = $fn);
+            
+            // Top corners (cylinders)
+            translate([r, r, height])
+            cylinder(r = r, h = 0.01, $fn = $fn);
+            translate([thickness - r, r, height])
+            cylinder(r = r, h = 0.01, $fn = $fn);
+            translate([r, length - r, height])
+            cylinder(r = r, h = 0.01, $fn = $fn);
+            translate([thickness - r, length - r, height])
+            cylinder(r = r, h = 0.01, $fn = $fn);
         }
     }
 }

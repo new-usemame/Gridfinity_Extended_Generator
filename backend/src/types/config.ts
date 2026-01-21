@@ -34,6 +34,7 @@ export interface BoxConfig {
   // Dividers
   dividersX: number;
   dividersY: number;
+  dividerFloorBevel: boolean;  // Bevel the divider-floor edge using the same radius and style as inner corners
   
   // Lip style
   lipStyle: 'perfect_fit' | 'none' | 'standard' | 'reduced' | 'minimum';
@@ -167,6 +168,7 @@ export const defaultBoxConfig: BoxConfig = {
   labelWidth: 100,
   dividersX: 0,
   dividersY: 0,
+  dividerFloorBevel: false,  // Default false = no bevel (disabled by default)
   lipStyle: 'perfect_fit',
   flatBase: 'off',
   efficientFloor: 'off',
@@ -298,15 +300,36 @@ export function splitBaseplateForPrinter(
   printerBedWidth: number,
   printerBedDepth: number,
   gridSize: number,
-  connectorEnabled: boolean
+  connectorEnabled: boolean,
+  actualWidthMm?: number,
+  actualDepthMm?: number
 ): SplitResult {
+  // First, check if actual physical dimensions exceed printer bed size
+  // This is critical for fill_area_mm mode where the actual size may be larger than grid units suggest
+  const actualWidthExceedsBed = actualWidthMm !== undefined && actualWidthMm > printerBedWidth;
+  const actualDepthExceedsBed = actualDepthMm !== undefined && actualDepthMm > printerBedDepth;
+  
   // Calculate max grid units that fit on the printer bed
   const maxSegmentUnitsX = Math.floor(printerBedWidth / gridSize);
   const maxSegmentUnitsY = Math.floor(printerBedDepth / gridSize);
   
-  // Calculate number of segments needed
-  const segmentsX = Math.ceil(totalGridUnitsX / maxSegmentUnitsX);
-  const segmentsY = Math.ceil(totalGridUnitsY / maxSegmentUnitsY);
+  // Calculate number of segments needed based on grid units
+  let segmentsX = Math.ceil(totalGridUnitsX / maxSegmentUnitsX);
+  let segmentsY = Math.ceil(totalGridUnitsY / maxSegmentUnitsY);
+  
+  // If actual dimensions exceed bed size, ensure we split even if grid units suggest otherwise
+  // This handles cases where the baseplate has padding or fractional grid units
+  if (actualWidthExceedsBed && segmentsX === 1) {
+    // Force splitting: calculate how many segments needed based on actual width
+    const actualWidthInUnits = actualWidthMm / gridSize;
+    segmentsX = Math.ceil(actualWidthInUnits / maxSegmentUnitsX);
+  }
+  
+  if (actualDepthExceedsBed && segmentsY === 1) {
+    // Force splitting: calculate how many segments needed based on actual depth
+    const actualDepthInUnits = actualDepthMm / gridSize;
+    segmentsY = Math.ceil(actualDepthInUnits / maxSegmentUnitsY);
+  }
   
   // Check if splitting is needed
   const needsSplit = segmentsX > 1 || segmentsY > 1;

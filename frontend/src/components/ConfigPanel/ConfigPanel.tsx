@@ -270,6 +270,18 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           step={1}
           onChange={(v) => update('dividersY', v)}
         />
+        {(config.dividersX > 0 || config.dividersY > 0) && (
+          <>
+            <ToggleInput
+              label="Bevel Divider-Floor Edge"
+              value={config.dividerFloorBevel}
+              onChange={(v) => update('dividerFloorBevel', v)}
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-500">
+              Applies the same corner radius style to the divider-floor edge junction, matching the existing inner corner radius.
+            </p>
+          </>
+        )}
       </CollapsibleSection>
 
       {/* Work in Progress Section */}
@@ -517,13 +529,21 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
     // Get total grid units based on sizing mode
     let totalUnitsX: number;
     let totalUnitsY: number;
+    let actualWidthMm: number | undefined;
+    let actualDepthMm: number | undefined;
     
     if (config.sizingMode === 'fill_area_mm' && gridCalc) {
       totalUnitsX = Math.floor(gridCalc.gridUnitsX);
       totalUnitsY = Math.floor(gridCalc.gridUnitsY);
+      // Pass actual physical dimensions for accurate splitting check
+      actualWidthMm = config.targetWidthMm;
+      actualDepthMm = config.targetDepthMm;
     } else {
       totalUnitsX = Math.floor(config.width);
       totalUnitsY = Math.floor(config.depth);
+      // In grid_units mode, actual size is grid units * gridSize
+      actualWidthMm = totalUnitsX * config.gridSize;
+      actualDepthMm = totalUnitsY * config.gridSize;
     }
     
     return splitBaseplateForPrinter(
@@ -532,11 +552,13 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
       config.printerBedWidth,
       config.printerBedDepth,
       config.gridSize,
-      config.connectorEnabled
+      config.connectorEnabled,
+      actualWidthMm,
+      actualDepthMm
     );
   }, [config.splitEnabled, config.sizingMode, config.width, config.depth, 
       config.printerBedWidth, config.printerBedDepth, config.gridSize, 
-      config.connectorEnabled, gridCalc]);
+      config.connectorEnabled, config.targetWidthMm, config.targetDepthMm, gridCalc]);
 
   return (
     <div className="p-3 space-y-2.5">

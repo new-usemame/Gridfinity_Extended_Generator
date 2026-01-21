@@ -92,46 +92,97 @@ export function Generator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeEditor, setActiveEditor] = useState<'box' | 'baseplate'>('box');
+  const [generateBox, setGenerateBox] = useState(true);
+  const [generateBaseplate, setGenerateBaseplate] = useState(true);
 
   // Server-side generation
   const handleServerGenerate = useCallback(async () => {
-    const [boxResponse, baseplateResponse] = await Promise.all([
-      fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'box', config: boxConfig })
-      }),
-      fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'baseplate', config: baseplateConfig })
-      })
-    ]);
+    const promises: Promise<Response>[] = [];
+    const types: string[] = [];
 
-    if (!boxResponse.ok || !baseplateResponse.ok) {
-      const errorData = boxResponse.ok ? await baseplateResponse.json() : await boxResponse.json();
-      throw new Error(errorData.message || 'Failed to generate STL');
+    if (generateBox) {
+      promises.push(
+        fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'box', config: boxConfig })
+        })
+      );
+      types.push('box');
     }
 
-    const boxResultData: GenerationResult = await boxResponse.json();
-    const baseplateResultData = await baseplateResponse.json();
-    
-    setBoxResult(boxResultData);
-    
-    if (baseplateResultData.segments) {
-      setMultiSegmentResult(baseplateResultData as MultiSegmentResult);
-      if (baseplateResultData.segments.length > 0) {
-        setBaseplateResult(baseplateResultData.segments[0]);
+    if (generateBaseplate) {
+      promises.push(
+        fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'baseplate', config: baseplateConfig })
+        })
+      );
+      types.push('baseplate');
+    }
+
+    // If nothing is selected, don't generate anything
+    if (promises.length === 0) {
+      return;
+    }
+
+    const responses = await Promise.all(promises);
+
+    // Check for errors
+    const errors: string[] = [];
+    responses.forEach((response, index) => {
+      if (!response.ok) {
+        errors.push(types[index]);
+      }
+    });
+
+    if (errors.length > 0) {
+      throw new Error(`Failed to generate STL for: ${errors.join(', ')}`);
+    }
+
+    // Process responses
+    let responseIndex = 0;
+    if (generateBox) {
+      const boxResultData: GenerationResult = await responses[responseIndex].json();
+      setBoxResult(boxResultData);
+      responseIndex++;
+    } else {
+      // If box is not being generated, keep existing result (don't clear it)
+      // This allows hiding/showing without regenerating
+    }
+
+    if (generateBaseplate) {
+      const baseplateResultData = await responses[responseIndex].json();
+      if (baseplateResultData.segments) {
+        setMultiSegmentResult(baseplateResultData as MultiSegmentResult);
+        if (baseplateResultData.segments.length > 0) {
+          setBaseplateResult(baseplateResultData.segments[0]);
+        }
+      } else {
+        setBaseplateResult(baseplateResultData as GenerationResult);
       }
     } else {
-      setBaseplateResult(baseplateResultData as GenerationResult);
+      // If baseplate is not being generated, keep existing result (don't clear it)
+      // This allows hiding/showing without regenerating
     }
-  }, [boxConfig, baseplateConfig]);
+  }, [boxConfig, baseplateConfig, generateBox, generateBaseplate]);
 
   const handleGenerate = useCallback(async () => {
     setIsGenerating(true);
     setError(null);
-    setMultiSegmentResult(null);
+    // Only clear results if we're actually generating them
+    // This allows hiding/showing without regenerating
+    if (generateBox && generateBaseplate) {
+      setMultiSegmentResult(null);
+    } else if (generateBox) {
+      // Only generating box, keep baseplate results
+    } else if (generateBaseplate) {
+      // Only generating baseplate, keep box result
+      setMultiSegmentResult(null);
+    } else {
+      // Nothing selected, don't clear anything
+    }
 
     try {
       await handleServerGenerate();
@@ -142,7 +193,7 @@ export function Generator() {
     } finally {
       setIsGenerating(false);
     }
-  }, [handleServerGenerate]);
+  }, [handleServerGenerate, generateBox, generateBaseplate]);
 
   // Auto-generate on initial load
   useEffect(() => {
@@ -541,12 +592,34 @@ export function Generator() {
             {/* Visual Separator */}
             <div className="h-6 w-px bg-slate-300 dark:bg-slate-700"></div>
 
+            {/* Generation Options */}
+            <div className="flex items-center gap-3 px-3 py-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={generateBox}
+                  onChange={(e) => setGenerateBox(e.target.checked)}
+                  className="w-4 h-4 text-green-600 dark:text-green-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-2 focus:ring-green-500/50 dark:focus:ring-green-500/50"
+                />
+                <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">Box</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={generateBaseplate}
+                  onChange={(e) => setGenerateBaseplate(e.target.checked)}
+                  className="w-4 h-4 text-green-600 dark:text-green-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-2 focus:ring-green-500/50 dark:focus:ring-green-500/50"
+                />
+                <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">Baseplate</span>
+              </label>
+            </div>
+
             {/* Generate Button */}
             <button
               onClick={handleGenerate}
-              disabled={isGenerating}
+              disabled={isGenerating || (!generateBox && !generateBaseplate)}
               className={`px-6 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
-                isGenerating
+                isGenerating || (!generateBox && !generateBaseplate)
                   ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
                   : 'bg-gradient-to-r from-green-600 to-green-500 dark:from-green-500 dark:to-green-400 text-white hover:from-green-500 hover:to-green-400 dark:hover:from-green-400 dark:hover:to-green-300 shadow-lg shadow-green-500/25 hover:shadow-green-500/40'
               }`}
@@ -685,8 +758,8 @@ export function Generator() {
           {/* 3D Preview */}
           <div className="flex-1 relative min-h-0">
             <PreviewCanvas
-              boxStlUrl={boxResult?.stlUrl || null}
-              baseplateStlUrl={baseplateResult?.stlUrl || null}
+              boxStlUrl={generateBox ? (boxResult?.stlUrl || null) : null}
+              baseplateStlUrl={generateBaseplate ? (baseplateResult?.stlUrl || null) : null}
               isLoading={isGenerating}
               isCombinedView={true}
               boxConfig={boxConfig}
@@ -698,7 +771,7 @@ export function Generator() {
 
       {/* Export Buttons - Fixed to bottom of screen (only over preview area) */}
       <div className="fixed bottom-0 left-96 right-0 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm p-4 space-y-4 overflow-x-auto min-w-0 z-10">
-        {boxResult && (
+        {generateBox && boxResult && (
           <div>
             <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">BOX</h4>
             <ExportButtons
@@ -715,7 +788,7 @@ export function Generator() {
             />
           </div>
         )}
-        {multiSegmentResult ? (
+        {generateBaseplate && (multiSegmentResult ? (
           <div>
             <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">BASEPLATE (SPLIT)</h4>
             <MultiSegmentExportButtons
@@ -747,7 +820,7 @@ export function Generator() {
               }}
             />
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
