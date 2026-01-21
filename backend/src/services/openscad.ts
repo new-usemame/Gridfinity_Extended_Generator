@@ -234,9 +234,23 @@ ${segmentPlacements}
 // Parametric segment module with male/female interlocking edges
 // Edge types: "none", "male", "female"
 module segment_base(width_units, depth_units, left_edge, right_edge, front_edge, back_edge, padding_near_x = 0, padding_far_x = 0, padding_near_y = 0, padding_far_y = 0) {
-    // Plate dimensions include padding on outer edges
-    plate_width = width_units * grid_unit + padding_near_x + padding_far_x;
-    plate_depth = depth_units * grid_unit + padding_near_y + padding_far_y;
+    // Grid coverage (actual grid area)
+    grid_width = width_units * grid_unit;
+    grid_depth = depth_units * grid_unit;
+    
+    // Total plate size (grid + padding) - using same pattern as non-split baseplate
+    // This matches: plate_width = use_fill_mode ? outer_width_mm : grid_width
+    outer_width_mm = grid_width + padding_near_x + padding_far_x;
+    outer_depth_mm = grid_depth + padding_near_y + padding_far_y;
+    use_fill_mode = (padding_near_x + padding_far_x + padding_near_y + padding_far_y) > 0;
+    plate_width = use_fill_mode ? outer_width_mm : grid_width;
+    plate_depth = use_fill_mode ? outer_depth_mm : grid_depth;
+    
+    // Grid offset (where the grid starts within the plate)
+    // When using fill mode with padding, offset the grid by the near padding amount
+    // This positions the grid correctly within the plate for proper centering
+    grid_offset_x = use_fill_mode ? padding_near_x : 0;
+    grid_offset_y = use_fill_mode ? padding_near_y : 0;
     
     difference() {
         union() {
@@ -244,143 +258,143 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
             
             // Right edge teeth (male or female depending on type)
-            // Position at grid boundary (accounting for padding)
+            // Position at grid boundary (using grid offset)
             if (right_edge == "male") {
-                grid_right_edge = padding_near_x + width_units * grid_unit;
+                grid_right_edge = grid_offset_x + width_units * grid_unit;
                 if (depth_units > 1) {
                     for (i = [1 : max(1, depth_units) - 1]) {
-                        translate([grid_right_edge, padding_near_y + i * grid_unit, 0])
+                        translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
                         rotate([0, 0, -90])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
                 }
                 if (depth_units == 1) {
-                    translate([grid_right_edge, padding_near_y + 0.5 * grid_unit, 0])
+                    translate([grid_right_edge, grid_offset_y + 0.5 * grid_unit, 0])
                     rotate([0, 0, -90])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
             }
             
             // Back edge teeth
-            // Position at grid boundary (accounting for padding)
+            // Position at grid boundary (using grid offset)
             if (back_edge == "male") {
-                grid_back_edge = padding_near_y + depth_units * grid_unit;
+                grid_back_edge = grid_offset_y + depth_units * grid_unit;
                 if (width_units > 1) {
                     for (i = [1 : max(1, width_units) - 1]) {
-                        translate([padding_near_x + i * grid_unit, grid_back_edge, 0])
+                        translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
                 }
                 if (width_units == 1) {
-                    translate([padding_near_x + 0.5 * grid_unit, grid_back_edge, 0])
+                    translate([grid_offset_x + 0.5 * grid_unit, grid_back_edge, 0])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
             }
             
             // Left edge male teeth (if overridden to male)
-            // Position at grid boundary (accounting for padding)
+            // Position at grid boundary (using grid offset)
             if (left_edge == "male") {
                 if (depth_units > 1) {
                     for (i = [1 : max(1, depth_units) - 1]) {
-                        translate([0, padding_near_y + i * grid_unit, 0])
+                        translate([0, grid_offset_y + i * grid_unit, 0])
                         rotate([0, 0, -90])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
                 }
                 if (depth_units == 1) {
-                    translate([0, padding_near_y + 0.5 * grid_unit, 0])
+                    translate([0, grid_offset_y + 0.5 * grid_unit, 0])
                     rotate([0, 0, -90])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
             }
             
             // Front edge male teeth (if overridden to male)
-            // Position at grid boundary (accounting for padding)
+            // Position at grid boundary (using grid offset)
             if (front_edge == "male") {
                 if (width_units > 1) {
                     for (i = [1 : max(1, width_units) - 1]) {
-                        translate([padding_near_x + i * grid_unit, 0, 0])
+                        translate([grid_offset_x + i * grid_unit, 0, 0])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
                 }
                 if (width_units == 1) {
-                    translate([padding_near_x + 0.5 * grid_unit, 0, 0])
+                    translate([grid_offset_x + 0.5 * grid_unit, 0, 0])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
             }
         }
         
         // Socket cutouts
-        // Position sockets accounting for padding on the near (left/front) edges
+        // Position sockets using grid offset (same pattern as non-split baseplate)
         for (gx = [0:width_units-1]) {
             for (gy = [0:depth_units-1]) {
-                translate([padding_near_x + gx * grid_unit, padding_near_y + gy * grid_unit, 0])
+                translate([grid_offset_x + gx * grid_unit, grid_offset_y + gy * grid_unit, 0])
                 grid_socket();
             }
         }
         
         // Left edge cavities
-        // Position at grid boundary (accounting for padding)
+        // Position at grid boundary (using grid offset)
         if (left_edge == "female") {
             if (depth_units > 1) {
                 for (i = [1 : max(1, depth_units) - 1]) {
-                    translate([0, padding_near_y + i * grid_unit, 0])
+                    translate([0, grid_offset_y + i * grid_unit, 0])
                     rotate([0, 0, -90])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (depth_units == 1) {
-                translate([0, padding_near_y + 0.5 * grid_unit, 0])
+                translate([0, grid_offset_y + 0.5 * grid_unit, 0])
                 rotate([0, 0, -90])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
         
         // Front edge cavities
-        // Position at grid boundary (accounting for padding)
+        // Position at grid boundary (using grid offset)
         if (front_edge == "female") {
             if (width_units > 1) {
                 for (i = [1 : max(1, width_units) - 1]) {
-                    translate([padding_near_x + i * grid_unit, 0, 0])
+                    translate([grid_offset_x + i * grid_unit, 0, 0])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (width_units == 1) {
-                translate([padding_near_x + 0.5 * grid_unit, 0, 0])
+                translate([grid_offset_x + 0.5 * grid_unit, 0, 0])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
         
         // Right edge cavities (if overridden to female)
-        // Position at grid boundary (accounting for padding)
+        // Position at grid boundary (using grid offset)
         if (right_edge == "female") {
-            grid_right_edge = padding_near_x + width_units * grid_unit;
+            grid_right_edge = grid_offset_x + width_units * grid_unit;
             if (depth_units > 1) {
                 for (i = [1 : max(1, depth_units) - 1]) {
-                    translate([grid_right_edge, padding_near_y + i * grid_unit, 0])
+                    translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
                     rotate([0, 0, -90])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (depth_units == 1) {
-                translate([grid_right_edge, padding_near_y + 0.5 * grid_unit, 0])
+                translate([grid_right_edge, grid_offset_y + 0.5 * grid_unit, 0])
                 rotate([0, 0, -90])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
         
         // Back edge cavities (if overridden to female)
-        // Position at grid boundary (accounting for padding)
+        // Position at grid boundary (using grid offset)
         if (back_edge == "female") {
-            grid_back_edge = padding_near_y + depth_units * grid_unit;
+            grid_back_edge = grid_offset_y + depth_units * grid_unit;
             if (width_units > 1) {
                 for (i = [1 : max(1, width_units) - 1]) {
-                    translate([padding_near_x + i * grid_unit, grid_back_edge, 0])
+                    translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (width_units == 1) {
-                translate([padding_near_x + 0.5 * grid_unit, grid_back_edge, 0])
+                translate([grid_offset_x + 0.5 * grid_unit, grid_back_edge, 0])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
@@ -2178,19 +2192,35 @@ module dividers() {
     inner_radius = max(0, corner_radius - wall_thickness);
     
     // X dividers (vertical walls along Y axis)
+    // These dividers run parallel to the Y axis and divide the box along the X direction
     if (dividers_x > 0) {
         spacing = inner_width / (dividers_x + 1);
         for (i = [1:dividers_x]) {
-            translate([wall_thickness + i * spacing - divider_thickness/2, wall_thickness, floor_thickness])
+            // Calculate the center position of the divider
+            // i * spacing gives us the position from the start of the inner space
+            divider_center_x = wall_thickness + i * spacing;
+            // Position the left edge of the divider, ensuring it stays within bounds
+            divider_left_x = divider_center_x - divider_thickness / 2;
+            // Safety check: ensure divider doesn't extend beyond inner space
+            divider_left_x = max(wall_thickness, min(divider_left_x, wall_thickness + inner_width - divider_thickness));
+            translate([divider_left_x, wall_thickness, floor_thickness])
             divider_with_bevel(divider_thickness, inner_depth, divider_height, inner_radius, divider_floor_bevel);
         }
     }
     
     // Y dividers (vertical walls along X axis)
+    // These dividers run parallel to the X axis and divide the box along the Y direction
     if (dividers_y > 0) {
         spacing = inner_depth / (dividers_y + 1);
         for (i = [1:dividers_y]) {
-            translate([wall_thickness, wall_thickness + i * spacing - divider_thickness/2, floor_thickness])
+            // Calculate the center position of the divider
+            // i * spacing gives us the position from the start of the inner space
+            divider_center_y = wall_thickness + i * spacing;
+            // Position the bottom edge of the divider, ensuring it stays within bounds
+            divider_bottom_y = divider_center_y - divider_thickness / 2;
+            // Safety check: ensure divider doesn't extend beyond inner space
+            divider_bottom_y = max(wall_thickness, min(divider_bottom_y, wall_thickness + inner_depth - divider_thickness));
+            translate([wall_thickness, divider_bottom_y, floor_thickness])
             rotate([0, 0, 90])
             divider_with_bevel(divider_thickness, inner_width, divider_height, inner_radius, divider_floor_bevel);
         }
