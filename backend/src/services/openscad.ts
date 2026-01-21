@@ -231,6 +231,23 @@ export class OpenSCADService {
           paddingFarY = Math.max(paddingFarY, minWallThickness);
         }
         
+        // CRITICAL FIX: Remove padding on edges with connectors - connectors need zero padding to expose the cutouts
+        // LEFT edge has connector (female) -> remove paddingNearX
+        // FRONT edge has connector (female) -> remove paddingNearY
+        // RIGHT edge has connector (male) -> remove paddingFarX
+        // BACK edge has connector (male) -> remove paddingFarY
+        if (segment.hasConnectorLeft) {
+          paddingNearX = 0;  // LEFT edge has female connector - remove wall
+        }
+        if (segment.hasConnectorFront) {
+          paddingNearY = 0;  // FRONT edge has female connector - remove wall
+        }
+        if (segment.hasConnectorRight) {
+          paddingFarX = 0;  // RIGHT edge has male connector - remove wall
+        }
+        if (segment.hasConnectorBack) {
+          paddingFarY = 0;  // BACK edge has male connector - remove wall
+        }
         
         // Validate segment dimensions
         const segmentWidth = segment.gridUnitsX * gridSize + paddingNearX + paddingFarX;
@@ -1391,10 +1408,29 @@ module female_cavity_3d(pattern, height) {
     // CRITICAL: Calculate effective padding for BOTH near and far edges to handle half cells
     // For near edges: if first segment (paddingNearX/Y > 0) OR has half cell, ensure minimum wall
     // For far edges: if last segment (paddingFarX/Y >= 0.5) OR has half cell, ensure minimum wall
-    const effectivePaddingNearX = (paddingNearX >= minWallThickness) ? paddingNearX : (definitelyHasHalfCellX ? Math.max(paddingNearX, minWallThickness) : paddingNearX);
-    const effectivePaddingNearY = (paddingNearY >= minWallThickness) ? paddingNearY : (definitelyHasHalfCellY ? Math.max(paddingNearY, minWallThickness) : paddingNearY);
-    const effectivePaddingFarX = (paddingFarX >= minWallThickness) ? paddingFarX : (definitelyHasHalfCellX ? Math.max(paddingFarX, minWallThickness) : paddingFarX);
-    const effectivePaddingFarY = (paddingFarY >= minWallThickness) ? paddingFarY : (definitelyHasHalfCellY ? Math.max(paddingFarY, minWallThickness) : paddingFarY);
+    // CRITICAL FIX: Remove padding on edges with connectors - connectors need zero padding to expose the cutouts
+    // LEFT edge has connector (female) -> remove paddingNearX
+    // FRONT edge has connector (female) -> remove paddingNearY
+    // RIGHT edge has connector (male) -> remove paddingFarX (but only if it's not the last segment)
+    // BACK edge has connector (male) -> remove paddingFarY (but only if it's not the last segment)
+    let effectivePaddingNearX = (paddingNearX >= minWallThickness) ? paddingNearX : (definitelyHasHalfCellX ? Math.max(paddingNearX, minWallThickness) : paddingNearX);
+    let effectivePaddingNearY = (paddingNearY >= minWallThickness) ? paddingNearY : (definitelyHasHalfCellY ? Math.max(paddingNearY, minWallThickness) : paddingNearY);
+    let effectivePaddingFarX = (paddingFarX >= minWallThickness) ? paddingFarX : (definitelyHasHalfCellX ? Math.max(paddingFarX, minWallThickness) : paddingFarX);
+    let effectivePaddingFarY = (paddingFarY >= minWallThickness) ? paddingFarY : (definitelyHasHalfCellY ? Math.max(paddingFarY, minWallThickness) : paddingFarY);
+    
+    // Remove padding on edges with connectors (connectors need zero padding to expose cutouts)
+    if (segment.hasConnectorLeft) {
+      effectivePaddingNearX = 0;  // LEFT edge has female connector - remove wall
+    }
+    if (segment.hasConnectorFront) {
+      effectivePaddingNearY = 0;  // FRONT edge has female connector - remove wall
+    }
+    if (segment.hasConnectorRight) {
+      effectivePaddingFarX = 0;  // RIGHT edge has male connector - remove wall
+    }
+    if (segment.hasConnectorBack) {
+      effectivePaddingFarY = 0;  // BACK edge has male connector - remove wall
+    }
     const outerWidthMm = gridWidth + effectivePaddingNearX + effectivePaddingFarX;
     const outerDepthMm = gridDepth + effectivePaddingNearY + effectivePaddingFarY;
     
@@ -1504,8 +1540,9 @@ has_female_front = ${segment.hasConnectorFront};
 /* [Padding] */
 // Note: padding_far_x/y may be increased to ensure minimum wall thickness when half cells are present
 // CRITICAL: For segments with half cells (e.g., width_units=1.5), padding_far_x MUST be >= 0.5mm to create closing wall
+// CRITICAL FIX: Padding is set to 0 on edges with connectors to remove walls and expose connector cutouts
 // Original padding: near_x=${paddingNearX.toFixed(2)}, far_x=${paddingFarX.toFixed(2)}, near_y=${paddingNearY.toFixed(2)}, far_y=${paddingFarY.toFixed(2)}
-// Effective padding (after half cell adjustment): near_x=${effectivePaddingNearX.toFixed(2)}, near_y=${effectivePaddingNearY.toFixed(2)}, far_x=${effectivePaddingFarX.toFixed(2)}, far_y=${effectivePaddingFarY.toFixed(2)}
+// Effective padding (after connector and half cell adjustment): near_x=${effectivePaddingNearX.toFixed(2)}, near_y=${effectivePaddingNearY.toFixed(2)}, far_x=${effectivePaddingFarX.toFixed(2)}, far_y=${effectivePaddingFarY.toFixed(2)}
 padding_near_x = ${effectivePaddingNearX.toFixed(2)};
 padding_far_x = ${effectivePaddingFarX.toFixed(2)};
 padding_near_y = ${effectivePaddingNearY.toFixed(2)};
