@@ -1324,10 +1324,15 @@ module female_cavity_3d(pattern, height) {
     // If fractional part is close to 0.5 (between 0.4 and 0.6), treat as half cell
     const definitelyHasHalfCellX = hasHalfCellX || (fractionalX > 0.4 && fractionalX < 0.6);  // Safety net for floating point errors
     const definitelyHasHalfCellY = hasHalfCellY || (fractionalY > 0.4 && fractionalY < 0.6);  // Safety net for floating point errors
+    // CRITICAL: Calculate effective padding for BOTH near and far edges to handle half cells
+    // For near edges: if first segment (paddingNearX/Y > 0) OR has half cell, ensure minimum wall
+    // For far edges: if last segment (paddingFarX/Y >= 0.5) OR has half cell, ensure minimum wall
+    const effectivePaddingNearX = (paddingNearX >= minWallThickness) ? paddingNearX : (definitelyHasHalfCellX ? Math.max(paddingNearX, minWallThickness) : paddingNearX);
+    const effectivePaddingNearY = (paddingNearY >= minWallThickness) ? paddingNearY : (definitelyHasHalfCellY ? Math.max(paddingNearY, minWallThickness) : paddingNearY);
     const effectivePaddingFarX = (paddingFarX >= minWallThickness) ? paddingFarX : (definitelyHasHalfCellX ? Math.max(paddingFarX, minWallThickness) : paddingFarX);
     const effectivePaddingFarY = (paddingFarY >= minWallThickness) ? paddingFarY : (definitelyHasHalfCellY ? Math.max(paddingFarY, minWallThickness) : paddingFarY);
-    const outerWidthMm = gridWidth + paddingNearX + effectivePaddingFarX;
-    const outerDepthMm = gridDepth + paddingNearY + effectivePaddingFarY;
+    const outerWidthMm = gridWidth + effectivePaddingNearX + effectivePaddingFarX;
+    const outerDepthMm = gridDepth + effectivePaddingNearY + effectivePaddingFarY;
     
     // #region agent log
     console.log(JSON.stringify({
@@ -1337,14 +1342,18 @@ module female_cavity_3d(pattern, height) {
         segmentX: segment.segmentX, segmentY: segment.segmentY,
         widthUnits, depthUnits, gridWidth, gridDepth,
         paddingNearX, paddingFarX, paddingNearY, paddingFarY,
-        effectivePaddingFarX, effectivePaddingFarY,
+        effectivePaddingNearX, effectivePaddingNearY, effectivePaddingFarX, effectivePaddingFarY,
         outerWidthMm, outerDepthMm,
         hasHalfCellX, hasHalfCellY,
         isLastSegmentX: paddingFarX >= minWallThickness,
         isLastSegmentY: paddingFarY >= minWallThickness,
         minWallThickness,
+        effectivePaddingNearXCalculation: `(${paddingNearX} >= ${minWallThickness}) ? ${paddingNearX} : (${hasHalfCellX} ? Math.max(${paddingNearX}, ${minWallThickness}) : ${paddingNearX})`,
+        effectivePaddingNearYCalculation: `(${paddingNearY} >= ${minWallThickness}) ? ${paddingNearY} : (${hasHalfCellY} ? Math.max(${paddingNearY}, ${minWallThickness}) : ${paddingNearY})`,
         effectivePaddingFarXCalculation: `(${paddingFarX} >= ${minWallThickness}) ? ${paddingFarX} : (${hasHalfCellX} ? Math.max(${paddingFarX}, ${minWallThickness}) : ${paddingFarX})`,
-        wallNeededForHalfCellX: hasHalfCellX && paddingFarX < minWallThickness
+        effectivePaddingFarYCalculation: `(${paddingFarY} >= ${minWallThickness}) ? ${paddingFarY} : (${hasHalfCellY} ? Math.max(${paddingFarY}, ${minWallThickness}) : ${paddingFarY})`,
+        wallNeededForHalfCellX: hasHalfCellX && paddingFarX < minWallThickness,
+        wallNeededForHalfCellY: hasHalfCellY && paddingNearY < minWallThickness
       },
       timestamp: Date.now(),
       sessionId: 'debug-session',
@@ -1364,13 +1373,13 @@ module female_cavity_3d(pattern, height) {
     // Determine if this segment should use fill mode (when padding > 0)
     // CRITICAL: Use effective padding values to account for wall extension added for half cells
     // This ensures useFillMode is true when half cells need wall extension, even if original padding was 0
-    const useFillMode = (paddingNearX + effectivePaddingFarX + paddingNearY + effectivePaddingFarY) > 0;
+    const useFillMode = (effectivePaddingNearX + effectivePaddingFarX + effectivePaddingNearY + effectivePaddingFarY) > 0;
     
     // Calculate expected plate dimensions for verification
     const expectedPlateWidth = useFillMode ? outerWidthMm : gridWidth;
     const expectedPlateDepth = useFillMode ? outerDepthMm : gridDepth;
-    const gridOffsetX = useFillMode ? paddingNearX : 0;
-    const gridOffsetY = useFillMode ? paddingNearY : 0;
+    const gridOffsetX = useFillMode ? effectivePaddingNearX : 0;
+    const gridOffsetY = useFillMode ? effectivePaddingNearY : 0;
     // For half cell wall verification: wall should extend from (gridOffsetX + widthUnits * gridSize) to (expectedPlateWidth)
     const halfCellEndX = gridOffsetX + widthUnits * gridSize;
     const wallStartX = halfCellEndX;
@@ -1532,10 +1541,10 @@ has_female_front = ${segment.hasConnectorFront};
 // Note: padding_far_x/y may be increased to ensure minimum wall thickness when half cells are present
 // CRITICAL: For segments with half cells (e.g., width_units=1.5), padding_far_x MUST be >= 0.5mm to create closing wall
 // Original padding: near_x=${paddingNearX.toFixed(2)}, far_x=${paddingFarX.toFixed(2)}, near_y=${paddingNearY.toFixed(2)}, far_y=${paddingFarY.toFixed(2)}
-// Effective padding (after half cell adjustment): far_x=${effectivePaddingFarX.toFixed(2)}, far_y=${effectivePaddingFarY.toFixed(2)}
-padding_near_x = ${paddingNearX.toFixed(2)};
+// Effective padding (after half cell adjustment): near_x=${effectivePaddingNearX.toFixed(2)}, near_y=${effectivePaddingNearY.toFixed(2)}, far_x=${effectivePaddingFarX.toFixed(2)}, far_y=${effectivePaddingFarY.toFixed(2)}
+padding_near_x = ${effectivePaddingNearX.toFixed(2)};
 padding_far_x = ${effectivePaddingFarX.toFixed(2)};
-padding_near_y = ${paddingNearY.toFixed(2)};
+padding_near_y = ${effectivePaddingNearY.toFixed(2)};
 padding_far_y = ${effectivePaddingFarY.toFixed(2)};
 
 /* [Constants] */
