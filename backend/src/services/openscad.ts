@@ -186,8 +186,11 @@ export class OpenSCADService {
         // CRITICAL: Last segment must always have a closing wall, even if no half cell
         // Also ensure padding when half cells are present on the far edge
         const minWallThickness = 0.5;
-        const hasHalfCellX = segment.gridUnitsX - Math.floor(segment.gridUnitsX) >= 0.5;
-        const hasHalfCellY = segment.gridUnitsY - Math.floor(segment.gridUnitsY) >= 0.5;
+        // Use > 0.49 instead of >= 0.5 to account for floating point precision errors
+        const fractionalX = segment.gridUnitsX - Math.floor(segment.gridUnitsX);
+        const fractionalY = segment.gridUnitsY - Math.floor(segment.gridUnitsY);
+        const hasHalfCellX = fractionalX > 0.49;
+        const hasHalfCellY = fractionalY > 0.49;
         const isLastSegmentX = sx === splitInfo.segmentsX - 1;
         const isLastSegmentY = sy === splitInfo.segmentsY - 1;
         
@@ -212,24 +215,34 @@ export class OpenSCADService {
         const isFirstSegmentX = sx === 0;
         if (isFirstSegmentX) {
           paddingNearX = Math.max(paddingNearX, minWallThickness);
+        } else if (hasHalfCellX) {
+          // CRITICAL FIX: Non-first segments with half cells need closing wall on NEAR edge too
+          // If gridUnitsX has a fractional part (e.g., 0.5), the half cell starts at X=0 (near edge)
+          // So we need padding on the near edge to create the closing wall
+          paddingNearX = Math.max(paddingNearX, minWallThickness);
         }
         // Last segment in X: ensure closing wall on far edge
         if (isLastSegmentX) {
           paddingFarX = Math.max(paddingFarX, minWallThickness);
         } else if (hasHalfCellX) {
-          // Non-last segments with half cells also need closing wall
+          // Non-last segments with half cells also need closing wall on far edge
           paddingFarX = Math.max(paddingFarX, minWallThickness);
         }
         // First segment in Y: ensure closing wall on near edge (Y=0)
         const isFirstSegmentY = sy === 0;
         if (isFirstSegmentY) {
           paddingNearY = Math.max(paddingNearY, minWallThickness);
+        } else if (hasHalfCellY) {
+          // CRITICAL FIX: Non-first segments with half cells need closing wall on NEAR edge too
+          // If gridUnitsY has a fractional part (e.g., 0.5), the half cell starts at Y=0 (near edge)
+          // So we need padding on the near edge to create the closing wall
+          paddingNearY = Math.max(paddingNearY, minWallThickness);
         }
         // Last segment in Y: ensure closing wall on far edge
         if (isLastSegmentY) {
           paddingFarY = Math.max(paddingFarY, minWallThickness);
         } else if (hasHalfCellY) {
-          // Non-last segments with half cells also need closing wall
+          // Non-last segments with half cells also need closing wall on far edge
           paddingFarY = Math.max(paddingFarY, minWallThickness);
         }
         
