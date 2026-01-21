@@ -866,13 +866,13 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
                     label="Roof Peak Intensity"
                     value={config.connectorRoofIntensity ?? 0}
                     min={0}
-                    max={100}
+                    max={200}
                     step={5}
                     unit="%"
                     onChange={(v) => update('connectorRoofIntensity', v)}
                   />
                   <p className="text-xs text-slate-500 dark:text-slate-500">
-                    Adds a peaked "^" roof to connector tops. 0% = flat, 100% = maximum peak height.
+                    Adds a peaked "^" roof to connector tops. 0% = flat, 100% = standard peak height, up to 200% for more intense peaks.
                   </p>
                   
                   {config.connectorRoofIntensity > 0 && (

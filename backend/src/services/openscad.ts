@@ -440,7 +440,7 @@ module grid_socket() {
     const toothWidth = config.toothWidth;
     const concaveDepth = config.concaveDepth ?? 50; // 0-100% depth of concave swoop
     const wineglassAspectRatio = config.wineglassAspectRatio ?? 1.0; // Aspect ratio for wineglass bulb (0.5-2.0)
-    const roofIntensity = config.connectorRoofIntensity ?? 0; // 0-100% peak intensity
+    const roofIntensity = config.connectorRoofIntensity ?? 0; // 0-200% peak intensity
     const roofDepth = config.connectorRoofDepth ?? 0; // 0-100% how far down from top the roof starts
     
     return `

@@ -138,7 +138,7 @@ export interface BaseplateConfig {
   toothWidth: number;           // Width of each tooth at base (mm)
   concaveDepth: number;         // How deep the concave swoop curves inward (0-100%, default 50%)
   wineglassAspectRatio: number; // Aspect ratio for wineglass bulb (0.5-2.0, 1.0=circular, <1.0=taller, >1.0=wider)
-  connectorRoofIntensity: number; // Peak intensity for connector roof (0-100%, 0=flat, 100=maximum peak)
+  connectorRoofIntensity: number; // Peak intensity for connector roof (0-200%, 0=flat, 100=standard peak, 200=maximum intensity)
   connectorRoofDepth: number;  // How far down from top the roof starts (0-100%, 0=roof at top, 100=roof at base)
   
   // Custom edge overrides (optional - overrides automatic male/female assignment)
