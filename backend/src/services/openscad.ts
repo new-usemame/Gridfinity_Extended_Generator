@@ -1187,13 +1187,18 @@ module female_cavity_3d(pattern, height) {
     // CRITICAL: The plate width MUST extend to at least widthUnits * gridSize to cover half cells on the far edge
     const gridWidth = widthUnits * gridSize;
     const gridDepth = depthUnits * gridSize;
-    // Ensure plate extends to cover half cells: gridWidth already includes half cells when widthUnits is fractional
-    // CRITICAL: In Fill Area mm mode, outerWidthMm must be at least gridWidth to ensure half cells are closed
-    // The plate extends from 0 to outerWidthMm, and half cells extend to grid_offset_x + width_units * grid_unit
-    // So outerWidthMm must be >= grid_offset_x + width_units * grid_unit + padding_far_x (when in fill mode)
-    // Or >= width_units * grid_unit (when not in fill mode, where grid_offset_x = 0)
-    const outerWidthMm = Math.max(gridWidth + paddingNearX + paddingFarX, gridWidth);
-    const outerDepthMm = Math.max(gridDepth + paddingNearY + paddingFarY, gridDepth);
+    
+    // CRITICAL: Ensure plate extends to cover half cells on the far edge
+    // Half cells extend to: grid_offset_x + width_units * grid_unit
+    // When in fill mode: grid_offset_x = padding_near_x, so half cells extend to padding_near_x + width_units * grid_unit
+    // Plate must extend to: padding_near_x + width_units * grid_unit + padding_far_x
+    // When not in fill mode: grid_offset_x = 0, so half cells extend to width_units * grid_unit
+    // Plate must extend to: width_units * grid_unit
+    // In both cases, the plate width must be at least gridWidth (which includes half cells when widthUnits is fractional)
+    // Add a small epsilon (0.01mm) to ensure plate always extends slightly beyond half cells to close the border
+    const epsilon = 0.01; // Small safety margin to ensure border is closed
+    const outerWidthMm = Math.max(gridWidth + paddingNearX + paddingFarX, gridWidth) + epsilon;
+    const outerDepthMm = Math.max(gridDepth + paddingNearY + paddingFarY, gridDepth) + epsilon;
     
     // Validate calculated dimensions are reasonable
     if (outerWidthMm <= 0 || outerWidthMm > 10000) {
