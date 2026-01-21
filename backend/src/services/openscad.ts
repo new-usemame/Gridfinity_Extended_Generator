@@ -1310,15 +1310,22 @@ module female_cavity_3d(pattern, height) {
     // Use a minimum wall thickness of 0.5mm to ensure the border is properly closed
     const minWallThickness = 0.5; // Minimum wall thickness to ensure border is closed (similar to clearance between cells)
     // Calculate if we have half cells on the far edge
-    const hasHalfCellX = widthUnits - Math.floor(widthUnits) >= 0.5;
-    const hasHalfCellY = depthUnits - Math.floor(depthUnits) >= 0.5;
+    // Use > 0.49 instead of >= 0.5 to account for floating point precision errors
+    const fractionalX = widthUnits - Math.floor(widthUnits);
+    const fractionalY = depthUnits - Math.floor(depthUnits);
+    const hasHalfCellX = fractionalX > 0.49;  // More robust than >= 0.5
+    const hasHalfCellY = fractionalY > 0.49;  // More robust than >= 0.5
     // CRITICAL FIX: Last segment must always have closing wall
     // In splitBaseplateForPrinter, last segment always gets paddingFarX set to at least 0.5mm
     // So if paddingFarX >= minWallThickness, it's the last segment - use it as-is
     // If paddingFarX < minWallThickness but hasHalfCellX, add wall for half cell
     // Otherwise (paddingFarX < minWallThickness and no half cell), it's a non-last segment - use padding as-is
-    const effectivePaddingFarX = (paddingFarX >= minWallThickness) ? paddingFarX : (hasHalfCellX ? Math.max(paddingFarX, minWallThickness) : paddingFarX);
-    const effectivePaddingFarY = (paddingFarY >= minWallThickness) ? paddingFarY : (hasHalfCellY ? Math.max(paddingFarY, minWallThickness) : paddingFarY);
+    // DOUBLE-CHECK: Also verify fractional part directly as safety net (handles floating point errors)
+    // If fractional part is close to 0.5 (between 0.4 and 0.6), treat as half cell
+    const definitelyHasHalfCellX = hasHalfCellX || (fractionalX > 0.4 && fractionalX < 0.6);  // Safety net for floating point errors
+    const definitelyHasHalfCellY = hasHalfCellY || (fractionalY > 0.4 && fractionalY < 0.6);  // Safety net for floating point errors
+    const effectivePaddingFarX = (paddingFarX >= minWallThickness) ? paddingFarX : (definitelyHasHalfCellX ? Math.max(paddingFarX, minWallThickness) : paddingFarX);
+    const effectivePaddingFarY = (paddingFarY >= minWallThickness) ? paddingFarY : (definitelyHasHalfCellY ? Math.max(paddingFarY, minWallThickness) : paddingFarY);
     const outerWidthMm = gridWidth + paddingNearX + effectivePaddingFarX;
     const outerDepthMm = gridDepth + paddingNearY + effectivePaddingFarY;
     

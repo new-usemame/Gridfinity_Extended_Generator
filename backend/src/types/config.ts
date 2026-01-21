@@ -505,8 +505,11 @@ export function splitBaseplateForPrinter(
         // Otherwise, use the original padding (which is already >= minWallThickness or we want to preserve exact size)
       }
       // Calculate if this segment has half cells (needed for wall check)
-      const segmentHasHalfCellX = gridUnitsX - Math.floor(gridUnitsX) >= 0.5;
-      const segmentHasHalfCellY = gridUnitsY - Math.floor(gridUnitsY) >= 0.5;
+      // Use > 0.49 instead of >= 0.5 to account for floating point precision errors
+      const fractionalX = gridUnitsX - Math.floor(gridUnitsX);
+      const fractionalY = gridUnitsY - Math.floor(gridUnitsY);
+      const segmentHasHalfCellX = fractionalX > 0.49;  // More robust than >= 0.5
+      const segmentHasHalfCellY = fractionalY > 0.49;  // More robust than >= 0.5
       
       if (sx === segmentsX - 1) {
         // Last segment in X: ensure at least minWallThickness padding to create closing wall
