@@ -562,6 +562,11 @@ module socket_rounded_rect(width, depth, height, radius) {
 module grid_socket(cell_width = grid_unit, cell_depth = grid_unit) {
     // Socket that receives Gridfinity bin foot
     // Supports full cells (42mm) and half cells (21mm)
+    // CRITICAL: Socket must be contained within cell boundaries to preserve walls
+    // When padding_near_y > 0, wall extends from Y=0 to Y=grid_offset_y
+    // Socket is positioned at grid_offset_y + gy * grid_unit, so first socket is at Y=grid_offset_y
+    // Socket then translates by clearance, so it starts at Y=grid_offset_y + clearance
+    // This preserves the wall from Y=0 to Y=grid_offset_y + clearance
     socket_width = cell_width - clearance * 2;
     socket_depth_size = cell_depth - clearance * 2;
     socket_corner_radius = 3.75;
@@ -569,15 +574,24 @@ module grid_socket(cell_width = grid_unit, cell_depth = grid_unit) {
     bottom_depth = socket_depth_size - socket_bottom_inset * 2;
     bottom_radius = socket_bottom_corner_radius;
     
-    translate([clearance, clearance, -0.1]) {
-        hull() {
-            translate([0, 0, plate_height])
-            socket_rounded_rect(socket_width, socket_depth_size, 0.2, socket_corner_radius);
-            if (!remove_bottom_taper) {
-                translate([socket_bottom_inset, socket_bottom_inset, 0])
-                socket_rounded_rect(bottom_width, bottom_depth, 0.2, bottom_radius);
-            } else {
+    // Constrain socket to cell boundaries using intersection
+    // This ensures socket never extends beyond its cell, preserving walls
+    intersection() {
+        // Cell boundary constraint
+        translate([-clearance, -clearance, -0.2])
+        cube([cell_width, cell_depth, plate_height + 0.3]);
+        
+        // Socket geometry
+        translate([clearance, clearance, -0.1]) {
+            hull() {
+                translate([0, 0, plate_height])
                 socket_rounded_rect(socket_width, socket_depth_size, 0.2, socket_corner_radius);
+                if (!remove_bottom_taper) {
+                    translate([socket_bottom_inset, socket_bottom_inset, 0])
+                    socket_rounded_rect(bottom_width, bottom_depth, 0.2, bottom_radius);
+                } else {
+                    socket_rounded_rect(socket_width, socket_depth_size, 0.2, socket_corner_radius);
+                }
             }
         }
     }
@@ -1564,6 +1578,11 @@ module socket_rounded_rect(width, depth, height, radius) {
 module grid_socket(cell_width = grid_unit, cell_depth = grid_unit) {
     // Socket that receives Gridfinity bin foot
     // Supports full cells (42mm) and half cells (21mm)
+    // CRITICAL: Socket must be contained within cell boundaries to preserve walls
+    // When padding_near_y > 0, wall extends from Y=0 to Y=grid_offset_y
+    // Socket is positioned at grid_offset_y + gy * grid_unit, so first socket is at Y=grid_offset_y
+    // Socket then translates by clearance, so it starts at Y=grid_offset_y + clearance
+    // This preserves the wall from Y=0 to Y=grid_offset_y + clearance
     socket_width = cell_width - clearance * 2;
     socket_depth_size = cell_depth - clearance * 2;
     socket_corner_radius = 3.75;
@@ -1572,17 +1591,26 @@ module grid_socket(cell_width = grid_unit, cell_depth = grid_unit) {
     bottom_depth = socket_depth_size - socket_bottom_inset * 2;
     bottom_radius = socket_bottom_corner_radius;
     
-    translate([clearance, clearance, -0.1]) {
-        hull() {
-            translate([0, 0, plate_height])
-            socket_rounded_rect(socket_width, socket_depth_size, 0.2, socket_corner_radius);
-            
-            if (!remove_bottom_taper) {
-                translate([socket_bottom_inset, socket_bottom_inset, 0])
-                socket_rounded_rect(bottom_width, bottom_depth, 0.2, bottom_radius);
-            } else {
-                translate([0, 0, 0])
+    // Constrain socket to cell boundaries using intersection
+    // This ensures socket never extends beyond its cell, preserving walls
+    intersection() {
+        // Cell boundary constraint
+        translate([-clearance, -clearance, -0.2])
+        cube([cell_width, cell_depth, plate_height + 0.3]);
+        
+        // Socket geometry
+        translate([clearance, clearance, -0.1]) {
+            hull() {
+                translate([0, 0, plate_height])
                 socket_rounded_rect(socket_width, socket_depth_size, 0.2, socket_corner_radius);
+                
+                if (!remove_bottom_taper) {
+                    translate([socket_bottom_inset, socket_bottom_inset, 0])
+                    socket_rounded_rect(bottom_width, bottom_depth, 0.2, bottom_radius);
+                } else {
+                    translate([0, 0, 0])
+                    socket_rounded_rect(socket_width, socket_depth_size, 0.2, socket_corner_radius);
+                }
             }
         }
     }

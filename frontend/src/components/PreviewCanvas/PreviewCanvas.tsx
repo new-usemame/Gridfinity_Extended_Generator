@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState, useRef } from 'react';
+import { Suspense, useEffect, useState, useRef, useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, Grid, Text, Billboard } from '@react-three/drei';
 import { STLLoader } from 'three-stdlib';
@@ -369,6 +369,14 @@ function CombinedSceneContent({
       {/* Axis Indicator at origin */}
       <AxisIndicator size={30} />
 
+      {/* Measurement Rulers */}
+      {(baseplateGeometry || boxGeometry) && (
+        <MeasurementRuler 
+          geometries={[baseplateGeometry, boxGeometry].filter(Boolean) as THREE.BufferGeometry[]}
+          boxZOffset={boxZOffset}
+        />
+      )}
+
       {/* Baseplate Model */}
       {baseplateGeometry && (
         <mesh geometry={baseplateGeometry}>
@@ -496,6 +504,9 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
       {/* Axis Indicator at origin */}
       <AxisIndicator size={30} />
 
+      {/* Measurement Rulers */}
+      {geometry && <MeasurementRuler geometries={[geometry]} />}
+
       {/* Model */}
       {geometry && <ModelMesh geometry={geometry} />}
 
@@ -605,6 +616,151 @@ function CameraFit({ geometry }: { geometry: THREE.BufferGeometry }) {
   }, [geometry, camera]);
 
   return null;
+}
+
+// Measurement Ruler component
+// Shows rulers along X and Z axes (OpenSCAD X and Y) with millimeter markings
+function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.BufferGeometry[]; boxZOffset?: number }) {
+  const rulerHeight = 0.2; // Height above ground plane
+  const tickLength = 2; // Length of major ticks
+  const minorTickLength = 1; // Length of minor ticks
+  const tickInterval = 10; // Tick every 10mm
+  const majorTickInterval = 50; // Major tick every 50mm
+  const labelOffset = 3; // Distance from ruler for labels
+  const fontSize = 1.5;
+  const rulerColor = '#ffffff';
+  const rulerOpacity = 0.8;
+
+  // Compute combined bounding box
+  const boundingBox = useMemo(() => {
+    if (geometries.length === 0) return null;
+    
+    const box = new THREE.Box3();
+    geometries.forEach((geo, index) => {
+      geo.computeBoundingBox();
+      if (geo.boundingBox) {
+        // If there are multiple geometries and this is the last one (likely the box),
+        // and there's a Z offset, adjust the bounding box
+        // This handles the combined view where boxGeometry is offset
+        if (geometries.length > 1 && index === geometries.length - 1 && boxZOffset !== 0) {
+          const adjustedBox = geo.boundingBox.clone();
+          adjustedBox.translate(new THREE.Vector3(0, 0, boxZOffset));
+          box.union(adjustedBox);
+        } else {
+          box.union(geo.boundingBox);
+        }
+      }
+    });
+    return box;
+  }, [geometries, boxZOffset]);
+
+  if (!boundingBox) return null;
+
+  const minX = boundingBox.min.x;
+  const maxX = boundingBox.max.x;
+  const minZ = boundingBox.min.z;
+  const maxZ = boundingBox.max.z;
+  const width = maxX - minX;
+  const depth = maxZ - minZ;
+
+  // Generate tick marks for X axis (OpenSCAD X)
+  const xTicks: Array<{ position: number; isMajor: boolean }> = [];
+  const startX = Math.floor(minX / tickInterval) * tickInterval;
+  const endX = Math.ceil(maxX / tickInterval) * tickInterval;
+  for (let x = startX; x <= endX; x += tickInterval) {
+    if (x >= minX && x <= maxX) {
+      xTicks.push({
+        position: x,
+        isMajor: x % majorTickInterval === 0
+      });
+    }
+  }
+
+  // Generate tick marks for Z axis (OpenSCAD Y)
+  const zTicks: Array<{ position: number; isMajor: boolean }> = [];
+  const startZ = Math.floor(minZ / tickInterval) * tickInterval;
+  const endZ = Math.ceil(maxZ / tickInterval) * tickInterval;
+  for (let z = startZ; z <= endZ; z += tickInterval) {
+    if (z >= minZ && z <= maxZ) {
+      zTicks.push({
+        position: z,
+        isMajor: z % majorTickInterval === 0
+      });
+    }
+  }
+
+  const centerX = (minX + maxX) / 2;
+  const centerZ = (minZ + maxZ) / 2;
+
+  return (
+    <group>
+      {/* X-axis ruler (OpenSCAD X) - along the front edge (minZ) */}
+      <group position={[centerX, rulerHeight, minZ]}>
+        {/* Main ruler line */}
+        <mesh>
+          <boxGeometry args={[width, 0.05, 0.05]} />
+          <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
+        </mesh>
+        {/* Tick marks */}
+        {xTicks.map((tick, i) => (
+          <group key={`x-tick-${i}`} position={[tick.position - centerX, 0, 0]}>
+            <mesh>
+              <boxGeometry args={[0.05, tick.isMajor ? tickLength : minorTickLength, 0.05]} />
+              <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
+            </mesh>
+            {/* Labels for major ticks */}
+            {tick.isMajor && (
+              <Billboard position={[0, -tickLength - labelOffset, 0]}>
+                <Text 
+                  fontSize={fontSize} 
+                  color={rulerColor} 
+                  anchorX="center" 
+                  anchorY="top"
+                  outlineWidth={0.1}
+                  outlineColor="#000000"
+                >
+                  {tick.position.toFixed(0)}mm
+                </Text>
+              </Billboard>
+            )}
+          </group>
+        ))}
+      </group>
+
+      {/* Z-axis ruler (OpenSCAD Y) - along the left edge (minX) */}
+      <group position={[minX, rulerHeight, centerZ]} rotation={[0, Math.PI / 2, 0]}>
+        {/* Main ruler line */}
+        <mesh>
+          <boxGeometry args={[depth, 0.05, 0.05]} />
+          <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
+        </mesh>
+        {/* Tick marks */}
+        {zTicks.map((tick, i) => (
+          <group key={`z-tick-${i}`} position={[tick.position - centerZ, 0, 0]}>
+            <mesh>
+              <boxGeometry args={[0.05, tick.isMajor ? tickLength : minorTickLength, 0.05]} />
+              <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
+            </mesh>
+            {/* Labels for major ticks */}
+            {tick.isMajor && (
+              <Billboard position={[0, -tickLength - labelOffset, 0]}>
+                <Text 
+                  fontSize={fontSize} 
+                  color={rulerColor} 
+                  anchorX="center" 
+                  anchorY="top"
+                  outlineWidth={0.1}
+                  outlineColor="#000000"
+                >
+                  {tick.position.toFixed(0)}mm
+                </Text>
+              </Billboard>
+            )}
+          </group>
+        ))}
+      </group>
+    </group>
+  );
 }
 
 // 3D Axis indicator at origin with labels
