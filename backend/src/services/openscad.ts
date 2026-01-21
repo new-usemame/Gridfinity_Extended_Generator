@@ -1895,9 +1895,14 @@ module screw_holes() {
       for (const y of positions) {
         maleTeeth.push(`
             // Right edge male tooth at Y=${y} - COLOR: RED
-            color([1, 0, 0]) translate([${gridRightEdge}, ${y}, 0])
-            rotate([0, 0, -90])
-            male_tooth_3d("${edgePattern}", plate_height);`);
+            color([1, 0, 0]) {
+                translate([${gridRightEdge}, ${y}, 0])
+                rotate([0, 0, -90])
+                male_tooth_3d("${edgePattern}", plate_height);
+                // Color marker
+                translate([${gridRightEdge}, ${y}, plate_height + 2])
+                sphere(r=2, $fn=16);
+            }`);
       }
     } else if (rightEdgeType === 'female') {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
@@ -1906,9 +1911,14 @@ module screw_holes() {
         // Right edge female cavity at Y=${y} - COLOR: PINK
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
-        color([1, 0.5, 0.8]) translate([${gridRightEdge}, ${y}, 0])
+        translate([${gridRightEdge}, ${y}, 0])
         rotate([0, 0, -90])
         female_cavity_3d("${edgePattern}", plate_height);`);
+        // Add color marker outside difference() - will be added to union
+        maleTeeth.push(`
+            // Right edge female marker at Y=${y} - COLOR: PINK
+            color([1, 0.5, 0.8]) translate([${gridRightEdge}, ${y}, plate_height + 2])
+            sphere(r=2, $fn=16);`);
       }
     }
     
@@ -1918,9 +1928,14 @@ module screw_holes() {
       for (const x of positions) {
         maleTeeth.push(`
             // Back edge male tooth at X=${x} - COLOR: BLUE
-            color([0, 0, 1]) translate([${x}, ${gridBackEdge}, 0])
-            rotate([0, 0, 0])
-            male_tooth_3d("${edgePattern}", plate_height);`);
+            color([0, 0, 1]) {
+                translate([${x}, ${gridBackEdge}, 0])
+                rotate([0, 0, 0])
+                male_tooth_3d("${edgePattern}", plate_height);
+                // Color marker
+                translate([${x}, ${gridBackEdge}, plate_height + 2])
+                sphere(r=2, $fn=16);
+            }`);
       }
     } else if (backEdgeType === 'female') {
       const positions = getPositions(segment.gridUnitsX, true, paddingNearX);
@@ -1929,9 +1944,14 @@ module screw_holes() {
         // Back edge female cavity at X=${x} - COLOR: LIGHT BLUE
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
-        color([0.5, 0.8, 1]) translate([${x}, ${gridBackEdge}, 0])
+        translate([${x}, ${gridBackEdge}, 0])
         rotate([0, 0, 0])
         female_cavity_3d("${edgePattern}", plate_height);`);
+        // Add color marker outside difference() - will be added to union
+        maleTeeth.push(`
+            // Back edge female marker at X=${x} - COLOR: LIGHT BLUE
+            color([0.5, 0.8, 1]) translate([${x}, ${gridBackEdge}, plate_height + 2])
+            sphere(r=2, $fn=16);`);
       }
     }
     
@@ -1947,18 +1967,28 @@ module screw_holes() {
         // Left edge female cavity at Y=${y}, X=${gridLeftEdge} (grid boundary) - COLOR: LIGHT GREEN
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
-        color([0.5, 1, 0.5]) translate([${gridLeftEdge}, ${y}, 0])
+        translate([${gridLeftEdge}, ${y}, 0])
         rotate([0, 0, -90])
         female_cavity_3d("${edgePattern}", plate_height);`);
+        // Add color marker outside difference() - will be added to union
+        maleTeeth.push(`
+            // Left edge female marker at Y=${y} - COLOR: LIGHT GREEN
+            color([0.5, 1, 0.5]) translate([${gridLeftEdge}, ${y}, plate_height + 2])
+            sphere(r=2, $fn=16);`);
       }
     } else if (leftEdgeType === 'male') {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         maleTeeth.push(`
             // Left edge male tooth at Y=${y}, X=${gridLeftEdge} (grid boundary) - COLOR: GREEN
-            color([0, 1, 0]) translate([${gridLeftEdge}, ${y}, 0])
-            rotate([0, 0, -90])
-            male_tooth_3d("${edgePattern}", plate_height);`);
+            color([0, 1, 0]) {
+                translate([${gridLeftEdge}, ${y}, 0])
+                rotate([0, 0, -90])
+                male_tooth_3d("${edgePattern}", plate_height);
+                // Color marker
+                translate([${gridLeftEdge}, ${y}, plate_height + 2])
+                sphere(r=2, $fn=16);
+            }`);
       }
     }
     
@@ -1974,17 +2004,27 @@ module screw_holes() {
       for (const x of frontEdgePositions) {
         femaleCavities.push(`
         // Front edge female cavity at X=${x}, Y=${gridFrontEdge} (grid boundary) - COLOR: ORANGE
-        color([1, 0.5, 0]) translate([${x}, ${gridFrontEdge}, 0])
+        translate([${x}, ${gridFrontEdge}, 0])
         rotate([0, 0, 0])
         female_cavity_3d("${edgePattern}", plate_height);`);
+        // Add color marker outside difference() - will be added to union
+        maleTeeth.push(`
+            // Front edge female marker at X=${x} - COLOR: ORANGE
+            color([1, 0.5, 0]) translate([${x}, ${gridFrontEdge}, plate_height + 2])
+            sphere(r=2, $fn=16);`);
       }
     } else if (frontEdgeType === 'male') {
       for (const x of frontEdgePositions) {
         maleTeeth.push(`
             // Front edge male tooth at X=${x}, Y=${gridFrontEdge} (grid boundary) - COLOR: YELLOW
-            color([1, 1, 0]) translate([${x}, ${gridFrontEdge}, 0])
-            rotate([0, 0, 0])
-            male_tooth_3d("${edgePattern}", plate_height);`);
+            color([1, 1, 0]) {
+                translate([${x}, ${gridFrontEdge}, 0])
+                rotate([0, 0, 0])
+                male_tooth_3d("${edgePattern}", plate_height);
+                // Color marker
+                translate([${x}, ${gridFrontEdge}, plate_height + 2])
+                sphere(r=2, $fn=16);
+            }`);
       }
     }
     
