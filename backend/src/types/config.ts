@@ -491,16 +491,25 @@ export function splitBaseplateForPrinter(
       
       // Determine connector positions (only on internal edges between segments)
       // CRITICAL FIX: Only place connectors on "strong connecting edges" (full grid boundaries)
-      // Skip connectors on "weak edges" (half cell boundaries) - move them to adjacent strong edges
+      // A "weak edge" is when the boundary between segments is at a fractional grid position (half cell boundary)
+      // A "strong edge" is when the boundary is at a full grid unit position
       // 
-      // For RIGHT edge: Only place connector if NOT a weak edge (no half cell on far X edge)
-      // For BACK edge: Only place connector if NOT a weak edge (no half cell on far Y edge)
-      // For LEFT edge: Place connector if normal position OR if previous segment has half cell on right (moved connector)
-      // For FRONT edge: Place connector if normal position OR if previous segment has half cell on back (moved connector)
-      let hasConnectorRight = connectorEnabled && sx < segmentsX - 1 && !segmentHasHalfCellX;
-      let hasConnectorBack = connectorEnabled && sy < segmentsY - 1 && !segmentHasHalfCellY;
-      let hasConnectorLeft = connectorEnabled && sx > 0;
-      let hasConnectorFront = connectorEnabled && sy > 0;
+      // Check if the boundary to the next segment is at a full grid unit (strong edge) or fractional (weak edge)
+      // The boundary position is at: startX + gridUnitsX (for right edge) or startY + gridUnitsY (for back edge)
+      const boundaryX = startX + gridUnitsX;
+      const boundaryY = startY + gridUnitsY;
+      const isStrongEdgeX = Math.abs(boundaryX - Math.round(boundaryX)) < 0.01;  // Boundary is at full grid unit
+      const isStrongEdgeY = Math.abs(boundaryY - Math.round(boundaryY)) < 0.01;  // Boundary is at full grid unit
+      
+      // Only place connectors on strong edges (full grid boundaries), not on weak edges (fractional boundaries)
+      // For RIGHT edge: Only if boundary is at a full grid unit (strong edge)
+      // For BACK edge: Only if boundary is at a full grid unit (strong edge)  
+      // For LEFT edge: Will be set in second pass if needed (when previous segment has weak edge)
+      // For FRONT edge: Will be set in second pass if needed (when previous segment has weak edge)
+      let hasConnectorRight = connectorEnabled && sx < segmentsX - 1 && isStrongEdgeX;
+      let hasConnectorBack = connectorEnabled && sy < segmentsY - 1 && isStrongEdgeY;
+      let hasConnectorLeft = false;  // Will be set in second pass
+      let hasConnectorFront = false;  // Will be set in second pass
       
       // Assign padding based on segment position
       // Padding is only on outer edges of the first/last segments
@@ -652,40 +661,44 @@ export function splitBaseplateForPrinter(
     segments.push(row);
   }
   
-  // CRITICAL FIX: Second pass - Move connectors from weak edges to adjacent strong edges
-  // If a segment has a half cell on its far edge, the connector should be on the near edge of the next segment
-  // This ensures connectors are always on "strong connecting edges" (full grid boundaries) not "weak edges" (half cell boundaries)
+  // CRITICAL FIX: Second pass - Set connectors on left/front edges based on boundary positions
+  // Connectors should only be on "strong edges" (full grid boundaries), not "weak edges" (fractional boundaries)
+  // A connector should be placed between two segments ONLY if both boundaries are at full grid unit positions
   if (connectorEnabled) {
     for (let sy = 0; sy < segmentsY; sy++) {
       for (let sx = 0; sx < segmentsX; sx++) {
         const segment = segments[sy][sx];
         
-        // Check if previous segment in X has a half cell on its right edge (weak edge)
-        // If previous segment would normally have a connector (not last segment) but doesn't (because of weak edge),
-        // then add connector to this segment's left edge (strong edge)
+        // LEFT edge: Place connector only if BOTH this segment's start AND previous segment's end are at strong edges
         if (sx > 0) {
           const prevSegment = segments[sy][sx - 1];
-          const prevFractionalX = prevSegment.gridUnitsX - Math.floor(prevSegment.gridUnitsX);
-          const prevHasHalfCellX = prevFractionalX > 0.49;
-          // Previous segment would have connector if: not last segment AND no half cell on far edge
-          // If it has half cell, connector was skipped - move it to this segment's left edge
-          if (prevHasHalfCellX && (sx - 1) < segmentsX - 1 && !prevSegment.hasConnectorRight) {
-            // Previous segment has half cell on right edge (weak edge) - move connector to strong edge here
+          const prevStartX = (sx - 1) * safeMaxSegmentUnitsX;
+          const prevBoundaryX = prevStartX + prevSegment.gridUnitsX;
+          const prevIsStrongEdgeX = Math.abs(prevBoundaryX - Math.round(prevBoundaryX)) < 0.01;
+          
+          const thisStartX = sx * safeMaxSegmentUnitsX;
+          const thisIsStrongEdgeX = Math.abs(thisStartX - Math.round(thisStartX)) < 0.01;
+          
+          // Only place connector if BOTH boundaries are at full grid units (strong edges)
+          // This ensures the connector is at a proper full grid boundary, not a fractional position
+          if (prevIsStrongEdgeX && thisIsStrongEdgeX) {
             segment.hasConnectorLeft = true;
           }
         }
         
-        // Check if previous segment in Y has a half cell on its back edge (weak edge)
-        // If previous segment would normally have a connector (not last segment) but doesn't (because of weak edge),
-        // then add connector to this segment's front edge (strong edge)
+        // FRONT edge: Place connector only if BOTH this segment's start AND previous segment's end are at strong edges
         if (sy > 0) {
           const prevSegment = segments[sy - 1][sx];
-          const prevFractionalY = prevSegment.gridUnitsY - Math.floor(prevSegment.gridUnitsY);
-          const prevHasHalfCellY = prevFractionalY > 0.49;
-          // Previous segment would have connector if: not last segment AND no half cell on far edge
-          // If it has half cell, connector was skipped - move it to this segment's front edge
-          if (prevHasHalfCellY && (sy - 1) < segmentsY - 1 && !prevSegment.hasConnectorBack) {
-            // Previous segment has half cell on back edge (weak edge) - move connector to strong edge here
+          const prevStartY = (sy - 1) * safeMaxSegmentUnitsY;
+          const prevBoundaryY = prevStartY + prevSegment.gridUnitsY;
+          const prevIsStrongEdgeY = Math.abs(prevBoundaryY - Math.round(prevBoundaryY)) < 0.01;
+          
+          const thisStartY = sy * safeMaxSegmentUnitsY;
+          const thisIsStrongEdgeY = Math.abs(thisStartY - Math.round(thisStartY)) < 0.01;
+          
+          // Only place connector if BOTH boundaries are at full grid units (strong edges)
+          // This ensures the connector is at a proper full grid boundary, not a fractional position
+          if (prevIsStrongEdgeY && thisIsStrongEdgeY) {
             segment.hasConnectorFront = true;
           }
         }
