@@ -325,12 +325,42 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         }
         
         // Socket cutouts
-        // Position sockets using grid offset (same pattern as non-split baseplate)
-        for (gx = [0:width_units-1]) {
-            for (gy = [0:depth_units-1]) {
+        // Handle both full and half cells (same pattern as non-split baseplate)
+        // Half cells go on the FAR edge (right/back) at high X, high Y
+        full_cells_x = floor(width_units);
+        full_cells_y = floor(depth_units);
+        has_half_x = width_units - full_cells_x >= 0.5;
+        has_half_y = depth_units - full_cells_y >= 0.5;
+        half_cell_size = grid_unit / 2;
+        
+        // Full grid cells - positioned at grid_offset for proper centering
+        for (gx = [0:full_cells_x-1]) {
+            for (gy = [0:full_cells_y-1]) {
                 translate([grid_offset_x + gx * grid_unit, grid_offset_y + gy * grid_unit, 0])
-                grid_socket();
+                grid_socket(grid_unit, grid_unit);
             }
+        }
+        
+        // Half cells on X edge (far/right side) - AFTER full cells, at high X values
+        if (has_half_x) {
+            for (gy = [0:full_cells_y-1]) {
+                translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + gy * grid_unit, 0])
+                grid_socket(half_cell_size, grid_unit);
+            }
+        }
+        
+        // Half cells on Y edge (far/back side) - AFTER full cells, at high Y values
+        if (has_half_y) {
+            for (gx = [0:full_cells_x-1]) {
+                translate([grid_offset_x + gx * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
+                grid_socket(grid_unit, half_cell_size);
+            }
+        }
+        
+        // Corner half cell (if both X and Y have half cells) - far corner at high X, high Y
+        if (has_half_x && has_half_y) {
+            translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
+            grid_socket(half_cell_size, half_cell_size);
         }
         
         // Left edge cavities
@@ -429,9 +459,11 @@ module socket_rounded_rect(width, depth, height, radius) {
     }
 }
 
-module grid_socket() {
-    socket_width = grid_unit - clearance * 2;
-    socket_depth_size = grid_unit - clearance * 2;
+module grid_socket(cell_width = grid_unit, cell_depth = grid_unit) {
+    // Socket that receives Gridfinity bin foot
+    // Supports full cells (42mm) and half cells (21mm)
+    socket_width = cell_width - clearance * 2;
+    socket_depth_size = cell_depth - clearance * 2;
     socket_corner_radius = 3.75;
     bottom_width = socket_width - socket_bottom_inset * 2;
     bottom_depth = socket_depth_size - socket_bottom_inset * 2;
@@ -450,7 +482,10 @@ module grid_socket() {
         }
     }
     
-    if (style == "magnet") {
+    // Only add features for full-size cells
+    is_full_cell = cell_width >= grid_unit - 0.1 && cell_depth >= grid_unit - 0.1;
+    
+    if (style == "magnet" && is_full_cell) {
         positions = [[4.8, 4.8], [4.8, grid_unit - 4.8], [grid_unit - 4.8, 4.8], [grid_unit - 4.8, grid_unit - 4.8]];
         for (pos = positions) {
             translate([pos[0], pos[1], plate_height - magnet_depth])
@@ -1257,12 +1292,42 @@ module gridfinity_segment() {
         }
         
         // Socket cutouts
-        // Position sockets using grid offset (same pattern as non-split baseplate)
-        for (gx = [0:width_units-1]) {
-            for (gy = [0:depth_units-1]) {
+        // Handle both full and half cells (same pattern as non-split baseplate)
+        // Half cells go on the FAR edge (right/back) at high X, high Y
+        full_cells_x = floor(width_units);
+        full_cells_y = floor(depth_units);
+        has_half_x = width_units - full_cells_x >= 0.5;
+        has_half_y = depth_units - full_cells_y >= 0.5;
+        half_cell_size = grid_unit / 2;
+        
+        // Full grid cells - positioned at grid_offset for proper centering
+        for (gx = [0:full_cells_x-1]) {
+            for (gy = [0:full_cells_y-1]) {
                 translate([grid_offset_x + gx * grid_unit, grid_offset_y + gy * grid_unit, 0])
-                grid_socket();
+                grid_socket(grid_unit, grid_unit);
             }
+        }
+        
+        // Half cells on X edge (far/right side) - AFTER full cells, at high X values
+        if (has_half_x) {
+            for (gy = [0:full_cells_y-1]) {
+                translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + gy * grid_unit, 0])
+                grid_socket(half_cell_size, grid_unit);
+            }
+        }
+        
+        // Half cells on Y edge (far/back side) - AFTER full cells, at high Y values
+        if (has_half_y) {
+            for (gx = [0:full_cells_x-1]) {
+                translate([grid_offset_x + gx * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
+                grid_socket(grid_unit, half_cell_size);
+            }
+        }
+        
+        // Corner half cell (if both X and Y have half cells) - far corner at high X, high Y
+        if (has_half_x && has_half_y) {
+            translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
+            grid_socket(half_cell_size, half_cell_size);
         }
         
         // Female cavities (cut into edges)
@@ -1307,9 +1372,11 @@ module socket_rounded_rect(width, depth, height, radius) {
     }
 }
 
-module grid_socket() {
-    socket_width = grid_unit - clearance * 2;
-    socket_depth_size = grid_unit - clearance * 2;
+module grid_socket(cell_width = grid_unit, cell_depth = grid_unit) {
+    // Socket that receives Gridfinity bin foot
+    // Supports full cells (42mm) and half cells (21mm)
+    socket_width = cell_width - clearance * 2;
+    socket_depth_size = cell_depth - clearance * 2;
     socket_corner_radius = 3.75;
     
     bottom_width = socket_width - socket_bottom_inset * 2;
@@ -1331,19 +1398,22 @@ module grid_socket() {
         }
     }
     
-    if (style == "magnet") {
+    // Only add features for full-size cells
+    is_full_cell = cell_width >= grid_unit - 0.1 && cell_depth >= grid_unit - 0.1;
+    
+    if (style == "magnet" && is_full_cell) {
         magnet_holes();
     }
     
-    if (style == "screw") {
+    if (style == "screw" && is_full_cell) {
         screw_holes();
     }
     
-    if (center_screw) {
+    if (center_screw && is_full_cell) {
         center_screw_hole();
     }
     
-    if (weight_cavity || style == "weighted") {
+    if ((weight_cavity || style == "weighted") && is_full_cell) {
         weight_cavity_cutout();
     }
 }
