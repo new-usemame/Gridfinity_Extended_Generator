@@ -113,6 +113,12 @@ export class OpenSCADService {
       paddingNearY,
       paddingFarY
     );
+    
+    // #region agent log
+    const lastSegment = splitInfo.segments[splitInfo.segmentsY - 1]?.[splitInfo.segmentsX - 1];
+    const lastSegmentPaddingFarX = lastSegment?.paddingFarX ?? 0;
+    fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'openscad.ts:115',message:'generateBaseplateSegments: After splitBaseplateForPrinter',data:{segmentsX:splitInfo.segmentsX,segmentsY:splitInfo.segmentsY,needsSplit:splitInfo.needsSplit,maxSegmentUnitsX:splitInfo.maxSegmentUnitsX,lastSegmentPaddingFarX},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
 
     // Generate a combined preview SCAD (faster - single render)
     const combinedScad = this.generateCombinedPreviewScad(config, splitInfo);
@@ -188,44 +194,12 @@ export class OpenSCADService {
         const minWallThickness = 0.5;
         const hasHalfCellX = segment.gridUnitsX - Math.floor(segment.gridUnitsX) >= 0.5;
         const hasHalfCellY = segment.gridUnitsY - Math.floor(segment.gridUnitsY) >= 0.5;
-        const paddingFarXBefore = paddingFarX;
-        const paddingFarYBefore = paddingFarY;
         if (hasHalfCellX) {
           paddingFarX = Math.max(paddingFarX, minWallThickness);
         }
         if (hasHalfCellY) {
           paddingFarY = Math.max(paddingFarY, minWallThickness);
         }
-        
-        // #region agent log
-        try {
-          const logPath = require('path').join(process.cwd(), '.cursor', 'debug.log');
-          const segmentWidth = segment.gridUnitsX * gridSize + paddingNearX + paddingFarX;
-          const logEntry = JSON.stringify({
-            location: 'openscad.ts:generateCombinedPreviewScad:paddingAdjust',
-            message: `Padding adjustment for segment [${sx}, ${sy}]`,
-            data: {
-              segmentX: sx,
-              segmentY: sy,
-              isLastX: sx === splitInfo.segmentsX - 1,
-              gridUnitsX: segment.gridUnitsX,
-              hasHalfCellX,
-              paddingFarXBefore,
-              paddingFarXAfter: paddingFarX,
-              paddingFarYBefore,
-              paddingFarYAfter: paddingFarY,
-              segmentWidth,
-              printerBedWidth: config.printerBedWidth,
-              exceedsBed: segmentWidth > config.printerBedWidth
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'A'
-          }) + '\n';
-          require('fs').appendFileSync(logPath, logEntry);
-        } catch (e) {}
-        // #endregion
         
         // Validate segment dimensions
         const segmentWidth = segment.gridUnitsX * gridSize + paddingNearX + paddingFarX;
@@ -1247,46 +1221,24 @@ module female_cavity_3d(pattern, height) {
     // Calculate if we have half cells on the far edge
     const hasHalfCellX = widthUnits - Math.floor(widthUnits) >= 0.5;
     const hasHalfCellY = depthUnits - Math.floor(depthUnits) >= 0.5;
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'openscad.ts:1216',message:'generateSegmentScad: Before effective padding calculation',data:{segmentX:segment.segmentX,segmentY:segment.segmentY,widthUnits:widthUnits,depthUnits:depthUnits,gridWidth:gridWidth,gridDepth:gridDepth,paddingNearX:paddingNearX,paddingFarX:paddingFarX,paddingNearY:paddingNearY,paddingFarY:paddingFarY,hasHalfCellX:hasHalfCellX,hasHalfCellY:hasHalfCellY,minWallThickness:minWallThickness,hasConnectorRight:segment.hasConnectorRight},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+    
     // CRITICAL: When half cells are present on the far edge, ensure padding is at least minWallThickness
     // This ensures the plate always extends beyond half cells to create the closing wall
     // The wall runs along the entire Y axis (depth) from Y=0 to Y=depth
     // If padding is already >= minWallThickness, use it; otherwise use minWallThickness
     const effectivePaddingFarX = hasHalfCellX ? Math.max(paddingFarX, minWallThickness) : paddingFarX;
     const effectivePaddingFarY = hasHalfCellY ? Math.max(paddingFarY, minWallThickness) : paddingFarY;
-    const outerWidthMm = gridWidth + paddingNearX + effectivePaddingFarX;
-    const outerDepthMm = gridDepth + paddingNearY + effectivePaddingFarY;
     
     // #region agent log
-    try {
-      const logPath = require('path').join(process.cwd(), '.cursor', 'debug.log');
-      const logEntry = JSON.stringify({
-        location: 'openscad.ts:generateSegmentScad:effectivePadding',
-        message: `Effective padding calculation for segment [${segment.segmentX}, ${segment.segmentY}]`,
-        data: {
-          segmentX: segment.segmentX,
-          segmentY: segment.segmentY,
-          isLastX: segment.segmentX === undefined ? false : true, // Will be set properly
-          widthUnits,
-          depthUnits,
-          hasHalfCellX,
-          hasHalfCellY,
-          paddingFarX,
-          effectivePaddingFarX,
-          paddingFarY,
-          effectivePaddingFarY,
-          gridWidth,
-          outerWidthMm,
-          printerBedWidth: config.printerBedWidth,
-          exceedsBed: outerWidthMm > config.printerBedWidth
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'A'
-      }) + '\n';
-      require('fs').appendFileSync(logPath, logEntry);
-    } catch (e) {}
+    fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'openscad.ts:1224',message:'generateSegmentScad: After effective padding calculation',data:{segmentX:segment.segmentX,segmentY:segment.segmentY,effectivePaddingFarX:effectivePaddingFarX,effectivePaddingFarY:effectivePaddingFarY,outerWidthMm:gridWidth + paddingNearX + effectivePaddingFarX,outerDepthMm:gridDepth + paddingNearY + effectivePaddingFarY},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
+    
+    const outerWidthMm = gridWidth + paddingNearX + effectivePaddingFarX;
+    const outerDepthMm = gridDepth + paddingNearY + effectivePaddingFarY;
     
     // Validate calculated dimensions are reasonable
     if (outerWidthMm <= 0 || outerWidthMm > 10000) {

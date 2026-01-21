@@ -1,6 +1,3 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
 // Box/Bin Configuration
 export interface BoxConfig {
   // Dimensions (in grid units)
@@ -317,36 +314,6 @@ export function splitBaseplateForPrinter(
   paddingNearY?: number,
   paddingFarY?: number
 ): SplitResult {
-  // #region agent log
-  try {
-    const logPath = path.join(process.cwd(), '.cursor', 'debug.log');
-    const logEntry = JSON.stringify({
-      location: 'config.ts:splitBaseplateForPrinter:entry',
-      message: 'Function entry with parameters',
-      data: {
-        totalGridUnitsX,
-        totalGridUnitsY,
-        printerBedWidth,
-        printerBedDepth,
-        gridSize,
-        actualGridUnitsX,
-        actualGridUnitsY,
-        gridCoverageMmX,
-        gridCoverageMmY,
-        paddingNearX,
-        paddingFarX,
-        paddingNearY,
-        paddingFarY
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'A,B,C,D,E'
-    }) + '\n';
-    fs.appendFileSync(logPath, logEntry);
-  } catch (e) {}
-  // #endregion
-  
   // Use actual grid units from calculateGridFromMm if provided (accounts for half cells)
   // Otherwise fall back to the floored totalGridUnits values
   const effectiveGridUnitsX = actualGridUnitsX !== undefined ? actualGridUnitsX : totalGridUnitsX;
@@ -369,31 +336,6 @@ export function splitBaseplateForPrinter(
   // Calculate max grid units that fit on the printer bed
   const maxSegmentUnitsX = Math.floor(printerBedWidth / gridSize);
   const maxSegmentUnitsY = Math.floor(printerBedDepth / gridSize);
-  
-  // #region agent log
-  try {
-    const logPath = path.join(process.cwd(), '.cursor', 'debug.log');
-    const logEntry = JSON.stringify({
-      location: 'config.ts:splitBaseplateForPrinter:maxSegmentCalc',
-      message: 'Max segment units calculated',
-      data: {
-        maxSegmentUnitsX,
-        maxSegmentUnitsY,
-        maxSegmentWidthMm: maxSegmentUnitsX * gridSize,
-        maxSegmentDepthMm: maxSegmentUnitsY * gridSize,
-        effectiveGridUnitsX,
-        effectiveGridUnitsY,
-        effectiveGridCoverageMmX: gridCoverageMmX !== undefined ? gridCoverageMmX : effectiveGridUnitsX * gridSize,
-        effectiveGridCoverageMmY: gridCoverageMmY !== undefined ? gridCoverageMmY : effectiveGridUnitsY * gridSize
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'B,E'
-    }) + '\n';
-    fs.appendFileSync(logPath, logEntry);
-  } catch (e) {}
-  // #endregion
   
   // Calculate number of segments needed based on actual grid units
   let segmentsX = Math.ceil(effectiveGridUnitsX / maxSegmentUnitsX);
@@ -491,48 +433,28 @@ export function splitBaseplateForPrinter(
       const segmentPaddingFarY = (sy === segmentsY - 1 && paddingFarY !== undefined) ? paddingFarY : 0;
       
       // #region agent log
-      try {
-        const logPath = path.join(process.cwd(), '.cursor', 'debug.log');
-        const hasHalfCellX = gridUnitsX - Math.floor(gridUnitsX) >= 0.5;
-        const hasHalfCellY = gridUnitsY - Math.floor(gridUnitsY) >= 0.5;
-        const segmentWidthMm = gridUnitsX * gridSize + segmentPaddingNearX + segmentPaddingFarX;
-        const segmentDepthMm = gridUnitsY * gridSize + segmentPaddingNearY + segmentPaddingFarY;
-        const exceedsBedWidth = segmentWidthMm > printerBedWidth;
-        const exceedsBedDepth = segmentDepthMm > printerBedDepth;
-        const logEntry = JSON.stringify({
-          location: 'config.ts:splitBaseplateForPrinter:segment',
-          message: `Segment [${sx}, ${sy}] calculated`,
+      fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: 'config.ts:433',
+          message: 'splitBaseplateForPrinter: Segment padding assignment',
           data: {
-            segmentX: sx,
-            segmentY: sy,
+            sx, sy, segmentsX, segmentsY, gridUnitsX, gridUnitsY,
+            segmentPaddingNearX, segmentPaddingFarX, segmentPaddingNearY, segmentPaddingFarY,
             isLastX: sx === segmentsX - 1,
             isLastY: sy === segmentsY - 1,
-            startX,
-            startY,
-            endX,
-            endY,
-            gridUnitsX,
-            gridUnitsY,
-            hasHalfCellX,
-            hasHalfCellY,
-            segmentPaddingNearX,
-            segmentPaddingFarX,
-            segmentPaddingNearY,
-            segmentPaddingFarY,
-            segmentWidthMm,
-            segmentDepthMm,
-            printerBedWidth,
-            printerBedDepth,
-            exceedsBedWidth,
-            exceedsBedDepth
+            paddingNearX, paddingFarX, paddingNearY, paddingFarY,
+            effectiveGridUnitsX, effectiveGridUnitsY,
+            gridCoverageMmX, gridCoverageMmY,
+            printerBedWidth, printerBedDepth
           },
           timestamp: Date.now(),
           sessionId: 'debug-session',
           runId: 'run1',
-          hypothesisId: 'A,B,C,D'
-        }) + '\n';
-        fs.appendFileSync(logPath, logEntry);
-      } catch (e) {}
+          hypothesisId: 'C'
+        })
+      }).catch(() => {});
       // #endregion
       
       row.push({
@@ -618,6 +540,29 @@ export function calculateGridFromMm(
     paddingNearY = 0;
     paddingFarY = totalPaddingY;
   }
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      location: 'config.ts:517',
+      message: 'calculateGridFromMm: Padding calculation result',
+      data: {
+        targetWidthMm, targetDepthMm, gridSize,
+        allowHalfCellsX, allowHalfCellsY, paddingAlignment,
+        fullCellsX, fullCellsY, hasHalfCellX, hasHalfCellY,
+        gridUnitsX, gridUnitsY, gridCoverageMmX, gridCoverageMmY,
+        totalPaddingX, totalPaddingY,
+        paddingNearX, paddingFarX, paddingNearY, paddingFarY
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'A'
+    })
+  }).catch(() => {});
+  // #endregion
   
   return {
     gridUnitsX,
