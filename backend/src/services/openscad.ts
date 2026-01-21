@@ -277,8 +277,29 @@ export class OpenSCADService {
         }));
         // #endregion
         
+        // CRITICAL DEBUG: Log actual padding values being passed to segment_base
+        console.log(JSON.stringify({
+          location: 'generateCombinedPreviewScad:segment-base-call',
+          message: `Segment [${sx}, ${sy}] - FINAL padding values being passed to SCAD`,
+          data: {
+            sx, sy,
+            paddingNearX: paddingNearX,
+            paddingFarX: paddingFarX,
+            paddingNearY: paddingNearY,  // THIS SHOULD BE >= 0.5 for sy===0
+            paddingFarY: paddingFarY,
+            isFirstSegmentX: sx === 0,
+            isFirstSegmentY: sy === 0,
+            segmentPaddingNearYFromSplit: segment.paddingNearY
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'FINAL-DEBUG'
+        }));
+        
         segmentPlacements += `
-    // Segment [${sx}, ${sy}]
+    // Segment [${sx}, ${sy}] - paddingNearY=${paddingNearY.toFixed(2)}, paddingFarY=${paddingFarY.toFixed(2)}
+    // DEBUG: isFirstSegmentY=${sy === 0}, wall should exist if paddingNearY > 0
     translate([${posX}, ${posY}, 0])
     segment_base(${segment.gridUnitsX}, ${segment.gridUnitsY}, "${leftEdge}", "${rightEdge}", "${frontEdge}", "${backEdge}", ${paddingNearX.toFixed(2)}, ${paddingFarX.toFixed(2)}, ${paddingNearY.toFixed(2)}, ${paddingFarY.toFixed(2)});
 `;
@@ -342,13 +363,25 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
     grid_offset_x = use_fill_mode ? padding_near_x : 0;
     grid_offset_y = use_fill_mode ? padding_near_y : 0;
     
+    // DEBUG: Echo padding values to help diagnose wall issues
+    // Check the OpenSCAD console for these values when rendering
+    echo("=== SEGMENT_BASE DEBUG ===");
+    echo("padding_near_y =", padding_near_y);
+    echo("padding_near_x =", padding_near_x);
+    echo("grid_offset_y =", grid_offset_y);
+    echo("grid_offset_x =", grid_offset_x);
+    echo("use_fill_mode =", use_fill_mode);
+    echo("plate_depth =", plate_depth);
+    echo("outer_depth_mm =", outer_depth_mm);
+    echo("Expected front wall:", padding_near_y > 0 ? "YES" : "NO");
+    
     difference() {
         union() {
             // Main plate body
-            // CRITICAL: plate_depth = outer_depth_mm = grid_depth + padding_far_y
-            // This creates the closing wall on the far edge (back/right)
-            // For segment [0, 1]: depth_units=0.5, grid_depth=21mm, padding_far_y=9.5mm
-            // plate_depth = 30.5mm, creating wall from Y=21mm to Y=30.5mm
+            // CRITICAL: plate_depth = outer_depth_mm = grid_depth + padding_near_y + padding_far_y
+            // This creates walls on BOTH near and far edges when padding > 0
+            // Near wall: from Y=0 to Y=padding_near_y (grid_offset_y)
+            // Far wall: from Y=(grid_offset_y + grid_depth) to Y=plate_depth
             rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
             
             // Right edge teeth (male or female depending on type)
