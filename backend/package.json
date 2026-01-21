@@ -9,6 +9,8 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@types/archiver": "^7.0.0",
+    "archiver": "^7.0.1",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.6.2",
     "cors": "^2.8.5",

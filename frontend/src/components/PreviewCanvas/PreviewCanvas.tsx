@@ -661,7 +661,6 @@ function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.Bu
   const minZ = boundingBox.min.z;
   const maxZ = boundingBox.max.z;
   const width = maxX - minX;
-  const depth = maxZ - minZ;
 
   // Generate tick marks for X axis (OpenSCAD X)
   const xTicks: Array<{ position: number; isMajor: boolean }> = [];
@@ -690,7 +689,12 @@ function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.Bu
   }
 
   const centerX = (minX + maxX) / 2;
-  const centerZ = (minZ + maxZ) / 2;
+
+  // For Z-axis ruler, we want it to start at the origin (Z=0)
+  // Extend the ruler range to include the origin if it's not already included
+  const rulerStartZ = Math.min(0, minZ);
+  const rulerEndZ = Math.max(0, maxZ);
+  const rulerDepth = rulerEndZ - rulerStartZ;
 
   return (
     <group>
@@ -727,37 +731,68 @@ function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.Bu
         ))}
       </group>
 
-      {/* Z-axis ruler (OpenSCAD Y) - along the left edge (minX) */}
-      <group position={[minX, rulerHeight, centerZ]} rotation={[0, Math.PI / 2, 0]}>
-        {/* Main ruler line */}
+      {/* Z-axis ruler (OpenSCAD -Y) - along the left edge (minX) */}
+      {/* Three.js Z = -OpenSCAD Y, so OpenSCAD -Y = Three.js Z */}
+      {/* The ruler starts at the origin (Z=0) and measurements increase with positive Z */}
+      <group position={[minX, rulerHeight, rulerStartZ]} rotation={[0, Math.PI / 2, 0]}>
+        {/* Main ruler line - extends from origin to cover the geometry */}
         <mesh>
-          <boxGeometry args={[depth, 0.05, 0.05]} />
+          <boxGeometry args={[rulerDepth, 0.05, 0.05]} />
           <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
         </mesh>
-        {/* Tick marks */}
-        {zTicks.map((tick, i) => (
-          <group key={`z-tick-${i}`} position={[tick.position - centerZ, 0, 0]}>
+        {/* Tick marks - generate ticks that include the origin */}
+        {zTicks.map((tick, i) => {
+          // Convert Three.js Z coordinate to OpenSCAD -Y value
+          // Three.js Z = -OpenSCAD Y, so OpenSCAD -Y = Three.js Z
+          // The ruler shows measurements starting at 0 at the origin
+          // So we use the Z value directly as the -Y measurement
+          const openScadMinusYValue = tick.position;
+          // Position tick relative to ruler start (which is at rulerStartZ, typically 0 or minZ)
+          return (
+            <group key={`z-tick-${i}`} position={[tick.position - rulerStartZ, 0, 0]}>
+              <mesh>
+                <boxGeometry args={[0.05, tick.isMajor ? tickLength : minorTickLength, 0.05]} />
+                <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
+              </mesh>
+              {/* Labels for major ticks - show OpenSCAD -Y value */}
+              {tick.isMajor && (
+                <Billboard position={[0, -tickLength - labelOffset, 0]}>
+                  <Text 
+                    fontSize={fontSize} 
+                    color={rulerColor} 
+                    anchorX="center" 
+                    anchorY="top"
+                    outlineWidth={0.1}
+                    outlineColor="#000000"
+                  >
+                    {openScadMinusYValue.toFixed(0)}mm
+                  </Text>
+                </Billboard>
+              )}
+            </group>
+          );
+        })}
+        {/* Always show tick at origin (Z=0) if it's not already in zTicks */}
+        {(!zTicks.some(t => Math.abs(t.position) < 0.01) && rulerStartZ <= 0 && rulerEndZ >= 0) && (
+          <group position={[-rulerStartZ, 0, 0]}>
             <mesh>
-              <boxGeometry args={[0.05, tick.isMajor ? tickLength : minorTickLength, 0.05]} />
+              <boxGeometry args={[0.05, tickLength, 0.05]} />
               <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
             </mesh>
-            {/* Labels for major ticks */}
-            {tick.isMajor && (
-              <Billboard position={[0, -tickLength - labelOffset, 0]}>
-                <Text 
-                  fontSize={fontSize} 
-                  color={rulerColor} 
-                  anchorX="center" 
-                  anchorY="top"
-                  outlineWidth={0.1}
-                  outlineColor="#000000"
-                >
-                  {tick.position.toFixed(0)}mm
-                </Text>
-              </Billboard>
-            )}
+            <Billboard position={[0, -tickLength - labelOffset, 0]}>
+              <Text 
+                fontSize={fontSize} 
+                color={rulerColor} 
+                anchorX="center" 
+                anchorY="top"
+                outlineWidth={0.1}
+                outlineColor="#000000"
+              >
+                0mm
+              </Text>
+            </Billboard>
           </group>
-        ))}
+        )}
       </group>
     </group>
   );

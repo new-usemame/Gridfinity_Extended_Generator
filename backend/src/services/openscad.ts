@@ -700,6 +700,95 @@ module grid_socket(cell_width = grid_unit, cell_depth = grid_unit) {
     return this.renderScad(scadContent, `segment_${segmentX}_${segmentY}`);
   }
 
+  // Generate all segments and return their file paths
+  async generateAllSegments(config: BaseplateConfig): Promise<{ splitInfo: SplitResult; filePaths: Array<{ segmentX: number; segmentY: number; filePath: string; filename: string }> }> {
+    // Calculate split info (same logic as generateSingleSegment)
+    let totalGridUnitsX: number;
+    let totalGridUnitsY: number;
+    
+    let actualGridUnitsX: number | undefined;
+    let actualGridUnitsY: number | undefined;
+    let gridCoverageMmX: number | undefined;
+    let gridCoverageMmY: number | undefined;
+    let paddingNearX: number | undefined;
+    let paddingFarX: number | undefined;
+    let paddingNearY: number | undefined;
+    let paddingFarY: number | undefined;
+    
+    if (config.sizingMode === 'fill_area_mm') {
+      const calc = calculateGridFromMm(
+        config.targetWidthMm,
+        config.targetDepthMm,
+        config.gridSize,
+        config.allowHalfCellsX,
+        config.allowHalfCellsY,
+        config.paddingAlignment
+      );
+      totalGridUnitsX = Math.floor(calc.gridUnitsX);
+      totalGridUnitsY = Math.floor(calc.gridUnitsY);
+      actualGridUnitsX = calc.gridUnitsX;
+      actualGridUnitsY = calc.gridUnitsY;
+      gridCoverageMmX = calc.gridCoverageMmX;
+      gridCoverageMmY = calc.gridCoverageMmY;
+      paddingNearX = calc.paddingNearX;
+      paddingFarX = calc.paddingFarX;
+      paddingNearY = calc.paddingNearY;
+      paddingFarY = calc.paddingFarY;
+    } else {
+      totalGridUnitsX = Math.floor(config.width);
+      totalGridUnitsY = Math.floor(config.depth);
+      actualGridUnitsX = config.width;
+      actualGridUnitsY = config.depth;
+      gridCoverageMmX = config.width * config.gridSize;
+      gridCoverageMmY = config.depth * config.gridSize;
+      paddingNearX = 0;
+      paddingFarX = 0;
+      paddingNearY = 0;
+      paddingFarY = 0;
+    }
+
+    const splitInfo = splitBaseplateForPrinter(
+      totalGridUnitsX,
+      totalGridUnitsY,
+      config.printerBedWidth,
+      config.printerBedDepth,
+      config.gridSize,
+      config.connectorEnabled,
+      actualGridUnitsX,
+      actualGridUnitsY,
+      gridCoverageMmX,
+      gridCoverageMmY,
+      paddingNearX,
+      paddingFarX,
+      paddingNearY,
+      paddingFarY
+    );
+
+    // Generate all segments
+    const filePaths: Array<{ segmentX: number; segmentY: number; filePath: string; filename: string }> = [];
+    
+    for (let sy = 0; sy < splitInfo.segmentsY; sy++) {
+      for (let sx = 0; sx < splitInfo.segmentsX; sx++) {
+        const segmentInfo = splitInfo.segments[sy][sx];
+        const scadContent = this.generateSegmentScad(config, segmentInfo);
+        const result = await this.renderScad(scadContent, `segment_${sx}_${sy}`);
+        
+        // Extract file path from stlUrl (remove /files/ prefix)
+        const filename = result.filename;
+        const filePath = path.join(this.outputPath, filename);
+        
+        filePaths.push({
+          segmentX: sx,
+          segmentY: sy,
+          filePath,
+          filename
+        });
+      }
+    }
+
+    return { splitInfo, filePaths };
+  }
+
   // Generate OpenSCAD modules for edge patterns (8 patterns, male + female)
   generateEdgePatternModules(config: BaseplateConfig): string {
     const tolerance = config.connectorTolerance;

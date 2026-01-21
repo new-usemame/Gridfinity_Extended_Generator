@@ -110,26 +110,55 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig, 
 
   const downloadAllSequentially = async () => {
     setIsGenerating(true);
+    setGeneratingSegment('all');
     
-    // Download all segments sequentially (generate each on-demand)
-    for (const segment of result.segments) {
-      setGeneratingSegment(`${segment.segmentX},${segment.segmentY}`);
-      await downloadSingleSegment(segment, true);
-      // Small delay between downloads
-      await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      // Request the server to generate all segments and return as zip
+      const response = await fetch('/api/generate/segments-zip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          config: baseplateConfig
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate zip file');
+      }
+      
+      // Get the zip file as a blob
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `baseplate_segments_${Date.now()}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download zip:', err);
+      // Fallback to individual downloads if zip fails
+      for (const segment of result.segments) {
+        setGeneratingSegment(`${segment.segmentX},${segment.segmentY}`);
+        await downloadSingleSegment(segment, true);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      // Download README with interlocking edge info
+      const readme = generateReadme(splitInfo, baseplateConfig.connectorEnabled, baseplateConfig.edgePattern);
+      const blob = new Blob([readme], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'README.txt';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     }
-    
-    // Download README with interlocking edge info
-    const readme = generateReadme(splitInfo, baseplateConfig.connectorEnabled, baseplateConfig.edgePattern);
-    const blob = new Blob([readme], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'README.txt';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
     
     setIsGenerating(false);
     setGeneratingSegment(null);
@@ -217,7 +246,7 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig, 
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span className="whitespace-nowrap">Generating {generatingSegment === 'connector' ? 'connector' : `[${generatingSegment}]`}...</span>
+              <span className="whitespace-nowrap">Generating {generatingSegment === 'connector' ? 'connector' : generatingSegment === 'all' ? 'all segments' : `[${generatingSegment}]`}...</span>
             </>
           ) : (
             <>
