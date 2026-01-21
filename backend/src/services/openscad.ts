@@ -1269,6 +1269,27 @@ module female_cavity_3d(pattern, height) {
     const outerWidthMm = gridWidth + paddingNearX + effectivePaddingFarX;
     const outerDepthMm = gridDepth + paddingNearY + effectivePaddingFarY;
     
+    // #region agent log
+    console.log(JSON.stringify({
+      location: 'generateSegmentScad:padding-calculation',
+      message: `Segment [${segment.segmentX}, ${segment.segmentY}] padding calculation`,
+      data: {
+        segmentX: segment.segmentX, segmentY: segment.segmentY,
+        widthUnits, depthUnits, gridWidth, gridDepth,
+        paddingNearX, paddingFarX, paddingNearY, paddingFarY,
+        effectivePaddingFarX, effectivePaddingFarY,
+        outerWidthMm, outerDepthMm,
+        hasHalfCellX, hasHalfCellY,
+        isLastSegmentX: paddingFarX >= minWallThickness,
+        isLastSegmentY: paddingFarY >= minWallThickness
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'A,B'
+    }));
+    // #endregion
+    
     // Validate calculated dimensions are reasonable
     if (outerWidthMm <= 0 || outerWidthMm > 10000) {
       throw new Error(`Invalid outerWidthMm for segment [${segment.segmentX}, ${segment.segmentY}]: ${outerWidthMm}mm (gridWidth: ${gridWidth}, padding: ${paddingNearX}+${paddingFarX})`);

@@ -527,6 +527,28 @@ export function splitBaseplateForPrinter(
       const segmentDepthMm = gridUnitsY * gridSize + segmentPaddingNearY + segmentPaddingFarY;
       const hasHalfCellX = gridUnitsX - Math.floor(gridUnitsX) >= 0.5;
       const hasHalfCellY = gridUnitsY - Math.floor(gridUnitsY) >= 0.5;
+      const isLastX = sx === segmentsX - 1;
+      const isLastY = sy === segmentsY - 1;
+      const exceedsBedX = segmentWidthMm > printerBedWidth;
+      const exceedsBedY = segmentDepthMm > printerBedDepth;
+      
+      // Validate segment fits on bed
+      if (exceedsBedX || exceedsBedY) {
+        console.error(JSON.stringify({
+          location: 'splitBaseplateForPrinter:segment:ERROR',
+          message: `Segment [${sx}, ${sy}] EXCEEDS BED SIZE!`,
+          data: {
+            sx, sy, segmentWidthMm, segmentDepthMm, printerBedWidth, printerBedDepth,
+            gridUnitsX, gridUnitsY, segmentPaddingNearX, segmentPaddingFarX,
+            segmentPaddingNearY, segmentPaddingFarY, exceedsBedX, exceedsBedY
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'C'
+        }));
+      }
+      
       console.log(JSON.stringify({
         location: 'splitBaseplateForPrinter:segment',
         message: `Segment [${sx}, ${sy}] calculation`,
@@ -534,13 +556,13 @@ export function splitBaseplateForPrinter(
           sx, sy, startX, startY, endX, endY, gridUnitsX, gridUnitsY,
           segmentPaddingNearX, segmentPaddingFarX, segmentPaddingNearY, segmentPaddingFarY,
           segmentWidthMm, segmentDepthMm, hasHalfCellX, hasHalfCellY,
-          isLastX: sx === segmentsX - 1, isLastY: sy === segmentsY - 1,
-          exceedsBedX: segmentWidthMm > printerBedWidth,
-          exceedsBedY: segmentDepthMm > printerBedDepth,
-          originalPaddingFarX: (sx === segmentsX - 1 && paddingFarX !== undefined) ? paddingFarX : 0,
-          originalPaddingFarY: (sy === segmentsY - 1 && paddingFarY !== undefined) ? paddingFarY : 0,
-          wallAddedX: sx === segmentsX - 1 && segmentPaddingFarX >= minWallThickness,
-          wallAddedY: sy === segmentsY - 1 && segmentPaddingFarY >= minWallThickness
+          isLastX, isLastY, exceedsBedX, exceedsBedY,
+          originalPaddingFarX: (isLastX && paddingFarX !== undefined) ? paddingFarX : 0,
+          originalPaddingFarY: (isLastY && paddingFarY !== undefined) ? paddingFarY : 0,
+          wallAddedX: isLastX && segmentPaddingFarX >= minWallThickness,
+          wallAddedY: isLastY && segmentPaddingFarY >= minWallThickness,
+          wallThicknessX: segmentPaddingFarX,
+          wallThicknessY: segmentPaddingFarY
         },
         timestamp: Date.now(),
         sessionId: 'debug-session',
