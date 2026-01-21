@@ -344,33 +344,33 @@ export function splitBaseplateForPrinter(
     ? gridCoverageMmY 
     : effectiveGridUnitsY * gridSize;
   
-  // Check if grid coverage exceeds printer bed size
-  // This is the correct check - we need to fit the grid coverage, not the total target size
-  const gridCoverageExceedsBedX = effectiveGridCoverageMmX > printerBedWidth;
-  const gridCoverageExceedsBedY = effectiveGridCoverageMmY > printerBedDepth;
-  
-  // Calculate max grid units that fit on the printer bed
-  // CRITICAL FIX: Account for padding on both first and last segments
-  // First segment has paddingNearX, last segment has paddingFarX (at least 0.5mm closing wall)
-  // We need to ensure segments fit even with padding, so we need to reserve space for both
+  // CRITICAL FIX: First check if the TOTAL size (grid + padding) fits on the bed
+  // If it does, we don't need to split at all
   const minWallThickness = 0.5;
-  // Estimate max padding: use actual padding if provided, otherwise assume worst case
-  // For first segment: use paddingNearX if provided, otherwise 0
-  // For last segment: use paddingFarX if provided, otherwise minWallThickness
   const estimatedPaddingNearX = paddingNearX !== undefined ? paddingNearX : 0;
   const estimatedPaddingFarX = paddingFarX !== undefined ? Math.max(paddingFarX, minWallThickness) : minWallThickness;
   const estimatedPaddingNearY = paddingNearY !== undefined ? paddingNearY : 0;
   const estimatedPaddingFarY = paddingFarY !== undefined ? Math.max(paddingFarY, minWallThickness) : minWallThickness;
   
-  // Reserve space for padding: worst case is when a segment has both (first segment has near, last has far)
-  // But segments are split, so each segment only has one type of padding
-  // For non-first, non-last segments: no padding
-  // For first segment: has near padding
-  // For last segment: has far padding
-  // So we need to account for the maximum of near or far padding
+  // Calculate total size including padding
+  const totalSizeX = effectiveGridCoverageMmX + estimatedPaddingNearX + estimatedPaddingFarX;
+  const totalSizeY = effectiveGridCoverageMmY + estimatedPaddingNearY + estimatedPaddingFarY;
+  
+  // Check if total size exceeds printer bed size
+  const totalExceedsBedX = totalSizeX > printerBedWidth;
+  const totalExceedsBedY = totalSizeY > printerBedDepth;
+  
+  // Also check if grid coverage alone exceeds bed (for cases where padding is 0)
+  const gridCoverageExceedsBedX = effectiveGridCoverageMmX > printerBedWidth;
+  const gridCoverageExceedsBedY = effectiveGridCoverageMmY > printerBedDepth;
+  
+  // Calculate max grid units that fit on the printer bed
+  // When splitting, each segment only has padding on one edge (near for first, far for last)
+  // So we need to reserve space for the maximum of near or far padding
   const maxPaddingX = Math.max(estimatedPaddingNearX, estimatedPaddingFarX);
   const maxPaddingY = Math.max(estimatedPaddingNearY, estimatedPaddingFarY);
   
+  // Calculate how many units fit per segment (accounting for padding on one edge)
   const maxSegmentUnitsX = Math.floor((printerBedWidth - maxPaddingX) / gridSize);
   const maxSegmentUnitsY = Math.floor((printerBedDepth - maxPaddingY) / gridSize);
   
@@ -379,8 +379,9 @@ export function splitBaseplateForPrinter(
   const safeMaxSegmentUnitsY = Math.max(1, maxSegmentUnitsY);
   
   // Calculate number of segments needed based on actual grid units
-  let segmentsX = Math.ceil(effectiveGridUnitsX / safeMaxSegmentUnitsX);
-  let segmentsY = Math.ceil(effectiveGridUnitsY / safeMaxSegmentUnitsY);
+  // CRITICAL: Only split if total size exceeds bed, not just grid coverage
+  let segmentsX = totalExceedsBedX ? Math.ceil(effectiveGridUnitsX / safeMaxSegmentUnitsX) : 1;
+  let segmentsY = totalExceedsBedY ? Math.ceil(effectiveGridUnitsY / safeMaxSegmentUnitsY) : 1;
   
   // #region agent log
   console.log(JSON.stringify({
@@ -388,7 +389,10 @@ export function splitBaseplateForPrinter(
     message: 'Initial split calculation',
     data: {
       effectiveGridUnitsX, effectiveGridUnitsY, effectiveGridCoverageMmX, effectiveGridCoverageMmY,
-      gridCoverageExceedsBedX, gridCoverageExceedsBedY, maxSegmentUnitsX, maxSegmentUnitsY, safeMaxSegmentUnitsX, safeMaxSegmentUnitsY,
+      totalSizeX, totalSizeY, totalExceedsBedX, totalExceedsBedY,
+      gridCoverageExceedsBedX, gridCoverageExceedsBedY,
+      estimatedPaddingNearX, estimatedPaddingFarX, estimatedPaddingNearY, estimatedPaddingFarY,
+      maxSegmentUnitsX, maxSegmentUnitsY, safeMaxSegmentUnitsX, safeMaxSegmentUnitsY,
       segmentsX, segmentsY
     },
     timestamp: Date.now(),
@@ -398,13 +402,13 @@ export function splitBaseplateForPrinter(
   }));
   // #endregion
   
-  // If grid coverage exceeds bed size, ensure we split even if grid units suggest otherwise
-  // This handles edge cases where rounding might suggest no split is needed
-  if (gridCoverageExceedsBedX && segmentsX === 1) {
+  // CRITICAL FIX: If grid coverage alone exceeds bed (shouldn't happen if padding is correct, but handle it)
+  // or if total exceeds bed but segments calculation suggests no split, force a split
+  if ((totalExceedsBedX || gridCoverageExceedsBedX) && segmentsX === 1) {
     segmentsX = Math.ceil(effectiveGridUnitsX / safeMaxSegmentUnitsX);
   }
   
-  if (gridCoverageExceedsBedY && segmentsY === 1) {
+  if ((totalExceedsBedY || gridCoverageExceedsBedY) && segmentsY === 1) {
     segmentsY = Math.ceil(effectiveGridUnitsY / safeMaxSegmentUnitsY);
   }
   
