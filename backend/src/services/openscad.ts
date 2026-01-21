@@ -178,9 +178,9 @@ export class OpenSCADService {
         }
         
         // Get padding values for this segment (validate they're numbers)
-        const paddingNearX = (typeof segment.paddingNearX === 'number' && !isNaN(segment.paddingNearX)) ? segment.paddingNearX : 0;
+        let paddingNearX = (typeof segment.paddingNearX === 'number' && !isNaN(segment.paddingNearX)) ? segment.paddingNearX : 0;
         let paddingFarX = (typeof segment.paddingFarX === 'number' && !isNaN(segment.paddingFarX)) ? segment.paddingFarX : 0;
-        const paddingNearY = (typeof segment.paddingNearY === 'number' && !isNaN(segment.paddingNearY)) ? segment.paddingNearY : 0;
+        let paddingNearY = (typeof segment.paddingNearY === 'number' && !isNaN(segment.paddingNearY)) ? segment.paddingNearY : 0;
         let paddingFarY = (typeof segment.paddingFarY === 'number' && !isNaN(segment.paddingFarY)) ? segment.paddingFarY : 0;
         
         // CRITICAL: Last segment must always have a closing wall, even if no half cell
@@ -207,13 +207,25 @@ export class OpenSCADService {
         }));
         // #endregion
         
-        // CRITICAL FIX: Last segment must always have closing wall, regardless of half cells
+        // CRITICAL FIX: First and last segments must always have closing walls, regardless of half cells
+        // First segment in X: ensure closing wall on near edge (X=0)
+        const isFirstSegmentX = sx === 0;
+        if (isFirstSegmentX) {
+          paddingNearX = Math.max(paddingNearX, minWallThickness);
+        }
+        // Last segment in X: ensure closing wall on far edge
         if (isLastSegmentX) {
           paddingFarX = Math.max(paddingFarX, minWallThickness);
         } else if (hasHalfCellX) {
           // Non-last segments with half cells also need closing wall
           paddingFarX = Math.max(paddingFarX, minWallThickness);
         }
+        // First segment in Y: ensure closing wall on near edge (Y=0)
+        const isFirstSegmentY = sy === 0;
+        if (isFirstSegmentY) {
+          paddingNearY = Math.max(paddingNearY, minWallThickness);
+        }
+        // Last segment in Y: ensure closing wall on far edge
         if (isLastSegmentY) {
           paddingFarY = Math.max(paddingFarY, minWallThickness);
         } else if (hasHalfCellY) {
@@ -333,6 +345,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
     difference() {
         union() {
             // Main plate body
+            // CRITICAL: plate_depth = outer_depth_mm = grid_depth + padding_far_y
+            // This creates the closing wall on the far edge (back/right)
+            // For segment [0, 1]: depth_units=0.5, grid_depth=21mm, padding_far_y=9.5mm
+            // plate_depth = 30.5mm, creating wall from Y=21mm to Y=30.5mm
             rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
             
             // Right edge teeth (male or female depending on type)
@@ -1484,12 +1500,20 @@ module gridfinity_segment() {
         
         // Half cells on Y edge (far/back side) - AFTER full cells, at high Y values
         // Only generate for full X cells (corner is already handled above)
+        // CRITICAL: When depth_units < 1 (e.g., 0.5), full_cells_y = 0, so this generates half cells
+        // at grid_offset_y + 0 * grid_unit = grid_offset_y, which is correct
+        // The plate extends to grid_depth + padding_far_y, creating the closing wall
         if (has_half_y) {
             for (gx = [0:full_cells_x-1]) {
                 translate([grid_offset_x + gx * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
                 grid_socket(grid_unit, half_cell_size);
             }
         }
+        
+        // DEBUG: Verify plate extends beyond grid to create closing wall
+        // For segment [0, 1]: depth_units=0.5, grid_depth=21mm, padding_far_y=9.5mm
+        // plate_depth should be 30.5mm, grid extends to 21mm, wall from 21mm to 30.5mm
+        // This is handled by: plate_depth = outer_depth_mm = grid_depth + padding_far_y
         
         // Female cavities (cut into edges)
         ${edgeCode.femaleCavities}

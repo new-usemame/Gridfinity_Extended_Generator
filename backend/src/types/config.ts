@@ -484,16 +484,26 @@ export function splitBaseplateForPrinter(
       
       // Assign padding based on segment position
       // Padding is only on outer edges of the first/last segments
-      const segmentPaddingNearX = (sx === 0 && paddingNearX !== undefined) ? paddingNearX : 0;
+      let segmentPaddingNearX = (sx === 0 && paddingNearX !== undefined) ? paddingNearX : 0;
       let segmentPaddingFarX = (sx === segmentsX - 1 && paddingFarX !== undefined) ? paddingFarX : 0;
-      const segmentPaddingNearY = (sy === 0 && paddingNearY !== undefined) ? paddingNearY : 0;
+      let segmentPaddingNearY = (sy === 0 && paddingNearY !== undefined) ? paddingNearY : 0;
       let segmentPaddingFarY = (sy === segmentsY - 1 && paddingFarY !== undefined) ? paddingFarY : 0;
       
-      // CRITICAL FIX: Last segment must always have a closing wall, even if padding was 0
-      // This ensures the grid is properly closed on the far edge
+      // CRITICAL FIX: First and last segments must always have closing walls, even if padding was 0
+      // This ensures the grid is properly closed on both near and far edges
       // Minimum wall thickness to ensure border is closed (similar to clearance between cells)
       // IMPORTANT: Only add minWallThickness if original padding was 0, to preserve total size
       const minWallThickness = 0.5;
+      if (sx === 0) {
+        // First segment in X: ensure at least minWallThickness padding to create closing wall on near edge
+        // But only if original padding was 0 (to avoid increasing total size)
+        const originalPaddingNearX = paddingNearX !== undefined ? paddingNearX : 0;
+        if (originalPaddingNearX < minWallThickness) {
+          // Original padding was too small, add minimum wall
+          segmentPaddingNearX = minWallThickness;
+        }
+        // Otherwise, use the original padding (which is already >= minWallThickness or we want to preserve exact size)
+      }
       if (sx === segmentsX - 1) {
         // Last segment in X: ensure at least minWallThickness padding to create closing wall
         // But only if original padding was 0 (to avoid increasing total size)
@@ -501,6 +511,16 @@ export function splitBaseplateForPrinter(
         if (originalPaddingFarX < minWallThickness) {
           // Original padding was too small, add minimum wall
           segmentPaddingFarX = minWallThickness;
+        }
+        // Otherwise, use the original padding (which is already >= minWallThickness or we want to preserve exact size)
+      }
+      if (sy === 0) {
+        // First segment in Y: ensure at least minWallThickness padding to create closing wall on near edge (Y=0)
+        // But only if original padding was 0 (to avoid increasing total size)
+        const originalPaddingNearY = paddingNearY !== undefined ? paddingNearY : 0;
+        if (originalPaddingNearY < minWallThickness) {
+          // Original padding was too small, add minimum wall
+          segmentPaddingNearY = minWallThickness;
         }
         // Otherwise, use the original padding (which is already >= minWallThickness or we want to preserve exact size)
       }
