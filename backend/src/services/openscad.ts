@@ -194,21 +194,6 @@ export class OpenSCADService {
         const isLastSegmentX = sx === splitInfo.segmentsX - 1;
         const isLastSegmentY = sy === splitInfo.segmentsY - 1;
         
-        // #region agent log
-        console.log(JSON.stringify({
-          location: 'generateCombinedPreviewScad:before-wall-check',
-          message: `Segment [${sx}, ${sy}] before wall check`,
-          data: {
-            sx, sy, gridUnitsX: segment.gridUnitsX, gridUnitsY: segment.gridUnitsY,
-            paddingNearX, paddingFarX: paddingFarX, paddingNearY, paddingFarY: paddingFarY,
-            hasHalfCellX, hasHalfCellY, isLastSegmentX, isLastSegmentY
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'A,B'
-        }));
-        // #endregion
         
         // CRITICAL FIX: First and last segments must always have closing walls, regardless of half cells
         // First segment in X: ensure closing wall on near edge (X=0)
@@ -246,23 +231,6 @@ export class OpenSCADService {
           paddingFarY = Math.max(paddingFarY, minWallThickness);
         }
         
-        // #region agent log
-        console.log(JSON.stringify({
-          location: 'generateCombinedPreviewScad:after-wall-check',
-          message: `Segment [${sx}, ${sy}] after wall check`,
-          data: {
-            sx, sy, paddingFarX: paddingFarX, paddingFarY: paddingFarY,
-            hasHalfCellX, hasHalfCellY, isLastSegmentX, isLastSegmentY,
-            wallAddedX: (isLastSegmentX || hasHalfCellX) && paddingFarX >= minWallThickness,
-            wallAddedY: (isLastSegmentY || hasHalfCellY) && paddingFarY >= minWallThickness,
-            originalPaddingFarX: segment.paddingFarX
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'A,B'
-        }));
-        // #endregion
         
         // Validate segment dimensions
         const segmentWidth = segment.gridUnitsX * gridSize + paddingNearX + paddingFarX;
@@ -271,24 +239,6 @@ export class OpenSCADService {
           throw new Error(`Invalid segment dimensions for [${sx}, ${sy}]: ${segmentWidth}mm x ${segmentDepth}mm`);
         }
         
-        // #region agent log
-        console.log(JSON.stringify({
-          location: 'generateCombinedPreviewScad:segment-placement',
-          message: `Segment [${sx}, ${sy}] placement in combined preview`,
-          data: {
-            sx, sy, posX, posY,
-            gridUnitsX: segment.gridUnitsX, gridUnitsY: segment.gridUnitsY,
-            paddingNearX, paddingFarX, paddingNearY, paddingFarY,
-            leftEdge, rightEdge, frontEdge, backEdge,
-            isLastX: sx === splitInfo.segmentsX - 1,
-            isLastY: sy === splitInfo.segmentsY - 1
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'A,B'
-        }));
-        // #endregion
         
         segmentPlacements += `
     // Segment [${sx}, ${sy}]
@@ -1488,27 +1438,6 @@ module female_cavity_3d(pattern, height) {
     const wallEndX = expectedPlateWidth;
     const wallThicknessX = wallEndX - wallStartX;
     
-    // #region agent log
-    console.log(JSON.stringify({
-      location: 'generateSegmentScad:fill-mode-check',
-      message: `Segment [${segment.segmentX}, ${segment.segmentY}] fill mode check`,
-      data: {
-        segmentX: segment.segmentX, segmentY: segment.segmentY,
-        paddingNearX, effectivePaddingFarX, paddingNearY, effectivePaddingFarY,
-        useFillMode, outerWidthMm, outerDepthMm,
-        gridWidth, gridDepth,
-        expectedPlateWidth, expectedPlateDepth,
-        gridOffsetX, gridOffsetY,
-        halfCellEndX, wallStartX, wallEndX, wallThicknessX,
-        hasHalfCellX, hasHalfCellY,
-        wallShouldExist: hasHalfCellX && wallThicknessX >= minWallThickness
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'A,B,C,D,E'
-    }));
-    // #endregion
     
     // Generate edge pattern modules
     const edgePatternModules = this.generateEdgePatternModules(config);
@@ -1525,88 +1454,6 @@ module female_cavity_3d(pattern, height) {
       paddingNearY
     );
     
-    // #region agent log
-    // Calculate socket positions for verification
-    const fullCellsX = Math.floor(widthUnits);
-    const fullCellsY = Math.floor(depthUnits);
-    const halfCellSize = gridSize / 2;
-    const socketPositions: Array<{x: number, y: number, width: number, depth: number, type: string}> = [];
-    
-    // Full cells
-    for (let gx = 0; gx < fullCellsX; gx++) {
-      for (let gy = 0; gy < fullCellsY; gy++) {
-        socketPositions.push({
-          x: gridOffsetX + gx * gridSize,
-          y: gridOffsetY + gy * gridSize,
-          width: gridSize,
-          depth: gridSize,
-          type: 'full'
-        });
-      }
-    }
-    
-    // Half cells on X edge
-    if (hasHalfCellX) {
-      for (let gy = 0; gy < fullCellsY; gy++) {
-        socketPositions.push({
-          x: gridOffsetX + fullCellsX * gridSize,
-          y: gridOffsetY + gy * gridSize,
-          width: halfCellSize,
-          depth: gridSize,
-          type: 'half-x'
-        });
-      }
-      if (hasHalfCellY) {
-        socketPositions.push({
-          x: gridOffsetX + fullCellsX * gridSize,
-          y: gridOffsetY + fullCellsY * gridSize,
-          width: halfCellSize,
-          depth: halfCellSize,
-          type: 'half-corner'
-        });
-      }
-    }
-    
-    // Half cells on Y edge
-    if (hasHalfCellY) {
-      for (let gx = 0; gx < fullCellsX; gx++) {
-        socketPositions.push({
-          x: gridOffsetX + gx * gridSize,
-          y: gridOffsetY + fullCellsY * gridSize,
-          width: gridSize,
-          depth: halfCellSize,
-          type: 'half-y'
-        });
-      }
-    }
-    
-    console.log(JSON.stringify({
-      location: 'generateSegmentScad:scad-values',
-      message: `Segment [${segment.segmentX}, ${segment.segmentY}] SCAD generation values`,
-      data: {
-        segmentX: segment.segmentX, segmentY: segment.segmentY,
-        widthUnits, depthUnits, gridWidth, gridDepth,
-        paddingNearX, paddingFarX, paddingNearY, paddingFarY,
-        effectivePaddingFarX, effectivePaddingFarY,
-        outerWidthMm, outerDepthMm,
-        useFillMode,
-        expectedPlateWidth: useFillMode ? outerWidthMm : gridWidth,
-        expectedPlateDepth: useFillMode ? outerDepthMm : gridDepth,
-        gridOffsetX, gridOffsetY,
-        halfCellEndX: gridOffsetX + widthUnits * gridSize,
-        wallStartX, wallEndX, wallThicknessX,
-        hasHalfCellX, hasHalfCellY,
-        fullCellsX, fullCellsY, halfCellSize,
-        socketPositions,
-        plateWidthInScad: useFillMode ? outerWidthMm : gridWidth,
-        plateDepthInScad: useFillMode ? outerDepthMm : gridDepth
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'A,B,C,D,E'
-    }));
-    // #endregion
     
     return `// Gridfinity Baseplate Segment [${segment.segmentX}, ${segment.segmentY}]
 // Part of a split baseplate system with interlocking male/female edges
@@ -1690,13 +1537,6 @@ use_fill_mode = ${useFillMode};
 plate_width = use_fill_mode ? outer_width_mm : grid_width;
 plate_depth = use_fill_mode ? outer_depth_mm : grid_depth;
 
-// DEBUG: Verify wall calculation for half cells
-// For width_units=${widthUnits}, has_half_x=${hasHalfCellX}, padding_far_x=${effectivePaddingFarX.toFixed(2)}
-// grid_width = ${gridWidth.toFixed(2)}mm, outer_width_mm = ${outerWidthMm.toFixed(2)}mm
-// plate_width = ${(useFillMode ? outerWidthMm : gridWidth).toFixed(2)}mm
-// Half cell ends at: grid_offset_x + width_units * grid_unit = ${(useFillMode ? paddingNearX : 0).toFixed(2)} + ${widthUnits} * ${gridSize} = ${(useFillMode ? paddingNearX : 0) + widthUnits * gridSize}mm
-// Wall should extend from: ${(useFillMode ? paddingNearX : 0) + widthUnits * gridSize}mm to ${(useFillMode ? outerWidthMm : gridWidth)}mm
-// Wall thickness: ${((useFillMode ? outerWidthMm : gridWidth) - ((useFillMode ? paddingNearX : 0) + widthUnits * gridSize)).toFixed(2)}mm
 
 // Grid offset (where the grid starts within the plate)
 // When using fill mode with padding, offset the grid by the near padding amount
@@ -1763,10 +1603,6 @@ module gridfinity_segment() {
             }
         }
         
-        // DEBUG: Verify plate extends beyond grid to create closing wall
-        // For segment [0, 1]: depth_units=0.5, grid_depth=21mm, padding_far_y=9.5mm
-        // plate_depth should be 30.5mm, grid extends to 21mm, wall from 21mm to 30.5mm
-        // This is handled by: plate_depth = outer_depth_mm = grid_depth + padding_far_y
         
         // Female cavities (cut into edges)
         ${edgeCode.femaleCavities}
@@ -2061,24 +1897,6 @@ module screw_holes() {
     const gridFrontEdge = paddingNearY;  // Grid boundary, not plate edge
     const frontEdgePositions = getPositions(segment.gridUnitsX, true, paddingNearX);
     
-    // #region agent log
-    console.log(JSON.stringify({
-      location: 'generateEdgeCode:front-edge',
-      message: `Segment [${segment.segmentX}, ${segment.segmentY}] front edge connector positioning`,
-      data: {
-        segmentX: segment.segmentX, segmentY: segment.segmentY,
-        frontEdgeType, paddingNearY, gridFrontEdge,
-        frontEdgePositions, gridUnitsX: segment.gridUnitsX,
-        paddingNearX,
-        wallArea: paddingNearY > 0 ? {startY: 0, endY: paddingNearY} : null,
-        connectorsAtY: gridFrontEdge
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'B'
-    }));
-    // #endregion
     
     if (frontEdgeType === 'female') {
       for (const x of frontEdgePositions) {
