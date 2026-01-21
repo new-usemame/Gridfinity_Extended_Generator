@@ -914,17 +914,21 @@ function ConnectorMarkers({
   const gridSize = baseplateConfig.gridSize;
   const markers: JSX.Element[] = [];
   
-  // Get baseplate bounding box to determine plate height
+  // Get baseplate bounding box to determine plate height and position
   baseplateGeometry.computeBoundingBox();
   const bbox = baseplateGeometry.boundingBox;
   if (!bbox) return null;
   
-  const plateHeight = bbox.max.y - bbox.min.y;
+  const plateHeight = bbox.max.y;
   const markerHeight = plateHeight + 20; // 20mm above plate
   const markerOffset = 15; // Distance from edge
+  
+  // The baseplate geometry has been transformed and translated so its min corner is at (0,0,0)
+  // We need to calculate marker positions in the same transformed coordinate space
+  // Transformation: OpenSCAD X→Three.js X, OpenSCAD Y→Three.js -Z, OpenSCAD Z→Three.js Y
+  // After transformation, the geometry is translated so min corner is at origin
 
-  // Calculate cumulative positions for each segment
-  // First, calculate where each segment starts in OpenSCAD coordinates
+  // Calculate cumulative positions for each segment in OpenSCAD coordinates
   const segmentPositions: Array<{ startX: number; startY: number; endX: number; endY: number }> = [];
   
   for (let sy = 0; sy < splitInfo.segmentsY; sy++) {
@@ -962,6 +966,11 @@ function ConnectorMarkers({
       segmentPositions.push({ startX, startY, endX, endY });
     }
   }
+  
+  // Now transform these positions to Three.js coordinates
+  // The baseplate is already transformed and positioned, so markers should align with it
+  // Since baseplate min corner is at (0,0,0) after transformation,
+  // and our OpenSCAD coordinates start at (0,0,0), they should align directly
 
   // Iterate through all segments
   let segmentIndex = 0;
@@ -973,19 +982,23 @@ function ConnectorMarkers({
       const pos = segmentPositions[segmentIndex];
       segmentIndex++;
       
-      // Transform to Three.js coordinates:
-      // OpenSCAD X → Three.js X (same)
-      // OpenSCAD Y → Three.js -Z (negated, so high SCAD Y → low Three.js Z)
+      // Transform OpenSCAD coordinates to Three.js coordinates
+      // Transformation: OpenSCAD X→Three.js X, OpenSCAD Y→Three.js -Z, OpenSCAD Z→Three.js Y
+      // Note: OpenSCAD Y increases toward back, Three.js Z increases toward front
+      // So: OpenSCAD high Y (back) → Three.js low Z (negative), OpenSCAD low Y (front) → Three.js high Z (positive)
       
-      // RIGHT EDGE markers (male connectors)
+      // RIGHT EDGE markers (male connectors) - cylinders along Y axis
       if (segment.hasConnectorRight) {
-        const threeRightX = pos.endX;
+        const threeRightX = pos.endX; // OpenSCAD X → Three.js X (same)
         
-        // Place markers along the right edge (every grid unit)
+        // Place markers along the right edge (every grid unit in Y direction)
         const numMarkers = Math.max(1, Math.floor(segment.gridUnitsY));
         for (let i = 0; i < numMarkers; i++) {
           const scadY = pos.startY + (i + 0.5) * gridSize;
-          const threeZ = -scadY; // OpenSCAD Y → Three.js -Z
+          // OpenSCAD Y → Three.js -Z (negated)
+          // User reports baseplates are at negative OpenSCAD Y = positive Three.js Z
+          // But cylinders are in opposite direction, so we need to flip the sign
+          const threeZ = scadY; // Flipped sign to match baseplate orientation
           
           markers.push(
             <mesh 
@@ -999,15 +1012,18 @@ function ConnectorMarkers({
         }
       }
       
-      // LEFT EDGE markers (female connectors)
+      // LEFT EDGE markers (female connectors) - cylinders along Y axis
       if (segment.hasConnectorLeft) {
-        const threeLeftX = pos.startX;
+        const threeLeftX = pos.startX; // OpenSCAD X → Three.js X (same)
         
-        // Place markers along the left edge (every grid unit)
+        // Place markers along the left edge (every grid unit in Y direction)
         const numMarkers = Math.max(1, Math.floor(segment.gridUnitsY));
         for (let i = 0; i < numMarkers; i++) {
           const scadY = pos.startY + (i + 0.5) * gridSize;
-          const threeZ = -scadY; // OpenSCAD Y → Three.js -Z
+          // OpenSCAD Y → Three.js -Z (negated)
+          // User reports baseplates are at negative OpenSCAD Y = positive Three.js Z
+          // But cylinders are in opposite direction, so we need to flip the sign
+          const threeZ = scadY; // Flipped sign to match baseplate orientation
           
           markers.push(
             <mesh 
@@ -1021,11 +1037,13 @@ function ConnectorMarkers({
         }
       }
       
-      // BACK EDGE markers (male connectors)
+      // BACK EDGE markers (male connectors) - boxes along X axis
+      // Back edge in OpenSCAD = high Y, which becomes low (negative) Z in Three.js
       if (segment.hasConnectorBack) {
-        const threeBackZ = -pos.endY; // OpenSCAD Y → Three.js -Z
+        const scadBackY = pos.endY; // Back edge is at endY in OpenSCAD
+        const threeBackZ = -scadBackY; // OpenSCAD Y → Three.js -Z
         
-        // Place markers along the back edge (every grid unit)
+        // Place markers along the back edge (every grid unit in X direction)
         const numMarkers = Math.max(1, Math.floor(segment.gridUnitsX));
         for (let i = 0; i < numMarkers; i++) {
           const scadX = pos.startX + (i + 0.5) * gridSize;
@@ -1043,11 +1061,13 @@ function ConnectorMarkers({
         }
       }
       
-      // FRONT EDGE markers (female connectors)
+      // FRONT EDGE markers (female connectors) - boxes along X axis
+      // Front edge in OpenSCAD = low Y, which becomes high (positive) Z in Three.js
       if (segment.hasConnectorFront) {
-        const threeFrontZ = -pos.startY; // OpenSCAD Y → Three.js -Z
+        const scadFrontY = pos.startY; // Front edge is at startY in OpenSCAD
+        const threeFrontZ = -scadFrontY; // OpenSCAD Y → Three.js -Z
         
-        // Place markers along the front edge (every grid unit)
+        // Place markers along the front edge (every grid unit in X direction)
         const numMarkers = Math.max(1, Math.floor(segment.gridUnitsX));
         for (let i = 0; i < numMarkers; i++) {
           const scadX = pos.startX + (i + 0.5) * gridSize;
