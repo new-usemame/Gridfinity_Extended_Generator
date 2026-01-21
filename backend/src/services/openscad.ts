@@ -177,16 +177,23 @@ export class OpenSCADService {
           posY += prevSegmentDepth + gap;
         }
         
-        // Get padding values for this segment
-        const paddingNearX = segment.paddingNearX || 0;
-        const paddingFarX = segment.paddingFarX || 0;
-        const paddingNearY = segment.paddingNearY || 0;
-        const paddingFarY = segment.paddingFarY || 0;
+        // Get padding values for this segment (validate they're numbers)
+        const paddingNearX = (typeof segment.paddingNearX === 'number' && !isNaN(segment.paddingNearX)) ? segment.paddingNearX : 0;
+        const paddingFarX = (typeof segment.paddingFarX === 'number' && !isNaN(segment.paddingFarX)) ? segment.paddingFarX : 0;
+        const paddingNearY = (typeof segment.paddingNearY === 'number' && !isNaN(segment.paddingNearY)) ? segment.paddingNearY : 0;
+        const paddingFarY = (typeof segment.paddingFarY === 'number' && !isNaN(segment.paddingFarY)) ? segment.paddingFarY : 0;
+        
+        // Validate segment dimensions
+        const segmentWidth = segment.gridUnitsX * gridSize + paddingNearX + paddingFarX;
+        const segmentDepth = segment.gridUnitsY * gridSize + paddingNearY + paddingFarY;
+        if (segmentWidth <= 0 || segmentWidth > 10000 || segmentDepth <= 0 || segmentDepth > 10000) {
+          throw new Error(`Invalid segment dimensions for [${sx}, ${sy}]: ${segmentWidth}mm x ${segmentDepth}mm`);
+        }
         
         segmentPlacements += `
     // Segment [${sx}, ${sy}]
     translate([${posX}, ${posY}, 0])
-    segment_base(${segment.gridUnitsX}, ${segment.gridUnitsY}, "${leftEdge}", "${rightEdge}", "${frontEdge}", "${backEdge}", ${paddingNearX}, ${paddingFarX}, ${paddingNearY}, ${paddingFarY});
+    segment_base(${segment.gridUnitsX}, ${segment.gridUnitsY}, "${leftEdge}", "${rightEdge}", "${frontEdge}", "${backEdge}", ${paddingNearX.toFixed(2)}, ${paddingFarX.toFixed(2)}, ${paddingNearY.toFixed(2)}, ${paddingFarY.toFixed(2)});
 `;
       }
     }
@@ -1108,11 +1115,37 @@ module female_cavity_3d(pattern, height) {
     const gridSize = config.gridSize;
     const edgePattern = config.edgePattern;
     
-    // Get padding values (default to 0 if not provided)
-    const paddingNearX = segment.paddingNearX || 0;
-    const paddingFarX = segment.paddingFarX || 0;
-    const paddingNearY = segment.paddingNearY || 0;
-    const paddingFarY = segment.paddingFarY || 0;
+    // Validate and get padding values (ensure they're valid numbers, not NaN/undefined)
+    const paddingNearX = (typeof segment.paddingNearX === 'number' && !isNaN(segment.paddingNearX)) ? segment.paddingNearX : 0;
+    const paddingFarX = (typeof segment.paddingFarX === 'number' && !isNaN(segment.paddingFarX)) ? segment.paddingFarX : 0;
+    const paddingNearY = (typeof segment.paddingNearY === 'number' && !isNaN(segment.paddingNearY)) ? segment.paddingNearY : 0;
+    const paddingFarY = (typeof segment.paddingFarY === 'number' && !isNaN(segment.paddingFarY)) ? segment.paddingFarY : 0;
+    
+    // Validate grid units are valid numbers
+    if (typeof widthUnits !== 'number' || isNaN(widthUnits) || widthUnits <= 0) {
+      throw new Error(`Invalid gridUnitsX for segment [${segment.segmentX}, ${segment.segmentY}]: ${widthUnits}`);
+    }
+    if (typeof depthUnits !== 'number' || isNaN(depthUnits) || depthUnits <= 0) {
+      throw new Error(`Invalid gridUnitsY for segment [${segment.segmentX}, ${segment.segmentY}]: ${depthUnits}`);
+    }
+    
+    // Calculate outer dimensions for this segment (similar to non-split baseplate)
+    // This matches the pattern: outer_dimension = grid_units * gridSize + padding
+    const gridWidth = widthUnits * gridSize;
+    const gridDepth = depthUnits * gridSize;
+    const outerWidthMm = gridWidth + paddingNearX + paddingFarX;
+    const outerDepthMm = gridDepth + paddingNearY + paddingFarY;
+    
+    // Validate calculated dimensions are reasonable
+    if (outerWidthMm <= 0 || outerWidthMm > 10000) {
+      throw new Error(`Invalid outerWidthMm for segment [${segment.segmentX}, ${segment.segmentY}]: ${outerWidthMm}mm (gridWidth: ${gridWidth}, padding: ${paddingNearX}+${paddingFarX})`);
+    }
+    if (outerDepthMm <= 0 || outerDepthMm > 10000) {
+      throw new Error(`Invalid outerDepthMm for segment [${segment.segmentX}, ${segment.segmentY}]: ${outerDepthMm}mm (gridDepth: ${gridDepth}, padding: ${paddingNearY}+${paddingFarY})`);
+    }
+    
+    // Determine if this segment should use fill mode (when padding > 0)
+    const useFillMode = (paddingNearX + paddingFarX + paddingNearY + paddingFarY) > 0;
     
     // Generate edge pattern modules
     const edgePatternModules = this.generateEdgePatternModules(config);
@@ -1176,9 +1209,23 @@ plate_height = socket_depth;
 $fn = 32;
 
 /* [Calculated] */
-// Plate dimensions include padding on outer edges
-plate_width = width_units * grid_unit + padding_near_x + padding_far_x;
-plate_depth = depth_units * grid_unit + padding_near_y + padding_far_y;
+// Grid coverage (actual grid area)
+grid_width = width_units * grid_unit;
+grid_depth = depth_units * grid_unit;
+
+// Total plate size (grid + padding) - using same pattern as non-split baseplate
+// This matches: plate_width = use_fill_mode ? outer_width_mm : grid_width
+outer_width_mm = ${outerWidthMm.toFixed(2)};
+outer_depth_mm = ${outerDepthMm.toFixed(2)};
+use_fill_mode = ${useFillMode};
+plate_width = use_fill_mode ? outer_width_mm : grid_width;
+plate_depth = use_fill_mode ? outer_depth_mm : grid_depth;
+
+// Grid offset (where the grid starts within the plate)
+// When using fill mode with padding, offset the grid by the near padding amount
+// This positions the grid correctly within the plate for proper centering
+grid_offset_x = use_fill_mode ? padding_near_x : 0;
+grid_offset_y = use_fill_mode ? padding_near_y : 0;
 
 ${edgePatternModules}
 
@@ -1196,10 +1243,10 @@ module gridfinity_segment() {
         }
         
         // Socket cutouts
-        // Position sockets accounting for padding on the near (left/front) edges
+        // Position sockets using grid offset (same pattern as non-split baseplate)
         for (gx = [0:width_units-1]) {
             for (gy = [0:depth_units-1]) {
-                translate([padding_near_x + gx * grid_unit, padding_near_y + gy * grid_unit, 0])
+                translate([grid_offset_x + gx * grid_unit, grid_offset_y + gy * grid_unit, 0])
                 grid_socket();
             }
         }
