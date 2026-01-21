@@ -183,8 +183,8 @@ export class OpenSCADService {
         const paddingNearY = (typeof segment.paddingNearY === 'number' && !isNaN(segment.paddingNearY)) ? segment.paddingNearY : 0;
         let paddingFarY = (typeof segment.paddingFarY === 'number' && !isNaN(segment.paddingFarY)) ? segment.paddingFarY : 0;
         
-        // CRITICAL: When half cells are present on the far edge, ensure padding is at least minWallThickness
-        // This ensures the plate always extends beyond half cells to create the closing wall
+        // CRITICAL: Last segment must always have a closing wall, even if no half cell
+        // Also ensure padding when half cells are present on the far edge
         const minWallThickness = 0.5;
         const hasHalfCellX = segment.gridUnitsX - Math.floor(segment.gridUnitsX) >= 0.5;
         const hasHalfCellY = segment.gridUnitsY - Math.floor(segment.gridUnitsY) >= 0.5;
@@ -207,10 +207,17 @@ export class OpenSCADService {
         }));
         // #endregion
         
-        if (hasHalfCellX) {
+        // CRITICAL FIX: Last segment must always have closing wall, regardless of half cells
+        if (isLastSegmentX) {
+          paddingFarX = Math.max(paddingFarX, minWallThickness);
+        } else if (hasHalfCellX) {
+          // Non-last segments with half cells also need closing wall
           paddingFarX = Math.max(paddingFarX, minWallThickness);
         }
-        if (hasHalfCellY) {
+        if (isLastSegmentY) {
+          paddingFarY = Math.max(paddingFarY, minWallThickness);
+        } else if (hasHalfCellY) {
+          // Non-last segments with half cells also need closing wall
           paddingFarY = Math.max(paddingFarY, minWallThickness);
         }
         
@@ -221,8 +228,9 @@ export class OpenSCADService {
           data: {
             sx, sy, paddingFarX: paddingFarX, paddingFarY: paddingFarY,
             hasHalfCellX, hasHalfCellY, isLastSegmentX, isLastSegmentY,
-            wallAddedX: hasHalfCellX && paddingFarX >= minWallThickness,
-            wallAddedY: hasHalfCellY && paddingFarY >= minWallThickness
+            wallAddedX: (isLastSegmentX || hasHalfCellX) && paddingFarX >= minWallThickness,
+            wallAddedY: (isLastSegmentY || hasHalfCellY) && paddingFarY >= minWallThickness,
+            originalPaddingFarX: segment.paddingFarX
           },
           timestamp: Date.now(),
           sessionId: 'debug-session',
@@ -1251,12 +1259,13 @@ module female_cavity_3d(pattern, height) {
     // Calculate if we have half cells on the far edge
     const hasHalfCellX = widthUnits - Math.floor(widthUnits) >= 0.5;
     const hasHalfCellY = depthUnits - Math.floor(depthUnits) >= 0.5;
-    // CRITICAL: When half cells are present on the far edge, ensure padding is at least minWallThickness
-    // This ensures the plate always extends beyond half cells to create the closing wall
-    // The wall runs along the entire Y axis (depth) from Y=0 to Y=depth
-    // If padding is already >= minWallThickness, use it; otherwise use minWallThickness
-    const effectivePaddingFarX = hasHalfCellX ? Math.max(paddingFarX, minWallThickness) : paddingFarX;
-    const effectivePaddingFarY = hasHalfCellY ? Math.max(paddingFarY, minWallThickness) : paddingFarY;
+    // CRITICAL FIX: Last segment must always have closing wall
+    // In splitBaseplateForPrinter, last segment always gets paddingFarX set to at least 0.5mm
+    // So if paddingFarX >= minWallThickness, it's the last segment - use it as-is
+    // If paddingFarX < minWallThickness but hasHalfCellX, add wall for half cell
+    // Otherwise (paddingFarX < minWallThickness and no half cell), it's a non-last segment - use padding as-is
+    const effectivePaddingFarX = (paddingFarX >= minWallThickness) ? paddingFarX : (hasHalfCellX ? Math.max(paddingFarX, minWallThickness) : paddingFarX);
+    const effectivePaddingFarY = (paddingFarY >= minWallThickness) ? paddingFarY : (hasHalfCellY ? Math.max(paddingFarY, minWallThickness) : paddingFarY);
     const outerWidthMm = gridWidth + paddingNearX + effectivePaddingFarX;
     const outerDepthMm = gridDepth + paddingNearY + effectivePaddingFarY;
     
