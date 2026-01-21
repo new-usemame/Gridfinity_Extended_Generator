@@ -3,7 +3,7 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, Grid, Text, Billboard } from '@react-three/drei';
 import { STLLoader } from 'three-stdlib';
 import * as THREE from 'three';
-import { BoxConfig, BaseplateConfig } from '../../types/config';
+import { BoxConfig, BaseplateConfig, SplitResult } from '../../types/config';
 
 // Track if camera has been fitted to prevent resetting on geometry changes
 let cameraFittedForScene = false;
@@ -17,6 +17,7 @@ interface PreviewCanvasProps {
   isCombinedView?: boolean;
   boxConfig?: BoxConfig;
   baseplateConfig?: BaseplateConfig;
+  splitInfo?: SplitResult | null;
 }
 
 export function PreviewCanvas({ 
@@ -26,7 +27,8 @@ export function PreviewCanvas({
   isLoading, 
   isCombinedView = false,
   boxConfig,
-  baseplateConfig
+  baseplateConfig,
+  splitInfo
 }: PreviewCanvasProps) {
   const [boxZOffset, setBoxZOffset] = useState(0); // mm offset for box position
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -159,9 +161,10 @@ export function PreviewCanvas({
               boxZOffset={boxZOffset}
               boxConfig={boxConfig}
               baseplateConfig={baseplateConfig}
+              splitInfo={splitInfo}
             />
           ) : (
-            <SceneContent stlUrl={stlUrl || null} />
+            <SceneContent stlUrl={stlUrl || null} splitInfo={splitInfo} />
           )}
         </Suspense>
       </Canvas>
@@ -216,13 +219,15 @@ function CombinedSceneContent({
   baseplateStlUrl, 
   boxZOffset,
   boxConfig: _boxConfig,
-  baseplateConfig: _baseplateConfig
+  baseplateConfig: _baseplateConfig,
+  splitInfo
 }: { 
   boxStlUrl: string | null; 
   baseplateStlUrl: string | null;
   boxZOffset: number;
   boxConfig?: BoxConfig;
   baseplateConfig?: BaseplateConfig;
+  splitInfo?: SplitResult | null;
 }) {
   const [boxGeometry, setBoxGeometry] = useState<THREE.BufferGeometry | null>(null);
   const [baseplateGeometry, setBaseplateGeometry] = useState<THREE.BufferGeometry | null>(null);
@@ -389,6 +394,15 @@ function CombinedSceneContent({
         </mesh>
       )}
 
+      {/* Connector Markers for Split Baseplates */}
+      {splitInfo && baseplateGeometry && _baseplateConfig && _baseplateConfig.connectorEnabled && (
+        <ConnectorMarkers 
+          splitInfo={splitInfo} 
+          baseplateConfig={_baseplateConfig}
+          baseplateGeometry={baseplateGeometry}
+        />
+      )}
+
       {/* Box Model with Z offset */}
       {/* Note: boxZOffset controls Front-Back position (OpenSCAD Y-axis = Three.js Z-axis) */}
       {boxGeometry && (
@@ -421,7 +435,7 @@ function CombinedSceneContent({
   );
 }
 
-function SceneContent({ stlUrl }: { stlUrl: string | null }) {
+function SceneContent({ stlUrl, splitInfo }: { stlUrl: string | null; splitInfo?: SplitResult | null }) {
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
 
   useEffect(() => {
@@ -509,6 +523,15 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
 
       {/* Model */}
       {geometry && <ModelMesh geometry={geometry} />}
+
+      {/* Connector Markers for Split Baseplates */}
+      {splitInfo && geometry && (
+        <ConnectorMarkers 
+          splitInfo={splitInfo} 
+          baseplateConfig={null}
+          baseplateGeometry={geometry}
+        />
+      )}
 
       {/* Camera Controls */}
       <OrbitControls
@@ -872,4 +895,177 @@ function AxisIndicator({ size = 30 }: { size?: number }) {
       </mesh>
     </group>
   );
+}
+
+// Connector Markers Component - Renders visual markers for connectors in Three.js
+function ConnectorMarkers({ 
+  splitInfo, 
+  baseplateConfig, 
+  baseplateGeometry 
+}: { 
+  splitInfo: SplitResult; 
+  baseplateConfig: BaseplateConfig | null;
+  baseplateGeometry: THREE.BufferGeometry;
+}) {
+  if (!baseplateConfig || !splitInfo || splitInfo.segments.length === 0) {
+    return null;
+  }
+
+  const gridSize = baseplateConfig.gridSize;
+  const markers: JSX.Element[] = [];
+  
+  // Get baseplate bounding box to determine plate height
+  baseplateGeometry.computeBoundingBox();
+  const bbox = baseplateGeometry.boundingBox;
+  if (!bbox) return null;
+  
+  const plateHeight = bbox.max.y - bbox.min.y;
+  const markerHeight = plateHeight + 20; // 20mm above plate
+  const markerOffset = 15; // Distance from edge
+
+  // Calculate cumulative positions for each segment
+  // First, calculate where each segment starts in OpenSCAD coordinates
+  const segmentPositions: Array<{ startX: number; startY: number; endX: number; endY: number }> = [];
+  
+  for (let sy = 0; sy < splitInfo.segmentsY; sy++) {
+    for (let sx = 0; sx < splitInfo.segmentsX; sx++) {
+      const segment = splitInfo.segments[sy][sx];
+      if (!segment) continue;
+      
+      // Calculate start position: sum of all previous segments
+      let startX = 0;
+      let startY = 0;
+      
+      // Sum all previous columns in this row
+      for (let prevSx = 0; prevSx < sx; prevSx++) {
+        const prevSegment = splitInfo.segments[sy][prevSx];
+        if (prevSegment) {
+          startX += prevSegment.gridUnitsX * gridSize + prevSegment.paddingNearX + prevSegment.paddingFarX;
+        }
+      }
+      
+      // Sum all previous rows
+      for (let prevSy = 0; prevSy < sy; prevSy++) {
+        const prevSegment = splitInfo.segments[prevSy][0];
+        if (prevSegment) {
+          startY += prevSegment.gridUnitsY * gridSize + prevSegment.paddingNearY + prevSegment.paddingFarY;
+        }
+      }
+      
+      // Add padding for this segment
+      startX += segment.paddingNearX;
+      startY += segment.paddingNearY;
+      
+      const endX = startX + segment.gridUnitsX * gridSize;
+      const endY = startY + segment.gridUnitsY * gridSize;
+      
+      segmentPositions.push({ startX, startY, endX, endY });
+    }
+  }
+
+  // Iterate through all segments
+  let segmentIndex = 0;
+  for (let sy = 0; sy < splitInfo.segmentsY; sy++) {
+    for (let sx = 0; sx < splitInfo.segmentsX; sx++) {
+      const segment = splitInfo.segments[sy][sx];
+      if (!segment) continue;
+      
+      const pos = segmentPositions[segmentIndex];
+      segmentIndex++;
+      
+      // Transform to Three.js coordinates:
+      // OpenSCAD X → Three.js X (same)
+      // OpenSCAD Y → Three.js -Z (negated, so high SCAD Y → low Three.js Z)
+      
+      // RIGHT EDGE markers (male connectors)
+      if (segment.hasConnectorRight) {
+        const threeRightX = pos.endX;
+        
+        // Place markers along the right edge (every grid unit)
+        const numMarkers = Math.max(1, Math.floor(segment.gridUnitsY));
+        for (let i = 0; i < numMarkers; i++) {
+          const scadY = pos.startY + (i + 0.5) * gridSize;
+          const threeZ = -scadY; // OpenSCAD Y → Three.js -Z
+          
+          markers.push(
+            <mesh 
+              key={`right-male-${sx}-${sy}-${i}`}
+              position={[threeRightX + markerOffset, markerHeight, threeZ]}
+            >
+              <cylinderGeometry args={[8, 8, 40, 16]} />
+              <meshBasicMaterial color="#ef4444" /> {/* Red for male */}
+            </mesh>
+          );
+        }
+      }
+      
+      // LEFT EDGE markers (female connectors)
+      if (segment.hasConnectorLeft) {
+        const threeLeftX = pos.startX;
+        
+        // Place markers along the left edge (every grid unit)
+        const numMarkers = Math.max(1, Math.floor(segment.gridUnitsY));
+        for (let i = 0; i < numMarkers; i++) {
+          const scadY = pos.startY + (i + 0.5) * gridSize;
+          const threeZ = -scadY; // OpenSCAD Y → Three.js -Z
+          
+          markers.push(
+            <mesh 
+              key={`left-female-${sx}-${sy}-${i}`}
+              position={[threeLeftX - markerOffset, markerHeight, threeZ]}
+            >
+              <cylinderGeometry args={[6, 6, 20, 16]} />
+              <meshBasicMaterial color="#3b82f6" /> {/* Blue for female */}
+            </mesh>
+          );
+        }
+      }
+      
+      // BACK EDGE markers (male connectors)
+      if (segment.hasConnectorBack) {
+        const threeBackZ = -pos.endY; // OpenSCAD Y → Three.js -Z
+        
+        // Place markers along the back edge (every grid unit)
+        const numMarkers = Math.max(1, Math.floor(segment.gridUnitsX));
+        for (let i = 0; i < numMarkers; i++) {
+          const scadX = pos.startX + (i + 0.5) * gridSize;
+          const threeX = scadX; // OpenSCAD X → Three.js X (same)
+          
+          markers.push(
+            <mesh 
+              key={`back-male-${sx}-${sy}-${i}`}
+              position={[threeX, markerHeight, threeBackZ - markerOffset]}
+            >
+              <boxGeometry args={[16, 40, 16]} />
+              <meshBasicMaterial color="#ef4444" /> {/* Red for male */}
+            </mesh>
+          );
+        }
+      }
+      
+      // FRONT EDGE markers (female connectors)
+      if (segment.hasConnectorFront) {
+        const threeFrontZ = -pos.startY; // OpenSCAD Y → Three.js -Z
+        
+        // Place markers along the front edge (every grid unit)
+        const numMarkers = Math.max(1, Math.floor(segment.gridUnitsX));
+        for (let i = 0; i < numMarkers; i++) {
+          const scadX = pos.startX + (i + 0.5) * gridSize;
+          const threeX = scadX; // OpenSCAD X → Three.js X (same)
+          
+          markers.push(
+            <mesh 
+              key={`front-female-${sx}-${sy}-${i}`}
+              position={[threeX, markerHeight, threeFrontZ + markerOffset]}
+            >
+              <boxGeometry args={[12, 20, 12]} />
+              <meshBasicMaterial color="#3b82f6" /> {/* Blue for female */}
+            </mesh>
+          );
+        }
+      }
+    }
+  }
+
+  return <group>{markers}</group>;
 }
