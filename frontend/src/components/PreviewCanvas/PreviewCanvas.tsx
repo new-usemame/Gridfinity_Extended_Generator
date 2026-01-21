@@ -615,7 +615,7 @@ function AxisIndicator({ size = 30 }: { size?: number }) {
   const coneHeight = size * 0.15;
   const coneRadius = size * 0.05;
   const labelOffset = axisLength + coneHeight + 3;
-  const fontSize = size * 0.2;
+  const fontSize = size * 0.05; // ¼ of original size (was size * 0.2)
 
   return (
     <group position={[0, 0, 0]}>
@@ -632,7 +632,7 @@ function AxisIndicator({ size = 30 }: { size?: number }) {
         </mesh>
         <Billboard position={[labelOffset, 0, 0]}>
           <Text fontSize={fontSize} color="#ef4444" anchorX="center" anchorY="middle">
-            Three.js X / OpenSCAD X
+            Three.js X{'\n'}OpenSCAD X
           </Text>
         </Billboard>
       </group>
@@ -650,7 +650,7 @@ function AxisIndicator({ size = 30 }: { size?: number }) {
         </mesh>
         <Billboard position={[0, labelOffset, 0]}>
           <Text fontSize={fontSize} color="#22c55e" anchorX="center" anchorY="middle">
-            Three.js Y / OpenSCAD Z
+            Three.js Y{'\n'}OpenSCAD Z
           </Text>
         </Billboard>
       </group>
@@ -668,7 +668,7 @@ function AxisIndicator({ size = 30 }: { size?: number }) {
         </mesh>
         <Billboard position={[0, 0, labelOffset]}>
           <Text fontSize={fontSize} color="#3b82f6" anchorX="center" anchorY="middle">
-            Three.js Z / OpenSCAD -Y
+            Three.js Z{'\n'}OpenSCAD -Y
           </Text>
         </Billboard>
       </group>

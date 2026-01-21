@@ -1272,10 +1272,20 @@ grid_depth = depth_units * grid_unit;
 
 // Total plate size (grid + padding) - using same pattern as non-split baseplate
 // This matches: plate_width = use_fill_mode ? outer_width_mm : grid_width
-// The plate_width MUST extend to cover all grid cells including half cells on the far edges
+// CRITICAL: The plate_width MUST extend to cover all grid cells including half cells on the far edges
+// When width_units is fractional (e.g., 7.5), grid_width = 7.5 * grid_unit includes the half cell
+// Half cells are positioned at: grid_offset_x + full_cells_x * grid_unit
+// Half cells extend to: grid_offset_x + full_cells_x * grid_unit + half_cell_size = grid_offset_x + width_units * grid_unit
+// Plate must extend to at least: grid_offset_x + width_units * grid_unit + padding_far_x (when in fill mode)
+// Or: width_units * grid_unit (when not in fill mode, where grid_offset_x = 0)
+// IMPORTANT: grid_width = width_units * grid_unit already includes half cells when width_units is fractional
 outer_width_mm = ${outerWidthMm.toFixed(2)};
 outer_depth_mm = ${outerDepthMm.toFixed(2)};
 use_fill_mode = ${useFillMode};
+// Plate width calculation: grid_width already includes half cells (e.g., 7.5 * 42 = 315mm includes 21mm half cell)
+// When in fill mode: plate_width = width_units * grid_unit + padding_near_x + padding_far_x
+// When not in fill mode: plate_width = width_units * grid_unit
+// Both cases ensure plate extends to cover half cells on the far edge
 plate_width = use_fill_mode ? outer_width_mm : grid_width;
 plate_depth = use_fill_mode ? outer_depth_mm : grid_depth;
 
