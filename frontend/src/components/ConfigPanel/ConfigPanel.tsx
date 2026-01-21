@@ -272,6 +272,18 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
         />
         {(config.dividersX > 0 || config.dividersY > 0) && (
           <>
+            <SliderInput
+              label="Divider Height"
+              value={config.dividerHeight}
+              min={0}
+              max={100}
+              step={1}
+              unit="%"
+              onChange={(v) => update('dividerHeight', v)}
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-500">
+              Adjust the height of dividers as a percentage of available space (from floor to lip).
+            </p>
             <ToggleInput
               label="Bevel Divider-Floor Edge"
               value={config.dividerFloorBevel}

@@ -2036,6 +2036,7 @@ screw_diameter = ${config.screwDiameter};
 lip_style = "${config.lipStyle === 'standard' ? 'normal' : config.lipStyle === 'perfect_fit' ? 'perfect_fit' : config.lipStyle}";
 dividers_x = ${config.dividersX};
 dividers_y = ${config.dividersY};
+divider_height_percent = ${config.dividerHeight};
 divider_floor_bevel = ${config.dividerFloorBevel};
 finger_slide = ${config.fingerSlide};
 finger_slide_style = "${config.fingerSlideStyle}";
@@ -2645,7 +2646,10 @@ module dividers() {
     wall_height = box_height - base_height;
     inner_width = box_width - wall_thickness * 2;
     inner_depth = box_depth - wall_thickness * 2;
-    divider_height = wall_height - floor_thickness - gf_lip_total_height;
+    // Calculate available height (from floor to lip)
+    available_height = wall_height - floor_thickness - gf_lip_total_height;
+    // Apply height percentage (0-100) to get actual divider height
+    divider_height = available_height * (divider_height_percent / 100);
     divider_thickness = 1.2;
     inner_radius = max(0, corner_radius - wall_thickness);
     

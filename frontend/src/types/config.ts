@@ -34,6 +34,7 @@ export interface BoxConfig {
   // Dividers
   dividersX: number;
   dividersY: number;
+  dividerHeight: number;  // Divider height as percentage (0-100) of available height (wall_height - floor_thickness - lip_height)
   dividerFloorBevel: boolean;  // Bevel the divider-floor edge using the same radius and style as inner corners
   
   // Lip style
@@ -168,6 +169,7 @@ export const defaultBoxConfig: BoxConfig = {
   labelWidth: 100,
   dividersX: 0,
   dividersY: 0,
+  dividerHeight: 100,  // Default 100% = full height (matches original behavior)
   dividerFloorBevel: false,  // Default false = no bevel (disabled by default)
   lipStyle: 'perfect_fit',
   flatBase: 'off',
