@@ -1901,8 +1901,8 @@ module screw_holes() {
         // Add floating marker - RED cylinder (tall) for right male
         maleTeeth.push(`
             // Right edge male marker at Y=${y} - RED (tall cylinder)
-            translate([${gridRightEdge + 5}, ${y}, plate_height + 10])
-            cylinder(h=12, r=2.5, $fn=16);`);
+            translate([${gridRightEdge + 10}, ${y}, 20])
+            cylinder(h=30, r=5, $fn=16);`);
       }
     } else if (rightEdgeType === 'female') {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
@@ -1917,8 +1917,8 @@ module screw_holes() {
         // Add floating marker - PINK cylinder (short) for right female
         maleTeeth.push(`
             // Right edge female marker at Y=${y} - PINK (short cylinder)
-            translate([${gridRightEdge + 5}, ${y}, plate_height + 10])
-            cylinder(h=6, r=2.5, $fn=16);`);
+            translate([${gridRightEdge + 10}, ${y}, 20])
+            cylinder(h=15, r=5, $fn=16);`);
       }
     }
     
@@ -1934,8 +1934,8 @@ module screw_holes() {
         // Add floating marker - BLUE box (large) for back male
         maleTeeth.push(`
             // Back edge male marker at X=${x} - BLUE (large box)
-            translate([${x}, ${gridBackEdge + 5}, plate_height + 10])
-            cube([8, 8, 12], center=true);`);
+            translate([${x}, ${gridBackEdge + 10}, 20])
+            cube([10, 10, 30], center=true);`);
       }
     } else if (backEdgeType === 'female') {
       const positions = getPositions(segment.gridUnitsX, true, paddingNearX);
@@ -1950,8 +1950,8 @@ module screw_holes() {
         // Add floating marker - LIGHT BLUE box (small) for back female
         maleTeeth.push(`
             // Back edge female marker at X=${x} - LIGHT BLUE (small box)
-            translate([${x}, ${gridBackEdge + 5}, plate_height + 10])
-            cube([6, 6, 8], center=true);`);
+            translate([${x}, ${gridBackEdge + 10}, 20])
+            cube([8, 8, 15], center=true);`);
       }
     }
     
@@ -1973,8 +1973,8 @@ module screw_holes() {
         // Add floating marker - LIGHT GREEN cylinder (short) for left female
         maleTeeth.push(`
             // Left edge female marker at Y=${y} - LIGHT GREEN (short cylinder)
-            translate([${gridLeftEdge - 5}, ${y}, plate_height + 10])
-            cylinder(h=6, r=2.5, $fn=16);`);
+            translate([${gridLeftEdge - 10}, ${y}, 20])
+            cylinder(h=15, r=5, $fn=16);`);
       }
     } else if (leftEdgeType === 'male') {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
@@ -1987,8 +1987,8 @@ module screw_holes() {
         // Add floating marker - GREEN cylinder (tall) for left male
         maleTeeth.push(`
             // Left edge male marker at Y=${y} - GREEN (tall cylinder)
-            translate([${gridLeftEdge - 5}, ${y}, plate_height + 10])
-            cylinder(h=12, r=2.5, $fn=16);`);
+            translate([${gridLeftEdge - 10}, ${y}, 20])
+            cylinder(h=30, r=5, $fn=16);`);
       }
     }
     
@@ -2010,8 +2010,8 @@ module screw_holes() {
         // Add floating marker - ORANGE box (small) for front female
         maleTeeth.push(`
             // Front edge female marker at X=${x} - ORANGE (small box)
-            translate([${x}, ${gridFrontEdge - 5}, plate_height + 10])
-            cube([6, 6, 8], center=true);`);
+            translate([${x}, ${gridFrontEdge - 10}, 20])
+            cube([8, 8, 15], center=true);`);
       }
     } else if (frontEdgeType === 'male') {
       for (const x of frontEdgePositions) {
@@ -2023,8 +2023,8 @@ module screw_holes() {
         // Add floating marker - YELLOW box (large) for front male
         maleTeeth.push(`
             // Front edge male marker at X=${x} - YELLOW (large box)
-            translate([${x}, ${gridFrontEdge - 5}, plate_height + 10])
-            cube([8, 8, 12], center=true);`);
+            translate([${x}, ${gridFrontEdge - 10}, 20])
+            cube([10, 10, 30], center=true);`);
       }
     }
     
