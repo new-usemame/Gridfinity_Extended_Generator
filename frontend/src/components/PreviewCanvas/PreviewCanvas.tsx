@@ -1039,9 +1039,10 @@ function ConnectorMarkers({
       
       // BACK EDGE markers (male connectors) - boxes along X axis
       // Back edge in OpenSCAD = high Y, which becomes low (negative) Z in Three.js
+      // But user reports boxes are on far side, so flip sign to match cylinders
       if (segment.hasConnectorBack) {
         const scadBackY = pos.endY; // Back edge is at endY in OpenSCAD
-        const threeBackZ = -scadBackY; // OpenSCAD Y → Three.js -Z
+        const threeBackZ = scadBackY; // Flipped sign to match baseplate orientation
         
         // Place markers along the back edge (every grid unit in X direction)
         const numMarkers = Math.max(1, Math.floor(segment.gridUnitsX));
@@ -1063,9 +1064,10 @@ function ConnectorMarkers({
       
       // FRONT EDGE markers (female connectors) - boxes along X axis
       // Front edge in OpenSCAD = low Y, which becomes high (positive) Z in Three.js
+      // But user reports boxes are on far side, so flip sign to match cylinders
       if (segment.hasConnectorFront) {
         const scadFrontY = pos.startY; // Front edge is at startY in OpenSCAD
-        const threeFrontZ = -scadFrontY; // OpenSCAD Y → Three.js -Z
+        const threeFrontZ = scadFrontY; // Flipped sign to match baseplate orientation
         
         // Place markers along the front edge (every grid unit in X direction)
         const numMarkers = Math.max(1, Math.floor(segment.gridUnitsX));
