@@ -529,21 +529,29 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
     // Get total grid units based on sizing mode
     let totalUnitsX: number;
     let totalUnitsY: number;
-    let actualWidthMm: number | undefined;
-    let actualDepthMm: number | undefined;
+    let actualGridUnitsX: number | undefined;
+    let actualGridUnitsY: number | undefined;
+    let gridCoverageMmX: number | undefined;
+    let gridCoverageMmY: number | undefined;
     
     if (config.sizingMode === 'fill_area_mm' && gridCalc) {
+      // Use floored values for totalUnits (for backwards compatibility)
       totalUnitsX = Math.floor(gridCalc.gridUnitsX);
       totalUnitsY = Math.floor(gridCalc.gridUnitsY);
-      // Pass actual physical dimensions for accurate splitting check
-      actualWidthMm = config.targetWidthMm;
-      actualDepthMm = config.targetDepthMm;
+      // Pass actual grid units from calculateGridFromMm (accounts for half cells)
+      actualGridUnitsX = gridCalc.gridUnitsX;
+      actualGridUnitsY = gridCalc.gridUnitsY;
+      // Pass grid coverage (what needs to fit on the bed, excluding padding)
+      gridCoverageMmX = gridCalc.gridCoverageMmX;
+      gridCoverageMmY = gridCalc.gridCoverageMmY;
     } else {
       totalUnitsX = Math.floor(config.width);
       totalUnitsY = Math.floor(config.depth);
-      // In grid_units mode, actual size is grid units * gridSize
-      actualWidthMm = totalUnitsX * config.gridSize;
-      actualDepthMm = totalUnitsY * config.gridSize;
+      // In grid_units mode, grid units are exact and coverage is units * gridSize
+      actualGridUnitsX = config.width;
+      actualGridUnitsY = config.depth;
+      gridCoverageMmX = config.width * config.gridSize;
+      gridCoverageMmY = config.depth * config.gridSize;
     }
     
     return splitBaseplateForPrinter(
@@ -553,8 +561,10 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
       config.printerBedDepth,
       config.gridSize,
       config.connectorEnabled,
-      actualWidthMm,
-      actualDepthMm
+      actualGridUnitsX,
+      actualGridUnitsY,
+      gridCoverageMmX,
+      gridCoverageMmY
     );
   }, [config.splitEnabled, config.sizingMode, config.width, config.depth, 
       config.printerBedWidth, config.printerBedDepth, config.gridSize, 

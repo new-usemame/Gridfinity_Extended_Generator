@@ -301,41 +301,46 @@ export function splitBaseplateForPrinter(
   printerBedDepth: number,
   gridSize: number,
   connectorEnabled: boolean,
-  actualWidthMm?: number,
-  actualDepthMm?: number
+  actualGridUnitsX?: number,
+  actualGridUnitsY?: number,
+  gridCoverageMmX?: number,
+  gridCoverageMmY?: number
 ): SplitResult {
-  // First, check if actual physical dimensions exceed printer bed size
-  // This is critical for fill_area_mm mode where the actual size may be larger than grid units suggest
-  const actualWidthExceedsBed = actualWidthMm !== undefined && actualWidthMm > printerBedWidth;
-  const actualDepthExceedsBed = actualDepthMm !== undefined && actualDepthMm > printerBedDepth;
+  // Use actual grid units from calculateGridFromMm if provided (accounts for half cells)
+  // Otherwise fall back to the floored totalGridUnits values
+  const effectiveGridUnitsX = actualGridUnitsX !== undefined ? actualGridUnitsX : totalGridUnitsX;
+  const effectiveGridUnitsY = actualGridUnitsY !== undefined ? actualGridUnitsY : totalGridUnitsY;
+  
+  // Calculate grid coverage in mm (grid units * gridSize)
+  // This is what we need to fit on the bed, not the targetWidthMm which includes padding
+  const effectiveGridCoverageMmX = gridCoverageMmX !== undefined 
+    ? gridCoverageMmX 
+    : effectiveGridUnitsX * gridSize;
+  const effectiveGridCoverageMmY = gridCoverageMmY !== undefined 
+    ? gridCoverageMmY 
+    : effectiveGridUnitsY * gridSize;
+  
+  // Check if grid coverage exceeds printer bed size
+  // This is the correct check - we need to fit the grid coverage, not the total target size
+  const gridCoverageExceedsBedX = effectiveGridCoverageMmX > printerBedWidth;
+  const gridCoverageExceedsBedY = effectiveGridCoverageMmY > printerBedDepth;
   
   // Calculate max grid units that fit on the printer bed
   const maxSegmentUnitsX = Math.floor(printerBedWidth / gridSize);
   const maxSegmentUnitsY = Math.floor(printerBedDepth / gridSize);
   
-  // Calculate number of segments needed based on grid units
-  let segmentsX = Math.ceil(totalGridUnitsX / maxSegmentUnitsX);
-  let segmentsY = Math.ceil(totalGridUnitsY / maxSegmentUnitsY);
+  // Calculate number of segments needed based on actual grid units
+  let segmentsX = Math.ceil(effectiveGridUnitsX / maxSegmentUnitsX);
+  let segmentsY = Math.ceil(effectiveGridUnitsY / maxSegmentUnitsY);
   
-  // If actual dimensions exceed bed size, ensure we split even if grid units suggest otherwise
-  // This handles cases where the baseplate has padding or fractional grid units
-  let useActualUnitsForX = false;
-  let useActualUnitsForY = false;
-  let actualWidthInUnits = totalGridUnitsX;
-  let actualDepthInUnits = totalGridUnitsY;
-  
-  if (actualWidthExceedsBed && segmentsX === 1) {
-    // Force splitting: calculate how many segments needed based on actual width
-    actualWidthInUnits = actualWidthMm / gridSize;
-    segmentsX = Math.ceil(actualWidthInUnits / maxSegmentUnitsX);
-    useActualUnitsForX = true;
+  // If grid coverage exceeds bed size, ensure we split even if grid units suggest otherwise
+  // This handles edge cases where rounding might suggest no split is needed
+  if (gridCoverageExceedsBedX && segmentsX === 1) {
+    segmentsX = Math.ceil(effectiveGridUnitsX / maxSegmentUnitsX);
   }
   
-  if (actualDepthExceedsBed && segmentsY === 1) {
-    // Force splitting: calculate how many segments needed based on actual depth
-    actualDepthInUnits = actualDepthMm / gridSize;
-    segmentsY = Math.ceil(actualDepthInUnits / maxSegmentUnitsY);
-    useActualUnitsForY = true;
+  if (gridCoverageExceedsBedY && segmentsY === 1) {
+    segmentsY = Math.ceil(effectiveGridUnitsY / maxSegmentUnitsY);
   }
   
   // Check if splitting is needed
@@ -344,11 +349,6 @@ export function splitBaseplateForPrinter(
   // Generate segment info
   const segments: SegmentInfo[][] = [];
   
-  // Use actual grid units (including fractional) for boundary calculations when we've forced a split
-  // Otherwise use the floored totalGridUnits values
-  const effectiveTotalUnitsX = useActualUnitsForX ? actualWidthInUnits : totalGridUnitsX;
-  const effectiveTotalUnitsY = useActualUnitsForY ? actualDepthInUnits : totalGridUnitsY;
-  
   for (let sy = 0; sy < segmentsY; sy++) {
     const row: SegmentInfo[] = [];
     for (let sx = 0; sx < segmentsX; sx++) {
@@ -356,38 +356,60 @@ export function splitBaseplateForPrinter(
       const startX = sx * maxSegmentUnitsX;
       const startY = sy * maxSegmentUnitsY;
       
-      // Calculate segment boundaries
+      // Calculate segment boundaries using actual grid units
       let endX: number;
       let endY: number;
       
       if (sx === segmentsX - 1) {
-        // Last segment in X: use the full effective total (may include fractional part)
-        endX = effectiveTotalUnitsX;
+        // Last segment in X: use the full effective grid units (may include fractional part for half cells)
+        endX = effectiveGridUnitsX;
       } else {
-        endX = Math.min(startX + maxSegmentUnitsX, effectiveTotalUnitsX);
+        endX = Math.min(startX + maxSegmentUnitsX, effectiveGridUnitsX);
       }
       
       if (sy === segmentsY - 1) {
-        // Last segment in Y: use the full effective total (may include fractional part)
-        endY = effectiveTotalUnitsY;
+        // Last segment in Y: use the full effective grid units (may include fractional part for half cells)
+        endY = effectiveGridUnitsY;
       } else {
-        endY = Math.min(startY + maxSegmentUnitsY, effectiveTotalUnitsY);
+        endY = Math.min(startY + maxSegmentUnitsY, effectiveGridUnitsY);
       }
       
       // Calculate grid units for this segment
+      // Use the exact difference to preserve fractional parts (for half cells)
       // For non-last segments: use floor to ensure they fit on the bed
-      // For the last segment: use ceil to capture any fractional remainder
-      let gridUnitsX = sx === segmentsX - 1 
-        ? Math.ceil(endX - startX)  // Last segment: round up to capture remainder
-        : Math.floor(endX - startX); // Other segments: round down to fit on bed
+      // For the last segment: use the exact value to preserve half cells
+      let gridUnitsX: number;
+      let gridUnitsY: number;
       
-      let gridUnitsY = sy === segmentsY - 1 
-        ? Math.ceil(endY - startY)  // Last segment: round up to capture remainder
-        : Math.floor(endY - startY); // Other segments: round down to fit on bed
+      if (sx === segmentsX - 1) {
+        // Last segment: preserve exact value (may be fractional for half cells)
+        gridUnitsX = endX - startX;
+      } else {
+        // Non-last segments: floor to ensure they fit on the bed
+        gridUnitsX = Math.floor(endX - startX);
+      }
       
-      // Ensure each segment has at least 1 full grid unit
-      gridUnitsX = Math.max(1, gridUnitsX);
-      gridUnitsY = Math.max(1, gridUnitsY);
+      if (sy === segmentsY - 1) {
+        // Last segment: preserve exact value (may be fractional for half cells)
+        gridUnitsY = endY - startY;
+      } else {
+        // Non-last segments: floor to ensure they fit on the bed
+        gridUnitsY = Math.floor(endY - startY);
+      }
+      
+      // Ensure each segment has at least 0.5 grid units (to allow half cells)
+      // But if we have a very small remainder, ensure at least 0.5
+      if (gridUnitsX < 0.5 && sx === segmentsX - 1) {
+        gridUnitsX = 0.5; // Minimum half cell
+      } else if (gridUnitsX < 1 && sx !== segmentsX - 1) {
+        gridUnitsX = 1; // Non-last segments must be at least 1 full unit
+      }
+      
+      if (gridUnitsY < 0.5 && sy === segmentsY - 1) {
+        gridUnitsY = 0.5; // Minimum half cell
+      } else if (gridUnitsY < 1 && sy !== segmentsY - 1) {
+        gridUnitsY = 1; // Non-last segments must be at least 1 full unit
+      }
       
       // Determine connector positions (only on internal edges between segments)
       const hasConnectorLeft = connectorEnabled && sx > 0;

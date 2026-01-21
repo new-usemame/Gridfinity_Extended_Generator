@@ -49,6 +49,11 @@ export class OpenSCADService {
     let actualWidthMm: number | undefined;
     let actualDepthMm: number | undefined;
     
+    let actualGridUnitsX: number | undefined;
+    let actualGridUnitsY: number | undefined;
+    let gridCoverageMmX: number | undefined;
+    let gridCoverageMmY: number | undefined;
+    
     if (config.sizingMode === 'fill_area_mm') {
       const calc = calculateGridFromMm(
         config.targetWidthMm,
@@ -58,17 +63,23 @@ export class OpenSCADService {
         config.allowHalfCellsY,
         config.paddingAlignment
       );
-      totalGridUnitsX = Math.floor(calc.gridUnitsX); // Only use full cells for splitting
+      // Use floored values for totalGridUnits (for backwards compatibility)
+      totalGridUnitsX = Math.floor(calc.gridUnitsX);
       totalGridUnitsY = Math.floor(calc.gridUnitsY);
-      // Pass actual physical dimensions for accurate splitting check
-      actualWidthMm = config.targetWidthMm;
-      actualDepthMm = config.targetDepthMm;
+      // Pass actual grid units from calculateGridFromMm (accounts for half cells)
+      actualGridUnitsX = calc.gridUnitsX;
+      actualGridUnitsY = calc.gridUnitsY;
+      // Pass grid coverage (what needs to fit on the bed, excluding padding)
+      gridCoverageMmX = calc.gridCoverageMmX;
+      gridCoverageMmY = calc.gridCoverageMmY;
     } else {
       totalGridUnitsX = Math.floor(config.width);
       totalGridUnitsY = Math.floor(config.depth);
-      // In grid_units mode, actual size is grid units * gridSize
-      actualWidthMm = totalGridUnitsX * config.gridSize;
-      actualDepthMm = totalGridUnitsY * config.gridSize;
+      // In grid_units mode, grid units are exact and coverage is units * gridSize
+      actualGridUnitsX = config.width;
+      actualGridUnitsY = config.depth;
+      gridCoverageMmX = config.width * config.gridSize;
+      gridCoverageMmY = config.depth * config.gridSize;
     }
 
     // Calculate split
@@ -79,8 +90,10 @@ export class OpenSCADService {
       config.printerBedDepth,
       config.gridSize,
       config.connectorEnabled,
-      actualWidthMm,
-      actualDepthMm
+      actualGridUnitsX,
+      actualGridUnitsY,
+      gridCoverageMmX,
+      gridCoverageMmY
     );
 
     // Generate a combined preview SCAD (faster - single render)
@@ -390,8 +403,10 @@ module grid_socket() {
     let totalGridUnitsX: number;
     let totalGridUnitsY: number;
     
-    let actualWidthMm: number | undefined;
-    let actualDepthMm: number | undefined;
+    let actualGridUnitsX: number | undefined;
+    let actualGridUnitsY: number | undefined;
+    let gridCoverageMmX: number | undefined;
+    let gridCoverageMmY: number | undefined;
     
     if (config.sizingMode === 'fill_area_mm') {
       const calc = calculateGridFromMm(
@@ -402,17 +417,23 @@ module grid_socket() {
         config.allowHalfCellsY,
         config.paddingAlignment
       );
+      // Use floored values for totalGridUnits (for backwards compatibility)
       totalGridUnitsX = Math.floor(calc.gridUnitsX);
       totalGridUnitsY = Math.floor(calc.gridUnitsY);
-      // Pass actual physical dimensions for accurate splitting check
-      actualWidthMm = config.targetWidthMm;
-      actualDepthMm = config.targetDepthMm;
+      // Pass actual grid units from calculateGridFromMm (accounts for half cells)
+      actualGridUnitsX = calc.gridUnitsX;
+      actualGridUnitsY = calc.gridUnitsY;
+      // Pass grid coverage (what needs to fit on the bed, excluding padding)
+      gridCoverageMmX = calc.gridCoverageMmX;
+      gridCoverageMmY = calc.gridCoverageMmY;
     } else {
       totalGridUnitsX = Math.floor(config.width);
       totalGridUnitsY = Math.floor(config.depth);
-      // In grid_units mode, actual size is grid units * gridSize
-      actualWidthMm = totalGridUnitsX * config.gridSize;
-      actualDepthMm = totalGridUnitsY * config.gridSize;
+      // In grid_units mode, grid units are exact and coverage is units * gridSize
+      actualGridUnitsX = config.width;
+      actualGridUnitsY = config.depth;
+      gridCoverageMmX = config.width * config.gridSize;
+      gridCoverageMmY = config.depth * config.gridSize;
     }
 
     const splitInfo = splitBaseplateForPrinter(
@@ -422,8 +443,10 @@ module grid_socket() {
       config.printerBedDepth,
       config.gridSize,
       config.connectorEnabled,
-      actualWidthMm,
-      actualDepthMm
+      actualGridUnitsX,
+      actualGridUnitsY,
+      gridCoverageMmX,
+      gridCoverageMmY
     );
 
     // Get segment info
