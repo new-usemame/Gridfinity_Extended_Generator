@@ -370,12 +370,19 @@ export function splitBaseplateForPrinter(
   const gridCoverageExceedsBedY = effectiveGridCoverageMmY > printerBedDepth;
   
   // Calculate max grid units that fit on the printer bed
-  const maxSegmentUnitsX = Math.floor(printerBedWidth / gridSize);
-  const maxSegmentUnitsY = Math.floor(printerBedDepth / gridSize);
+  // CRITICAL FIX: Account for minimum padding on last segment (0.5mm closing wall)
+  // This ensures segments don't exceed bed size when padding is added
+  const minWallThickness = 0.5;
+  const maxSegmentUnitsX = Math.floor((printerBedWidth - minWallThickness) / gridSize);
+  const maxSegmentUnitsY = Math.floor((printerBedDepth - minWallThickness) / gridSize);
+  
+  // Ensure at least 1 unit can fit
+  const safeMaxSegmentUnitsX = Math.max(1, maxSegmentUnitsX);
+  const safeMaxSegmentUnitsY = Math.max(1, maxSegmentUnitsY);
   
   // Calculate number of segments needed based on actual grid units
-  let segmentsX = Math.ceil(effectiveGridUnitsX / maxSegmentUnitsX);
-  let segmentsY = Math.ceil(effectiveGridUnitsY / maxSegmentUnitsY);
+  let segmentsX = Math.ceil(effectiveGridUnitsX / safeMaxSegmentUnitsX);
+  let segmentsY = Math.ceil(effectiveGridUnitsY / safeMaxSegmentUnitsY);
   
   // #region agent log
   console.log(JSON.stringify({
@@ -383,7 +390,7 @@ export function splitBaseplateForPrinter(
     message: 'Initial split calculation',
     data: {
       effectiveGridUnitsX, effectiveGridUnitsY, effectiveGridCoverageMmX, effectiveGridCoverageMmY,
-      gridCoverageExceedsBedX, gridCoverageExceedsBedY, maxSegmentUnitsX, maxSegmentUnitsY,
+      gridCoverageExceedsBedX, gridCoverageExceedsBedY, maxSegmentUnitsX, maxSegmentUnitsY, safeMaxSegmentUnitsX, safeMaxSegmentUnitsY,
       segmentsX, segmentsY
     },
     timestamp: Date.now(),
@@ -396,11 +403,11 @@ export function splitBaseplateForPrinter(
   // If grid coverage exceeds bed size, ensure we split even if grid units suggest otherwise
   // This handles edge cases where rounding might suggest no split is needed
   if (gridCoverageExceedsBedX && segmentsX === 1) {
-    segmentsX = Math.ceil(effectiveGridUnitsX / maxSegmentUnitsX);
+    segmentsX = Math.ceil(effectiveGridUnitsX / safeMaxSegmentUnitsX);
   }
   
   if (gridCoverageExceedsBedY && segmentsY === 1) {
-    segmentsY = Math.ceil(effectiveGridUnitsY / maxSegmentUnitsY);
+    segmentsY = Math.ceil(effectiveGridUnitsY / safeMaxSegmentUnitsY);
   }
   
   // Check if splitting is needed
@@ -413,8 +420,8 @@ export function splitBaseplateForPrinter(
     const row: SegmentInfo[] = [];
     for (let sx = 0; sx < segmentsX; sx++) {
       // Calculate grid units for this segment
-      const startX = sx * maxSegmentUnitsX;
-      const startY = sy * maxSegmentUnitsY;
+      const startX = sx * safeMaxSegmentUnitsX;
+      const startY = sy * safeMaxSegmentUnitsY;
       
       // Calculate segment boundaries using actual grid units
       let endX: number;
@@ -424,14 +431,14 @@ export function splitBaseplateForPrinter(
         // Last segment in X: use the full effective grid units (may include fractional part for half cells)
         endX = effectiveGridUnitsX;
       } else {
-        endX = Math.min(startX + maxSegmentUnitsX, effectiveGridUnitsX);
+        endX = Math.min(startX + safeMaxSegmentUnitsX, effectiveGridUnitsX);
       }
       
       if (sy === segmentsY - 1) {
         // Last segment in Y: use the full effective grid units (may include fractional part for half cells)
         endY = effectiveGridUnitsY;
       } else {
-        endY = Math.min(startY + maxSegmentUnitsY, effectiveGridUnitsY);
+        endY = Math.min(startY + safeMaxSegmentUnitsY, effectiveGridUnitsY);
       }
       
       // Calculate grid units for this segment
@@ -480,9 +487,22 @@ export function splitBaseplateForPrinter(
       // Assign padding based on segment position
       // Padding is only on outer edges of the first/last segments
       const segmentPaddingNearX = (sx === 0 && paddingNearX !== undefined) ? paddingNearX : 0;
-      const segmentPaddingFarX = (sx === segmentsX - 1 && paddingFarX !== undefined) ? paddingFarX : 0;
+      let segmentPaddingFarX = (sx === segmentsX - 1 && paddingFarX !== undefined) ? paddingFarX : 0;
       const segmentPaddingNearY = (sy === 0 && paddingNearY !== undefined) ? paddingNearY : 0;
-      const segmentPaddingFarY = (sy === segmentsY - 1 && paddingFarY !== undefined) ? paddingFarY : 0;
+      let segmentPaddingFarY = (sy === segmentsY - 1 && paddingFarY !== undefined) ? paddingFarY : 0;
+      
+      // CRITICAL FIX: Last segment must always have a closing wall, even if padding was 0
+      // This ensures the grid is properly closed on the far edge
+      // Minimum wall thickness to ensure border is closed (similar to clearance between cells)
+      const minWallThickness = 0.5;
+      if (sx === segmentsX - 1) {
+        // Last segment in X: ensure at least minWallThickness padding to create closing wall
+        segmentPaddingFarX = Math.max(segmentPaddingFarX, minWallThickness);
+      }
+      if (sy === segmentsY - 1) {
+        // Last segment in Y: ensure at least minWallThickness padding to create closing wall
+        segmentPaddingFarY = Math.max(segmentPaddingFarY, minWallThickness);
+      }
       
       // #region agent log
       const segmentWidthMm = gridUnitsX * gridSize + segmentPaddingNearX + segmentPaddingFarX;
@@ -498,7 +518,11 @@ export function splitBaseplateForPrinter(
           segmentWidthMm, segmentDepthMm, hasHalfCellX, hasHalfCellY,
           isLastX: sx === segmentsX - 1, isLastY: sy === segmentsY - 1,
           exceedsBedX: segmentWidthMm > printerBedWidth,
-          exceedsBedY: segmentDepthMm > printerBedDepth
+          exceedsBedY: segmentDepthMm > printerBedDepth,
+          originalPaddingFarX: (sx === segmentsX - 1 && paddingFarX !== undefined) ? paddingFarX : 0,
+          originalPaddingFarY: (sy === segmentsY - 1 && paddingFarY !== undefined) ? paddingFarY : 0,
+          wallAddedX: sx === segmentsX - 1 && segmentPaddingFarX >= minWallThickness,
+          wallAddedY: sy === segmentsY - 1 && segmentPaddingFarY >= minWallThickness
         },
         timestamp: Date.now(),
         sessionId: 'debug-session',
@@ -530,8 +554,8 @@ export function splitBaseplateForPrinter(
     segmentsX,
     segmentsY,
     totalSegments: segmentsX * segmentsY,
-    maxSegmentUnitsX,
-    maxSegmentUnitsY,
+    maxSegmentUnitsX: safeMaxSegmentUnitsX,
+    maxSegmentUnitsY: safeMaxSegmentUnitsY,
     needsSplit
   };
 }
