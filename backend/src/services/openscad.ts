@@ -1182,8 +1182,12 @@ module female_cavity_3d(pattern, height) {
     
     // Calculate outer dimensions for this segment (similar to non-split baseplate)
     // This matches the pattern: outer_dimension = grid_units * gridSize + padding
+    // Note: widthUnits and depthUnits can be fractional (e.g., 7.5) to include half cells
+    // The gridWidth/depth calculation automatically includes half cells: 7.5 * 42 = 315mm (includes 0.5 * 42 = 21mm half cell)
+    // CRITICAL: The plate width MUST extend to at least widthUnits * gridSize to cover half cells on the far edge
     const gridWidth = widthUnits * gridSize;
     const gridDepth = depthUnits * gridSize;
+    // Ensure plate extends to cover half cells: gridWidth already includes half cells when widthUnits is fractional
     const outerWidthMm = gridWidth + paddingNearX + paddingFarX;
     const outerDepthMm = gridDepth + paddingNearY + paddingFarY;
     
@@ -1261,11 +1265,14 @@ $fn = 32;
 
 /* [Calculated] */
 // Grid coverage (actual grid area)
+// Note: width_units and depth_units can be fractional (e.g., 7.5) to include half cells
+// The calculation automatically includes half cells: 7.5 * grid_unit = 315mm (includes 21mm half cell)
 grid_width = width_units * grid_unit;
 grid_depth = depth_units * grid_unit;
 
 // Total plate size (grid + padding) - using same pattern as non-split baseplate
 // This matches: plate_width = use_fill_mode ? outer_width_mm : grid_width
+// The plate_width MUST extend to cover all grid cells including half cells on the far edges
 outer_width_mm = ${outerWidthMm.toFixed(2)};
 outer_depth_mm = ${outerDepthMm.toFixed(2)};
 use_fill_mode = ${useFillMode};

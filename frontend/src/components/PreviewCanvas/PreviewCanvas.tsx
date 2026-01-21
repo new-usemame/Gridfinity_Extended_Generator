@@ -607,6 +607,8 @@ function CameraFit({ geometry }: { geometry: THREE.BufferGeometry }) {
 }
 
 // 3D Axis indicator at origin with labels
+// Shows both Three.js (viewer) and OpenSCAD coordinate systems
+// Transformation: OpenSCAD X→Three.js X, OpenSCAD Y→Three.js -Z, OpenSCAD Z→Three.js Y
 function AxisIndicator({ size = 30 }: { size?: number }) {
   const axisLength = size;
   const axisRadius = size * 0.02;
@@ -618,6 +620,7 @@ function AxisIndicator({ size = 30 }: { size?: number }) {
   return (
     <group position={[0, 0, 0]}>
       {/* X Axis - Red */}
+      {/* Three.js X = OpenSCAD X (same direction) */}
       <group>
         <mesh position={[axisLength / 2, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
           <cylinderGeometry args={[axisRadius, axisRadius, axisLength, 8]} />
@@ -629,12 +632,13 @@ function AxisIndicator({ size = 30 }: { size?: number }) {
         </mesh>
         <Billboard position={[labelOffset, 0, 0]}>
           <Text fontSize={fontSize} color="#ef4444" anchorX="center" anchorY="middle">
-            X
+            Three.js X / OpenSCAD X
           </Text>
         </Billboard>
       </group>
 
       {/* Y Axis - Green (Up) */}
+      {/* Three.js Y = OpenSCAD Z (vertical) */}
       <group>
         <mesh position={[0, axisLength / 2, 0]}>
           <cylinderGeometry args={[axisRadius, axisRadius, axisLength, 8]} />
@@ -646,12 +650,13 @@ function AxisIndicator({ size = 30 }: { size?: number }) {
         </mesh>
         <Billboard position={[0, labelOffset, 0]}>
           <Text fontSize={fontSize} color="#22c55e" anchorX="center" anchorY="middle">
-            Y
+            Three.js Y / OpenSCAD Z
           </Text>
         </Billboard>
       </group>
 
       {/* Z Axis - Blue */}
+      {/* Three.js Z = -OpenSCAD Y (negated depth) */}
       <group>
         <mesh position={[0, 0, axisLength / 2]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[axisRadius, axisRadius, axisLength, 8]} />
@@ -663,7 +668,7 @@ function AxisIndicator({ size = 30 }: { size?: number }) {
         </mesh>
         <Billboard position={[0, 0, labelOffset]}>
           <Text fontSize={fontSize} color="#3b82f6" anchorX="center" anchorY="middle">
-            Z
+            Three.js Z / OpenSCAD -Y
           </Text>
         </Billboard>
       </group>
