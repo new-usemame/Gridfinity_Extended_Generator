@@ -334,6 +334,22 @@ export function splitBaseplateForPrinter(
   paddingNearY?: number,
   paddingFarY?: number
 ): SplitResult {
+  // #region agent log
+  console.log(JSON.stringify({
+    location: 'splitBaseplateForPrinter:entry',
+    message: 'Split calculation entry',
+    data: {
+      totalGridUnitsX, totalGridUnitsY, printerBedWidth, printerBedDepth, gridSize,
+      actualGridUnitsX, actualGridUnitsY, gridCoverageMmX, gridCoverageMmY,
+      paddingNearX, paddingFarX, paddingNearY, paddingFarY
+    },
+    timestamp: Date.now(),
+    sessionId: 'debug-session',
+    runId: 'run1',
+    hypothesisId: 'A,B,C,D'
+  }));
+  // #endregion
+  
   // Use actual grid units from calculateGridFromMm if provided (accounts for half cells)
   // Otherwise fall back to the floored totalGridUnits values
   const effectiveGridUnitsX = actualGridUnitsX !== undefined ? actualGridUnitsX : totalGridUnitsX;
@@ -360,6 +376,22 @@ export function splitBaseplateForPrinter(
   // Calculate number of segments needed based on actual grid units
   let segmentsX = Math.ceil(effectiveGridUnitsX / maxSegmentUnitsX);
   let segmentsY = Math.ceil(effectiveGridUnitsY / maxSegmentUnitsY);
+  
+  // #region agent log
+  console.log(JSON.stringify({
+    location: 'splitBaseplateForPrinter:initial-calc',
+    message: 'Initial split calculation',
+    data: {
+      effectiveGridUnitsX, effectiveGridUnitsY, effectiveGridCoverageMmX, effectiveGridCoverageMmY,
+      gridCoverageExceedsBedX, gridCoverageExceedsBedY, maxSegmentUnitsX, maxSegmentUnitsY,
+      segmentsX, segmentsY
+    },
+    timestamp: Date.now(),
+    sessionId: 'debug-session',
+    runId: 'run1',
+    hypothesisId: 'C,D'
+  }));
+  // #endregion
   
   // If grid coverage exceeds bed size, ensure we split even if grid units suggest otherwise
   // This handles edge cases where rounding might suggest no split is needed
@@ -452,6 +484,29 @@ export function splitBaseplateForPrinter(
       const segmentPaddingNearY = (sy === 0 && paddingNearY !== undefined) ? paddingNearY : 0;
       const segmentPaddingFarY = (sy === segmentsY - 1 && paddingFarY !== undefined) ? paddingFarY : 0;
       
+      // #region agent log
+      const segmentWidthMm = gridUnitsX * gridSize + segmentPaddingNearX + segmentPaddingFarX;
+      const segmentDepthMm = gridUnitsY * gridSize + segmentPaddingNearY + segmentPaddingFarY;
+      const hasHalfCellX = gridUnitsX - Math.floor(gridUnitsX) >= 0.5;
+      const hasHalfCellY = gridUnitsY - Math.floor(gridUnitsY) >= 0.5;
+      console.log(JSON.stringify({
+        location: 'splitBaseplateForPrinter:segment',
+        message: `Segment [${sx}, ${sy}] calculation`,
+        data: {
+          sx, sy, startX, startY, endX, endY, gridUnitsX, gridUnitsY,
+          segmentPaddingNearX, segmentPaddingFarX, segmentPaddingNearY, segmentPaddingFarY,
+          segmentWidthMm, segmentDepthMm, hasHalfCellX, hasHalfCellY,
+          isLastX: sx === segmentsX - 1, isLastY: sy === segmentsY - 1,
+          exceedsBedX: segmentWidthMm > printerBedWidth,
+          exceedsBedY: segmentDepthMm > printerBedDepth
+        },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A,B,C'
+      }));
+      // #endregion
+      
       row.push({
         segmentX: sx,
         segmentY: sy,
@@ -492,6 +547,18 @@ export function calculateGridFromMm(
   allowHalfCellsY: boolean,
   paddingAlignment: 'center' | 'near' | 'far'
 ): GridCalculation {
+  // #region agent log
+  console.log(JSON.stringify({
+    location: 'calculateGridFromMm:entry',
+    message: 'Grid calculation entry',
+    data: { targetWidthMm, targetDepthMm, gridSize, allowHalfCellsX, allowHalfCellsY, paddingAlignment },
+    timestamp: Date.now(),
+    sessionId: 'debug-session',
+    runId: 'run1',
+    hypothesisId: 'B'
+  }));
+  // #endregion
+  
   const halfSize = gridSize / 2;
   
   // Calculate for X axis (width)
@@ -535,6 +602,23 @@ export function calculateGridFromMm(
     paddingNearY = 0;
     paddingFarY = totalPaddingY;
   }
+  
+  // #region agent log
+  console.log(JSON.stringify({
+    location: 'calculateGridFromMm:result',
+    message: 'Grid calculation result',
+    data: {
+      fullCellsX, fullCellsY, remainderX, remainderY, halfSize,
+      hasHalfCellX, hasHalfCellY, gridUnitsX, gridUnitsY,
+      gridCoverageMmX, gridCoverageMmY, totalPaddingX, totalPaddingY,
+      paddingNearX, paddingFarX, paddingNearY, paddingFarY, paddingAlignment
+    },
+    timestamp: Date.now(),
+    sessionId: 'debug-session',
+    runId: 'run1',
+    hypothesisId: 'B'
+  }));
+  // #endregion
   
   return {
     gridUnitsX,
