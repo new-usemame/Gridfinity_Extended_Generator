@@ -492,14 +492,27 @@ export function splitBaseplateForPrinter(
       // CRITICAL FIX: Last segment must always have a closing wall, even if padding was 0
       // This ensures the grid is properly closed on the far edge
       // Minimum wall thickness to ensure border is closed (similar to clearance between cells)
+      // IMPORTANT: Only add minWallThickness if original padding was 0, to preserve total size
       const minWallThickness = 0.5;
       if (sx === segmentsX - 1) {
         // Last segment in X: ensure at least minWallThickness padding to create closing wall
-        segmentPaddingFarX = Math.max(segmentPaddingFarX, minWallThickness);
+        // But only if original padding was 0 (to avoid increasing total size)
+        const originalPaddingFarX = paddingFarX !== undefined ? paddingFarX : 0;
+        if (originalPaddingFarX < minWallThickness) {
+          // Original padding was too small, add minimum wall
+          segmentPaddingFarX = minWallThickness;
+        }
+        // Otherwise, use the original padding (which is already >= minWallThickness or we want to preserve exact size)
       }
       if (sy === segmentsY - 1) {
         // Last segment in Y: ensure at least minWallThickness padding to create closing wall
-        segmentPaddingFarY = Math.max(segmentPaddingFarY, minWallThickness);
+        // But only if original padding was 0 (to avoid increasing total size)
+        const originalPaddingFarY = paddingFarY !== undefined ? paddingFarY : 0;
+        if (originalPaddingFarY < minWallThickness) {
+          // Original padding was too small, add minimum wall
+          segmentPaddingFarY = minWallThickness;
+        }
+        // Otherwise, use the original padding (which is already >= minWallThickness or we want to preserve exact size)
       }
       
       // #region agent log
@@ -567,6 +580,51 @@ export function splitBaseplateForPrinter(
       });
     }
     segments.push(row);
+  }
+  
+  // Validate total size matches expected (for fill_area_mm mode)
+  if (paddingNearX !== undefined && paddingFarX !== undefined && 
+      paddingNearY !== undefined && paddingFarY !== undefined &&
+      gridCoverageMmX !== undefined && gridCoverageMmY !== undefined) {
+    // Calculate total size from segments
+    let totalWidthMm = 0;
+    let totalDepthMm = 0;
+    
+    // Sum up all segments in X direction (use first row)
+    for (let sx = 0; sx < segmentsX; sx++) {
+      const segment = segments[0][sx];
+      totalWidthMm += segment.gridUnitsX * gridSize;
+      if (sx === 0) totalWidthMm += segment.paddingNearX;
+      if (sx === segmentsX - 1) totalWidthMm += segment.paddingFarX;
+    }
+    
+    // Sum up all segments in Y direction (use first column)
+    for (let sy = 0; sy < segmentsY; sy++) {
+      const segment = segments[sy][0];
+      totalDepthMm += segment.gridUnitsY * gridSize;
+      if (sy === 0) totalDepthMm += segment.paddingNearY;
+      if (sy === segmentsY - 1) totalDepthMm += segment.paddingFarY;
+    }
+    
+    const expectedWidthMm = gridCoverageMmX + paddingNearX + paddingFarX;
+    const expectedDepthMm = gridCoverageMmY + paddingNearY + paddingFarY;
+    
+    // #region agent log
+    console.log(JSON.stringify({
+      location: 'splitBaseplateForPrinter:total-size-validation',
+      message: 'Total size validation',
+      data: {
+        totalWidthMm, totalDepthMm, expectedWidthMm, expectedDepthMm,
+        gridCoverageMmX, gridCoverageMmY, paddingNearX, paddingFarX, paddingNearY, paddingFarY,
+        widthMatches: Math.abs(totalWidthMm - expectedWidthMm) < 0.01,
+        depthMatches: Math.abs(totalDepthMm - expectedDepthMm) < 0.01
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'C'
+    }));
+    // #endregion
   }
   
   return {
