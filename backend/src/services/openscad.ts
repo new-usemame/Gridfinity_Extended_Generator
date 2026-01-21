@@ -2312,7 +2312,10 @@ module dividers() {
             // Position the left edge of the divider (divider extends divider_thickness to the right)
             // This positions the divider so it's centered at divider_center_x
             divider_left_x = divider_center_x - divider_thickness / 2;
-            // Position divider: X from divider_left_x to divider_left_x+divider_thickness, Y from wall_thickness to wall_thickness+inner_depth
+            // Position divider within the inner cavity:
+            // X: from divider_left_x to divider_left_x+divider_thickness (centered at divider_center_x)
+            // Y: from wall_thickness to wall_thickness+inner_depth (full depth of inner cavity)
+            // Z: from floor_thickness upward
             translate([divider_left_x, wall_thickness, floor_thickness])
             divider_with_bevel(divider_thickness, inner_depth, divider_height, inner_radius, divider_floor_bevel);
         }
