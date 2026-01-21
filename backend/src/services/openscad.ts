@@ -246,6 +246,25 @@ export class OpenSCADService {
           throw new Error(`Invalid segment dimensions for [${sx}, ${sy}]: ${segmentWidth}mm x ${segmentDepth}mm`);
         }
         
+        // #region agent log
+        console.log(JSON.stringify({
+          location: 'generateCombinedPreviewScad:segment-placement',
+          message: `Segment [${sx}, ${sy}] placement in combined preview`,
+          data: {
+            sx, sy, posX, posY,
+            gridUnitsX: segment.gridUnitsX, gridUnitsY: segment.gridUnitsY,
+            paddingNearX, paddingFarX, paddingNearY, paddingFarY,
+            leftEdge, rightEdge, frontEdge, backEdge,
+            isLastX: sx === splitInfo.segmentsX - 1,
+            isLastY: sy === splitInfo.segmentsY - 1
+          },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'A,B'
+        }));
+        // #endregion
+        
         segmentPlacements += `
     // Segment [${sx}, ${sy}]
     translate([${posX}, ${posY}, 0])
@@ -1302,6 +1321,23 @@ module female_cavity_3d(pattern, height) {
     // CRITICAL: Use effective padding values to account for wall extension added for half cells
     // This ensures useFillMode is true when half cells need wall extension, even if original padding was 0
     const useFillMode = (paddingNearX + effectivePaddingFarX + paddingNearY + effectivePaddingFarY) > 0;
+    
+    // #region agent log
+    console.log(JSON.stringify({
+      location: 'generateSegmentScad:fill-mode-check',
+      message: `Segment [${segment.segmentX}, ${segment.segmentY}] fill mode check`,
+      data: {
+        segmentX: segment.segmentX, segmentY: segment.segmentY,
+        paddingNearX, effectivePaddingFarX, paddingNearY, effectivePaddingFarY,
+        useFillMode, outerWidthMm, outerDepthMm,
+        gridWidth, gridDepth
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'A,B'
+    }));
+    // #endregion
     
     // Generate edge pattern modules
     const edgePatternModules = this.generateEdgePatternModules(config);
