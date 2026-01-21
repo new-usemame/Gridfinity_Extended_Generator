@@ -277,29 +277,8 @@ export class OpenSCADService {
         }));
         // #endregion
         
-        // CRITICAL DEBUG: Log actual padding values being passed to segment_base
-        console.log(JSON.stringify({
-          location: 'generateCombinedPreviewScad:segment-base-call',
-          message: `Segment [${sx}, ${sy}] - FINAL padding values being passed to SCAD`,
-          data: {
-            sx, sy,
-            paddingNearX: paddingNearX,
-            paddingFarX: paddingFarX,
-            paddingNearY: paddingNearY,  // THIS SHOULD BE >= 0.5 for sy===0
-            paddingFarY: paddingFarY,
-            isFirstSegmentX: sx === 0,
-            isFirstSegmentY: sy === 0,
-            segmentPaddingNearYFromSplit: segment.paddingNearY
-          },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'FINAL-DEBUG'
-        }));
-        
         segmentPlacements += `
-    // Segment [${sx}, ${sy}] - paddingNearY=${paddingNearY.toFixed(2)}, paddingFarY=${paddingFarY.toFixed(2)}
-    // DEBUG: isFirstSegmentY=${sy === 0}, wall should exist if paddingNearY > 0
+    // Segment [${sx}, ${sy}]
     translate([${posX}, ${posY}, 0])
     segment_base(${segment.gridUnitsX}, ${segment.gridUnitsY}, "${leftEdge}", "${rightEdge}", "${frontEdge}", "${backEdge}", ${paddingNearX.toFixed(2)}, ${paddingFarX.toFixed(2)}, ${paddingNearY.toFixed(2)}, ${paddingFarY.toFixed(2)});
 `;
@@ -362,18 +341,6 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
     // This positions the grid correctly within the plate for proper centering
     grid_offset_x = use_fill_mode ? padding_near_x : 0;
     grid_offset_y = use_fill_mode ? padding_near_y : 0;
-    
-    // DEBUG: Echo padding values to help diagnose wall issues
-    // Check the OpenSCAD console for these values when rendering
-    echo("=== SEGMENT_BASE DEBUG ===");
-    echo("padding_near_y =", padding_near_y);
-    echo("padding_near_x =", padding_near_x);
-    echo("grid_offset_y =", grid_offset_y);
-    echo("grid_offset_x =", grid_offset_x);
-    echo("use_fill_mode =", use_fill_mode);
-    echo("plate_depth =", plate_depth);
-    echo("outer_depth_mm =", outer_depth_mm);
-    echo("Expected front wall:", padding_near_y > 0 ? "YES" : "NO");
     
     difference() {
         union() {

@@ -640,26 +640,6 @@ export function splitBaseplateForPrinter(
       }));
       // #endregion
       
-      // CRITICAL DEBUG: Verify padding values before creating segment
-      console.log(JSON.stringify({
-        location: 'splitBaseplateForPrinter:segment-creation',
-        message: `Creating segment [${sx}, ${sy}] with padding values`,
-        data: {
-          sx, sy,
-          segmentPaddingNearX,
-          segmentPaddingFarX,
-          segmentPaddingNearY,  // THIS SHOULD BE 0.5 for sy===0
-          segmentPaddingFarY,
-          isFirstSegmentY: sy === 0,
-          isLastSegmentY: sy === segmentsY - 1,
-          originalPaddingNearY: paddingNearY
-        },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'SEGMENT-CREATION'
-      }));
-      
       row.push({
         segmentX: sx,
         segmentY: sy,
