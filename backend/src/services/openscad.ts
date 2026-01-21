@@ -183,17 +183,30 @@ export class OpenSCADService {
         const paddingNearY = (typeof segment.paddingNearY === 'number' && !isNaN(segment.paddingNearY)) ? segment.paddingNearY : 0;
         let paddingFarY = (typeof segment.paddingFarY === 'number' && !isNaN(segment.paddingFarY)) ? segment.paddingFarY : 0;
         
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'openscad.ts:generateCombinedPreviewScad:BEFORE_HALFCELL_CHECK',message:'Before half cell check',data:{sx,sy,gridUnitsX:segment.gridUnitsX,gridUnitsY:segment.gridUnitsY,paddingNearX,paddingFarXBeforeCheck:paddingFarX,paddingNearY,paddingFarYBeforeCheck:paddingFarY},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        
         // CRITICAL: When half cells are present on the far edge, ensure padding is at least minWallThickness
         // This ensures the plate always extends beyond half cells to create the closing wall
         const minWallThickness = 0.5;
         const hasHalfCellX = segment.gridUnitsX - Math.floor(segment.gridUnitsX) >= 0.5;
         const hasHalfCellY = segment.gridUnitsY - Math.floor(segment.gridUnitsY) >= 0.5;
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'openscad.ts:generateCombinedPreviewScad:HALFCELL_CHECK',message:'Half cell check result',data:{sx,sy,hasHalfCellX,hasHalfCellY,gridUnitsX:segment.gridUnitsX,gridUnitsY:segment.gridUnitsY,floorX:Math.floor(segment.gridUnitsX),floorY:Math.floor(segment.gridUnitsY),diffX:segment.gridUnitsX-Math.floor(segment.gridUnitsX),diffY:segment.gridUnitsY-Math.floor(segment.gridUnitsY)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        
         if (hasHalfCellX) {
           paddingFarX = Math.max(paddingFarX, minWallThickness);
         }
         if (hasHalfCellY) {
           paddingFarY = Math.max(paddingFarY, minWallThickness);
         }
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'openscad.ts:generateCombinedPreviewScad:AFTER_HALFCELL_CHECK',message:'After half cell check',data:{sx,sy,paddingFarXAfterCheck:paddingFarX,paddingFarYAfterCheck:paddingFarY,segmentWidth:segment.gridUnitsX*gridSize+paddingNearX+paddingFarX,segmentDepth:segment.gridUnitsY*gridSize+paddingNearY+paddingFarY},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         
         // Validate segment dimensions
         const segmentWidth = segment.gridUnitsX * gridSize + paddingNearX + paddingFarX;
@@ -1690,77 +1703,6 @@ module screw_holes() {
 
   // Generate Box SCAD code - simplified version compatible with standard OpenSCAD
   generateBoxScad(config: BoxConfig): string {
-    // #region agent log
-    const logData = {
-      location: 'openscad.ts:generateBoxScad',
-      message: 'Box SCAD generation started',
-      data: {
-        width: config.width,
-        depth: config.depth,
-        height: config.height,
-        gridSize: config.gridSize,
-        dividersX: config.dividersX,
-        dividersY: config.dividersY,
-        wallThickness: config.wallThickness
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'A'
-    };
-    fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logData) }).catch(() => {});
-    // #endregion
-    
-    const boxWidth = config.width * config.gridSize;
-    const boxDepth = config.depth * config.gridSize;
-    const innerWidth = boxWidth - config.wallThickness * 2;
-    const innerDepth = boxDepth - config.wallThickness * 2;
-    
-    // Calculate divider positions for logging
-    const dividerPositions: any = { x: [], y: [] };
-    if (config.dividersX > 0) {
-      const spacing = innerWidth / (config.dividersX + 1);
-      for (let i = 1; i <= config.dividersX; i++) {
-        const centerX = config.wallThickness + i * spacing;
-        const leftX = centerX - 1.2 / 2;
-        dividerPositions.x.push({ i, centerX, leftX, y: config.wallThickness });
-      }
-    }
-    if (config.dividersY > 0) {
-      const spacing = innerDepth / (config.dividersY + 1);
-      for (let i = 1; i <= config.dividersY; i++) {
-        const centerY = config.wallThickness + i * spacing;
-        const bottomY = centerY - 1.2 / 2;
-        dividerPositions.y.push({ i, centerY, bottomY, x: config.wallThickness });
-      }
-    }
-    
-    // #region agent log
-    const calcLog = {
-      location: 'openscad.ts:generateBoxScad',
-      message: 'Box dimensions and divider positions calculated',
-      data: {
-        boxWidth,
-        boxDepth,
-        innerWidth,
-        innerDepth,
-        wallThickness: config.wallThickness,
-        firstBaseUnitX: 0,
-        firstBaseUnitY: 0,
-        wallX: 0,
-        wallY: 0,
-        innerCavityX: config.wallThickness,
-        innerCavityY: config.wallThickness,
-        dividerPositions
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'A,B,C,D,E'
-    };
-    fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(calcLog) }).catch(() => {});
-    // #endregion
-    
     return `// Gridfinity Box Generator
 // Compatible with standard OpenSCAD
 
@@ -1849,6 +1791,8 @@ module gridfinity_box() {
     gridfinity_base();
     
     // Box walls - start directly after the foot taper
+    // Walls align with base units: base units are at grid positions [gx * grid_unit, gy * grid_unit]
+    // The first base unit is at (0, 0), so walls should also start at (0, 0) to align
     translate([0, 0, base_height])
     gridfinity_walls();
 }
@@ -1908,12 +1852,8 @@ module cavity_with_inner_bevel(width, depth, height, corner_radius, bevel_enable
 }
 
 module gridfinity_base() {
-    // #region agent log
-    // Log base unit positions - first unit at (0, 0, 0)
-    // #endregion
     for (gx = [0:width_units-1]) {
         for (gy = [0:depth_units-1]) {
-            // Base units positioned at grid locations: [gx * grid_unit, gy * grid_unit, 0]
             translate([gx * grid_unit, gy * grid_unit, 0])
             single_base_unit();
         }
@@ -2040,11 +1980,6 @@ module gridfinity_walls() {
     // Use the standard Gridfinity corner radius or user override
     outer_radius = corner_radius > 0 ? corner_radius : gf_corner_radius;
     inner_radius = max(0, outer_radius - wall_thickness);
-    
-    // #region agent log
-    // Walls positioned at [0, 0, base_height] in gridfinity_box module
-    // Inner cavity starts at [wall_thickness, wall_thickness, floor_thickness] relative to walls
-    // #endregion
     
     // Chamfer height for overhang prevention (fixed at 0.3mm, angle is user-controlled)
     overhang_chamfer_height = 0.3;

@@ -314,6 +314,9 @@ export function splitBaseplateForPrinter(
   paddingNearY?: number,
   paddingFarY?: number
 ): SplitResult {
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config.ts:splitBaseplateForPrinter:ENTRY',message:'splitBaseplateForPrinter entry',data:{totalGridUnitsX,totalGridUnitsY,printerBedWidth,printerBedDepth,gridSize,actualGridUnitsX,actualGridUnitsY,gridCoverageMmX,gridCoverageMmY,paddingNearX,paddingFarX,paddingNearY,paddingFarY},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   // Use actual grid units from calculateGridFromMm if provided (accounts for half cells)
   // Otherwise fall back to the floored totalGridUnits values
   const effectiveGridUnitsX = actualGridUnitsX !== undefined ? actualGridUnitsX : totalGridUnitsX;
@@ -340,6 +343,10 @@ export function splitBaseplateForPrinter(
   // Calculate number of segments needed based on actual grid units
   let segmentsX = Math.ceil(effectiveGridUnitsX / maxSegmentUnitsX);
   let segmentsY = Math.ceil(effectiveGridUnitsY / maxSegmentUnitsY);
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config.ts:splitBaseplateForPrinter:BEFORE_SPLIT_CHECK',message:'Before split check',data:{effectiveGridUnitsX,effectiveGridUnitsY,effectiveGridCoverageMmX,effectiveGridCoverageMmY,gridCoverageExceedsBedX,gridCoverageExceedsBedY,maxSegmentUnitsX,maxSegmentUnitsY,segmentsX,segmentsY},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   
   // If grid coverage exceeds bed size, ensure we split even if grid units suggest otherwise
   // This handles edge cases where rounding might suggest no split is needed
@@ -432,6 +439,10 @@ export function splitBaseplateForPrinter(
       const segmentPaddingNearY = (sy === 0 && paddingNearY !== undefined) ? paddingNearY : 0;
       const segmentPaddingFarY = (sy === segmentsY - 1 && paddingFarY !== undefined) ? paddingFarY : 0;
       
+      // #region agent log
+      fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config.ts:splitBaseplateForPrinter:SEGMENT',message:'Segment calculated',data:{sx,sy,startX,startY,endX,endY,gridUnitsX,gridUnitsY,segmentPaddingNearX,segmentPaddingFarX,segmentPaddingNearY,segmentPaddingFarY,isLastX:sx===segmentsX-1,isLastY:sy===segmentsY-1,paddingFarXProvided:paddingFarX},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      
       row.push({
         segmentX: sx,
         segmentY: sy,
@@ -449,6 +460,19 @@ export function splitBaseplateForPrinter(
     }
     segments.push(row);
   }
+  
+  // #region agent log
+  // Check if any segment width exceeds printer bed width (including padding)
+  const segmentWidths: Array<{sx: number, sy: number, widthMm: number, exceedsBed: boolean}> = [];
+  for (let sy = 0; sy < segmentsY; sy++) {
+    for (let sx = 0; sx < segmentsX; sx++) {
+      const seg = segments[sy][sx];
+      const widthMm = seg.gridUnitsX * gridSize + (seg.paddingNearX || 0) + (seg.paddingFarX || 0);
+      segmentWidths.push({sx, sy, widthMm, exceedsBed: widthMm > printerBedWidth});
+    }
+  }
+  fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config.ts:splitBaseplateForPrinter:EXIT',message:'splitBaseplateForPrinter exit',data:{segmentsX,segmentsY,totalSegments:segmentsX*segmentsY,segmentWidths,printerBedWidth},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   
   return {
     segments,
@@ -472,6 +496,9 @@ export function calculateGridFromMm(
   allowHalfCellsY: boolean,
   paddingAlignment: 'center' | 'near' | 'far'
 ): GridCalculation {
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config.ts:calculateGridFromMm:ENTRY',message:'calculateGridFromMm entry',data:{targetWidthMm,targetDepthMm,gridSize,allowHalfCellsX,allowHalfCellsY,paddingAlignment},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const halfSize = gridSize / 2;
   
   // Calculate for X axis (width)
@@ -516,6 +543,9 @@ export function calculateGridFromMm(
     paddingFarY = totalPaddingY;
   }
   
+  // #region agent log
+  fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config.ts:calculateGridFromMm:EXIT',message:'calculateGridFromMm exit',data:{gridUnitsX,gridUnitsY,gridCoverageMmX,gridCoverageMmY,totalPaddingX,totalPaddingY,paddingNearX,paddingFarX,paddingNearY,paddingFarY,hasHalfCellX,hasHalfCellY},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   return {
     gridUnitsX,
     gridUnitsY,
