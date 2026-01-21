@@ -333,17 +333,18 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             
             // Right edge teeth (male or female depending on type)
             // Position at grid boundary (using grid offset)
+            // COLOR: RED for male, PINK for female
             if (right_edge == "male") {
                 grid_right_edge = grid_offset_x + width_units * grid_unit;
                 if (depth_units > 1) {
                     for (i = [1 : max(1, depth_units) - 1]) {
-                        translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
+                        color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
                         rotate([0, 0, -90])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
                 }
                 if (depth_units == 1) {
-                    translate([grid_right_edge, grid_offset_y + 0.5 * grid_unit, 0])
+                    color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + 0.5 * grid_unit, 0])
                     rotate([0, 0, -90])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
@@ -351,16 +352,17 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             
             // Back edge teeth
             // Position at grid boundary (using grid offset)
+            // COLOR: BLUE for male, LIGHT BLUE for female
             if (back_edge == "male") {
                 grid_back_edge = grid_offset_y + depth_units * grid_unit;
                 if (width_units > 1) {
                     for (i = [1 : max(1, width_units) - 1]) {
-                        translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
+                        color([0, 0, 1]) translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
                 }
                 if (width_units == 1) {
-                    translate([grid_offset_x + 0.5 * grid_unit, grid_back_edge, 0])
+                    color([0, 0, 1]) translate([grid_offset_x + 0.5 * grid_unit, grid_back_edge, 0])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
             }
@@ -369,16 +371,17 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // Position at grid boundary (using grid offset) - NOT at plate edge (X=0)
             // CRITICAL: When padding_near_x > 0, the wall extends from X=0 to X=grid_offset_x
             // Teeth must be at the grid boundary (X=grid_offset_x), not at the plate edge
+            // COLOR: GREEN for male, LIGHT GREEN for female
             if (left_edge == "male") {
                 if (depth_units > 1) {
                     for (i = [1 : max(1, depth_units) - 1]) {
-                        translate([grid_offset_x, grid_offset_y + i * grid_unit, 0])
+                        color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + i * grid_unit, 0])
                         rotate([0, 0, -90])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
                 }
                 if (depth_units == 1) {
-                    translate([grid_offset_x, grid_offset_y + 0.5 * grid_unit, 0])
+                    color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + 0.5 * grid_unit, 0])
                     rotate([0, 0, -90])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
@@ -388,15 +391,16 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // Position at grid boundary (using grid offset) - NOT at plate edge (Y=0)
             // CRITICAL: When padding_near_y > 0, the wall extends from Y=0 to Y=grid_offset_y
             // Teeth must be at the grid boundary (Y=grid_offset_y), not at the plate edge
+            // COLOR: YELLOW for male, ORANGE for female
             if (front_edge == "male") {
                 if (width_units > 1) {
                     for (i = [1 : max(1, width_units) - 1]) {
-                        translate([grid_offset_x + i * grid_unit, grid_offset_y, 0])
+                        color([1, 1, 0]) translate([grid_offset_x + i * grid_unit, grid_offset_y, 0])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
                 }
                 if (width_units == 1) {
-                    translate([grid_offset_x + 0.5 * grid_unit, grid_offset_y, 0])
+                    color([1, 1, 0]) translate([grid_offset_x + 0.5 * grid_unit, grid_offset_y, 0])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
             }
@@ -449,16 +453,17 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         // Cavities must be at the grid boundary (X=grid_offset_x), not at the plate edge
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
+        // COLOR: LIGHT GREEN for female
         if (left_edge == "female") {
             if (depth_units > 1) {
                 for (i = [1 : max(1, depth_units) - 1]) {
-                    translate([grid_offset_x, grid_offset_y + i * grid_unit, 0])
+                    color([0.5, 1, 0.5]) translate([grid_offset_x, grid_offset_y + i * grid_unit, 0])
                     rotate([0, 0, -90])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (depth_units == 1) {
-                translate([grid_offset_x, grid_offset_y + 0.5 * grid_unit, 0])
+                color([0.5, 1, 0.5]) translate([grid_offset_x, grid_offset_y + 0.5 * grid_unit, 0])
                 rotate([0, 0, -90])
                 female_cavity_3d(edge_pattern, plate_height);
             }
@@ -468,15 +473,16 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         // Position at grid boundary (using grid offset) - NOT at plate edge (Y=0)
         // CRITICAL: When padding_near_y > 0, the wall extends from Y=0 to Y=grid_offset_y
         // Cavities must be at the grid boundary (Y=grid_offset_y), not at the plate edge
+        // COLOR: ORANGE for female
         if (front_edge == "female") {
             if (width_units > 1) {
                 for (i = [1 : max(1, width_units) - 1]) {
-                    translate([grid_offset_x + i * grid_unit, grid_offset_y, 0])
+                    color([1, 0.5, 0]) translate([grid_offset_x + i * grid_unit, grid_offset_y, 0])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (width_units == 1) {
-                translate([grid_offset_x + 0.5 * grid_unit, grid_offset_y, 0])
+                color([1, 0.5, 0]) translate([grid_offset_x + 0.5 * grid_unit, grid_offset_y, 0])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
@@ -484,19 +490,20 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         // Right edge cavities (if overridden to female)
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
+        // COLOR: PINK for female
         if (right_edge == "female") {
             // Position at grid boundary (same position as male teeth) so cavity aligns properly
             // The cavity profile extends inward, removing the wall between grid boundary and plate edge
             grid_right_edge = grid_offset_x + width_units * grid_unit;
             if (depth_units > 1) {
                 for (i = [1 : max(1, depth_units) - 1]) {
-                    translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
+                    color([1, 0.5, 0.8]) translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
                     rotate([0, 0, -90])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (depth_units == 1) {
-                translate([grid_right_edge, grid_offset_y + 0.5 * grid_unit, 0])
+                color([1, 0.5, 0.8]) translate([grid_right_edge, grid_offset_y + 0.5 * grid_unit, 0])
                 rotate([0, 0, -90])
                 female_cavity_3d(edge_pattern, plate_height);
             }
@@ -505,18 +512,19 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         // Back edge cavities (if overridden to female)
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
+        // COLOR: LIGHT BLUE for female
         if (back_edge == "female") {
             // Position at grid boundary (same position as male teeth) so cavity aligns properly
             // The cavity profile extends inward, removing the wall between grid boundary and plate edge
             grid_back_edge = grid_offset_y + depth_units * grid_unit;
             if (width_units > 1) {
                 for (i = [1 : max(1, width_units) - 1]) {
-                    translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
+                    color([0.5, 0.8, 1]) translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (width_units == 1) {
-                translate([grid_offset_x + 0.5 * grid_unit, grid_back_edge, 0])
+                color([0.5, 0.8, 1]) translate([grid_offset_x + 0.5 * grid_unit, grid_back_edge, 0])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
@@ -1886,8 +1894,8 @@ module screw_holes() {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         maleTeeth.push(`
-            // Right edge male tooth at Y=${y}
-            translate([${gridRightEdge}, ${y}, 0])
+            // Right edge male tooth at Y=${y} - COLOR: RED
+            color([1, 0, 0]) translate([${gridRightEdge}, ${y}, 0])
             rotate([0, 0, -90])
             male_tooth_3d("${edgePattern}", plate_height);`);
       }
@@ -1895,10 +1903,10 @@ module screw_holes() {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         femaleCavities.push(`
-        // Right edge female cavity at Y=${y}
+        // Right edge female cavity at Y=${y} - COLOR: PINK
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
-        translate([${gridRightEdge}, ${y}, 0])
+        color([1, 0.5, 0.8]) translate([${gridRightEdge}, ${y}, 0])
         rotate([0, 0, -90])
         female_cavity_3d("${edgePattern}", plate_height);`);
       }
@@ -1909,8 +1917,8 @@ module screw_holes() {
       const positions = getPositions(segment.gridUnitsX, true, paddingNearX);
       for (const x of positions) {
         maleTeeth.push(`
-            // Back edge male tooth at X=${x}
-            translate([${x}, ${gridBackEdge}, 0])
+            // Back edge male tooth at X=${x} - COLOR: BLUE
+            color([0, 0, 1]) translate([${x}, ${gridBackEdge}, 0])
             rotate([0, 0, 0])
             male_tooth_3d("${edgePattern}", plate_height);`);
       }
@@ -1918,10 +1926,10 @@ module screw_holes() {
       const positions = getPositions(segment.gridUnitsX, true, paddingNearX);
       for (const x of positions) {
         femaleCavities.push(`
-        // Back edge female cavity at X=${x}
+        // Back edge female cavity at X=${x} - COLOR: LIGHT BLUE
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
-        translate([${x}, ${gridBackEdge}, 0])
+        color([0.5, 0.8, 1]) translate([${x}, ${gridBackEdge}, 0])
         rotate([0, 0, 0])
         female_cavity_3d("${edgePattern}", plate_height);`);
       }
@@ -1936,10 +1944,10 @@ module screw_holes() {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         femaleCavities.push(`
-        // Left edge female cavity at Y=${y}, X=${gridLeftEdge} (grid boundary)
+        // Left edge female cavity at Y=${y}, X=${gridLeftEdge} (grid boundary) - COLOR: LIGHT GREEN
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
-        translate([${gridLeftEdge}, ${y}, 0])
+        color([0.5, 1, 0.5]) translate([${gridLeftEdge}, ${y}, 0])
         rotate([0, 0, -90])
         female_cavity_3d("${edgePattern}", plate_height);`);
       }
@@ -1947,8 +1955,8 @@ module screw_holes() {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         maleTeeth.push(`
-            // Left edge male tooth at Y=${y}, X=${gridLeftEdge} (grid boundary)
-            translate([${gridLeftEdge}, ${y}, 0])
+            // Left edge male tooth at Y=${y}, X=${gridLeftEdge} (grid boundary) - COLOR: GREEN
+            color([0, 1, 0]) translate([${gridLeftEdge}, ${y}, 0])
             rotate([0, 0, -90])
             male_tooth_3d("${edgePattern}", plate_height);`);
       }
@@ -1965,16 +1973,16 @@ module screw_holes() {
     if (frontEdgeType === 'female') {
       for (const x of frontEdgePositions) {
         femaleCavities.push(`
-        // Front edge female cavity at X=${x}, Y=${gridFrontEdge} (grid boundary)
-        translate([${x}, ${gridFrontEdge}, 0])
+        // Front edge female cavity at X=${x}, Y=${gridFrontEdge} (grid boundary) - COLOR: ORANGE
+        color([1, 0.5, 0]) translate([${x}, ${gridFrontEdge}, 0])
         rotate([0, 0, 0])
         female_cavity_3d("${edgePattern}", plate_height);`);
       }
     } else if (frontEdgeType === 'male') {
       for (const x of frontEdgePositions) {
         maleTeeth.push(`
-            // Front edge male tooth at X=${x}, Y=${gridFrontEdge} (grid boundary)
-            translate([${x}, ${gridFrontEdge}, 0])
+            // Front edge male tooth at X=${x}, Y=${gridFrontEdge} (grid boundary) - COLOR: YELLOW
+            color([1, 1, 0]) translate([${x}, ${gridFrontEdge}, 0])
             rotate([0, 0, 0])
             male_tooth_3d("${edgePattern}", plate_height);`);
       }
