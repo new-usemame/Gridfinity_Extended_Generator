@@ -34,6 +34,54 @@
   --border-hover: #64748b;
 }
 
+/* Blue theme */
+[data-theme="blue"] {
+  --bg-primary: #0c1226;
+  --bg-secondary: #1a2332;
+  --bg-tertiary: #2d3a4e;
+  --bg-quaternary: #3d4d66;
+  --accent: #60a5fa;
+  --accent-light: #3b82f6;
+  --accent-dark: #2563eb;
+  --text-primary: #e0e7ff;
+  --text-secondary: #c7d2fe;
+  --text-muted: #a5b4fc;
+  --border-color: #3d4d66;
+  --border-hover: #4d5d7a;
+}
+
+/* Purple theme */
+[data-theme="purple"] {
+  --bg-primary: #1a0f2e;
+  --bg-secondary: #2d1b3d;
+  --bg-tertiary: #3d2a4d;
+  --bg-quaternary: #4d3a5d;
+  --accent: #a78bfa;
+  --accent-light: #8b5cf6;
+  --accent-dark: #7c3aed;
+  --text-primary: #f3e8ff;
+  --text-secondary: #e9d5ff;
+  --text-muted: #ddd6fe;
+  --border-color: #4d3a5d;
+  --border-hover: #5d4a6d;
+}
+
+/* Orange theme */
+[data-theme="orange"] {
+  --bg-primary: #1f0f0a;
+  --bg-secondary: #2d1a12;
+  --bg-tertiary: #3d2a1f;
+  --bg-quaternary: #4d3a2f;
+  --accent: #fb923c;
+  --accent-light: #f97316;
+  --accent-dark: #ea580c;
+  --text-primary: #fff7ed;
+  --text-secondary: #ffedd5;
+  --text-muted: #fed7aa;
+  --border-color: #4d3a2f;
+  --border-hover: #5d4a3f;
+}
+
 /* Default to dark theme if no theme is set */
 :root {
   --bg-primary: #0f172a;

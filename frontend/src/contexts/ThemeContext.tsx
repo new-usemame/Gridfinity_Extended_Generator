@@ -1,10 +1,10 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-type Theme = 'light' | 'dark' | 'auto';
+type Theme = 'light' | 'dark' | 'blue' | 'purple' | 'orange' | 'auto';
 
 interface ThemeContextType {
   theme: Theme;
-  effectiveTheme: 'light' | 'dark';
+  effectiveTheme: 'light' | 'dark' | 'blue' | 'purple' | 'orange';
   setTheme: (theme: Theme) => void;
   cycleTheme: () => void;
 }
@@ -21,14 +21,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     // Check localStorage first
     const stored = localStorage.getItem(THEME_KEY) as Theme | null;
-    if (stored === 'light' || stored === 'dark' || stored === 'auto') {
+    const validThemes: Theme[] = ['light', 'dark', 'blue', 'purple', 'orange', 'auto'];
+    if (stored && validThemes.includes(stored)) {
       return stored;
     }
     // Default to auto
     return 'auto';
   });
 
-  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>(() => {
+  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark' | 'blue' | 'purple' | 'orange'>(() => {
     if (theme === 'auto') {
       return getSystemTheme();
     }
@@ -58,7 +59,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Apply theme to document
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', effectiveTheme);
-    if (effectiveTheme === 'dark') {
+    // Add dark class for dark-like themes (dark, blue, purple, orange)
+    if (effectiveTheme === 'dark' || effectiveTheme === 'blue' || effectiveTheme === 'purple' || effectiveTheme === 'orange') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
@@ -71,7 +73,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   const cycleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : theme === 'dark' ? 'auto' : 'light');
+    const themes: Theme[] = ['light', 'dark', 'blue', 'purple', 'orange', 'auto'];
+    const currentIndex = themes.indexOf(theme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    setTheme(themes[nextIndex]);
   };
 
   return (
