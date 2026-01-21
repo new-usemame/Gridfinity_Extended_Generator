@@ -2682,16 +2682,17 @@ module dividers() {
         for (i = [1:dividers_y]) {
             // Calculate the center position of the divider along Y
             divider_center_y = wall_thickness + i * spacing;
-            // The divider_with_bevel creates a cube [thickness, length, height]
-            // We want: X from wall_thickness to wall_thickness+inner_width, Y centered at divider_center_y
-            // Strategy: Create divider with [divider_thickness, inner_width, height]
-            // Then rotate 90° around Z to get [inner_width, divider_thickness, height]
-            // Position at [wall_thickness, divider_center_y - divider_thickness/2, floor_thickness]
-            // After rotation, it will extend:
-            //   X: from wall_thickness to wall_thickness + inner_width (correct)
-            //   Y: from divider_center_y - divider_thickness/2 to divider_center_y + divider_thickness/2 (centered)
-            translate([wall_thickness, divider_center_y - divider_thickness / 2, floor_thickness])
+            // Position divider within the inner cavity:
+            // X: from wall_thickness to wall_thickness+inner_width (full width of inner cavity)
+            // Y: centered at divider_center_y (from divider_center_y - divider_thickness/2 to divider_center_y + divider_thickness/2)
+            // Z: from floor_thickness upward
+            // Create divider with [divider_thickness, inner_width, divider_height] then rotate 90° around Z
+            // After rotation: [inner_width, divider_thickness, divider_height]
+            // The rotation happens around the origin, so we need to translate first to position correctly
+            // Then rotate around the divider's center to avoid positioning issues
+            translate([wall_thickness + inner_width / 2, divider_center_y, floor_thickness])
             rotate([0, 0, 90])
+            translate([-inner_width / 2, -divider_thickness / 2, 0])
             divider_with_bevel(divider_thickness, inner_width, divider_height, inner_radius, divider_floor_bevel);
         }
     }
