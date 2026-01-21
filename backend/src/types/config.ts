@@ -350,11 +350,29 @@ export function splitBaseplateForPrinter(
   const gridCoverageExceedsBedY = effectiveGridCoverageMmY > printerBedDepth;
   
   // Calculate max grid units that fit on the printer bed
-  // CRITICAL FIX: Account for minimum padding on last segment (0.5mm closing wall)
-  // This ensures segments don't exceed bed size when padding is added
+  // CRITICAL FIX: Account for padding on both first and last segments
+  // First segment has paddingNearX, last segment has paddingFarX (at least 0.5mm closing wall)
+  // We need to ensure segments fit even with padding, so we need to reserve space for both
   const minWallThickness = 0.5;
-  const maxSegmentUnitsX = Math.floor((printerBedWidth - minWallThickness) / gridSize);
-  const maxSegmentUnitsY = Math.floor((printerBedDepth - minWallThickness) / gridSize);
+  // Estimate max padding: use actual padding if provided, otherwise assume worst case
+  // For first segment: use paddingNearX if provided, otherwise 0
+  // For last segment: use paddingFarX if provided, otherwise minWallThickness
+  const estimatedPaddingNearX = paddingNearX !== undefined ? paddingNearX : 0;
+  const estimatedPaddingFarX = paddingFarX !== undefined ? Math.max(paddingFarX, minWallThickness) : minWallThickness;
+  const estimatedPaddingNearY = paddingNearY !== undefined ? paddingNearY : 0;
+  const estimatedPaddingFarY = paddingFarY !== undefined ? Math.max(paddingFarY, minWallThickness) : minWallThickness;
+  
+  // Reserve space for padding: worst case is when a segment has both (first segment has near, last has far)
+  // But segments are split, so each segment only has one type of padding
+  // For non-first, non-last segments: no padding
+  // For first segment: has near padding
+  // For last segment: has far padding
+  // So we need to account for the maximum of near or far padding
+  const maxPaddingX = Math.max(estimatedPaddingNearX, estimatedPaddingFarX);
+  const maxPaddingY = Math.max(estimatedPaddingNearY, estimatedPaddingFarY);
+  
+  const maxSegmentUnitsX = Math.floor((printerBedWidth - maxPaddingX) / gridSize);
+  const maxSegmentUnitsY = Math.floor((printerBedDepth - maxPaddingY) / gridSize);
   
   // Ensure at least 1 unit can fit
   const safeMaxSegmentUnitsX = Math.max(1, maxSegmentUnitsX);
