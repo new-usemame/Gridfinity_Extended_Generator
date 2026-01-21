@@ -162,20 +162,31 @@ export class OpenSCADService {
         const backEdge = this.getEdgeType(segment, 'back', edgeOverrides);
         
         // Calculate position with gap
+        // Account for padding when calculating positions - padding affects segment width/depth
         let posX = 0;
         let posY = 0;
         
         for (let i = 0; i < sx; i++) {
-          posX += splitInfo.segments[sy][i].gridUnitsX * gridSize + gap;
+          const prevSegment = splitInfo.segments[sy][i];
+          const prevSegmentWidth = prevSegment.gridUnitsX * gridSize + (prevSegment.paddingNearX || 0) + (prevSegment.paddingFarX || 0);
+          posX += prevSegmentWidth + gap;
         }
         for (let i = 0; i < sy; i++) {
-          posY += splitInfo.segments[i][sx].gridUnitsY * gridSize + gap;
+          const prevSegment = splitInfo.segments[i][sx];
+          const prevSegmentDepth = prevSegment.gridUnitsY * gridSize + (prevSegment.paddingNearY || 0) + (prevSegment.paddingFarY || 0);
+          posY += prevSegmentDepth + gap;
         }
+        
+        // Get padding values for this segment
+        const paddingNearX = segment.paddingNearX || 0;
+        const paddingFarX = segment.paddingFarX || 0;
+        const paddingNearY = segment.paddingNearY || 0;
+        const paddingFarY = segment.paddingFarY || 0;
         
         segmentPlacements += `
     // Segment [${sx}, ${sy}]
     translate([${posX}, ${posY}, 0])
-    segment_base(${segment.gridUnitsX}, ${segment.gridUnitsY}, "${leftEdge}", "${rightEdge}", "${frontEdge}", "${backEdge}");
+    segment_base(${segment.gridUnitsX}, ${segment.gridUnitsY}, "${leftEdge}", "${rightEdge}", "${frontEdge}", "${backEdge}", ${paddingNearX}, ${paddingFarX}, ${paddingNearY}, ${paddingFarY});
 `;
       }
     }
@@ -215,9 +226,10 @@ ${segmentPlacements}
 
 // Parametric segment module with male/female interlocking edges
 // Edge types: "none", "male", "female"
-module segment_base(width_units, depth_units, left_edge, right_edge, front_edge, back_edge) {
-    plate_width = width_units * grid_unit;
-    plate_depth = depth_units * grid_unit;
+module segment_base(width_units, depth_units, left_edge, right_edge, front_edge, back_edge, padding_near_x = 0, padding_far_x = 0, padding_near_y = 0, padding_far_y = 0) {
+    // Plate dimensions include padding on outer edges
+    plate_width = width_units * grid_unit + padding_near_x + padding_far_x;
+    plate_depth = depth_units * grid_unit + padding_near_y + padding_far_y;
     
     difference() {
         union() {
@@ -225,130 +237,143 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
             
             // Right edge teeth (male or female depending on type)
+            // Position at grid boundary (accounting for padding)
             if (right_edge == "male") {
+                grid_right_edge = padding_near_x + width_units * grid_unit;
                 if (depth_units > 1) {
                     for (i = [1 : max(1, depth_units) - 1]) {
-                        translate([plate_width, i * grid_unit, 0])
+                        translate([grid_right_edge, padding_near_y + i * grid_unit, 0])
                         rotate([0, 0, -90])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
                 }
                 if (depth_units == 1) {
-                    translate([plate_width, 0.5 * grid_unit, 0])
+                    translate([grid_right_edge, padding_near_y + 0.5 * grid_unit, 0])
                     rotate([0, 0, -90])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
             }
             
             // Back edge teeth
+            // Position at grid boundary (accounting for padding)
             if (back_edge == "male") {
+                grid_back_edge = padding_near_y + depth_units * grid_unit;
                 if (width_units > 1) {
                     for (i = [1 : max(1, width_units) - 1]) {
-                        translate([i * grid_unit, plate_depth, 0])
+                        translate([padding_near_x + i * grid_unit, grid_back_edge, 0])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
                 }
                 if (width_units == 1) {
-                    translate([0.5 * grid_unit, plate_depth, 0])
+                    translate([padding_near_x + 0.5 * grid_unit, grid_back_edge, 0])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
             }
             
             // Left edge male teeth (if overridden to male)
+            // Position at grid boundary (accounting for padding)
             if (left_edge == "male") {
                 if (depth_units > 1) {
                     for (i = [1 : max(1, depth_units) - 1]) {
-                        translate([0, i * grid_unit, 0])
+                        translate([0, padding_near_y + i * grid_unit, 0])
                         rotate([0, 0, -90])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
                 }
                 if (depth_units == 1) {
-                    translate([0, 0.5 * grid_unit, 0])
+                    translate([0, padding_near_y + 0.5 * grid_unit, 0])
                     rotate([0, 0, -90])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
             }
             
             // Front edge male teeth (if overridden to male)
+            // Position at grid boundary (accounting for padding)
             if (front_edge == "male") {
                 if (width_units > 1) {
                     for (i = [1 : max(1, width_units) - 1]) {
-                        translate([i * grid_unit, 0, 0])
+                        translate([padding_near_x + i * grid_unit, 0, 0])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
                 }
                 if (width_units == 1) {
-                    translate([0.5 * grid_unit, 0, 0])
+                    translate([padding_near_x + 0.5 * grid_unit, 0, 0])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
             }
         }
         
         // Socket cutouts
+        // Position sockets accounting for padding on the near (left/front) edges
         for (gx = [0:width_units-1]) {
             for (gy = [0:depth_units-1]) {
-                translate([gx * grid_unit, gy * grid_unit, 0])
+                translate([padding_near_x + gx * grid_unit, padding_near_y + gy * grid_unit, 0])
                 grid_socket();
             }
         }
         
         // Left edge cavities
+        // Position at grid boundary (accounting for padding)
         if (left_edge == "female") {
             if (depth_units > 1) {
                 for (i = [1 : max(1, depth_units) - 1]) {
-                    translate([0, i * grid_unit, 0])
+                    translate([0, padding_near_y + i * grid_unit, 0])
                     rotate([0, 0, -90])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (depth_units == 1) {
-                translate([0, 0.5 * grid_unit, 0])
+                translate([0, padding_near_y + 0.5 * grid_unit, 0])
                 rotate([0, 0, -90])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
         
         // Front edge cavities
+        // Position at grid boundary (accounting for padding)
         if (front_edge == "female") {
             if (width_units > 1) {
                 for (i = [1 : max(1, width_units) - 1]) {
-                    translate([i * grid_unit, 0, 0])
+                    translate([padding_near_x + i * grid_unit, 0, 0])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (width_units == 1) {
-                translate([0.5 * grid_unit, 0, 0])
+                translate([padding_near_x + 0.5 * grid_unit, 0, 0])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
         
         // Right edge cavities (if overridden to female)
+        // Position at grid boundary (accounting for padding)
         if (right_edge == "female") {
+            grid_right_edge = padding_near_x + width_units * grid_unit;
             if (depth_units > 1) {
                 for (i = [1 : max(1, depth_units) - 1]) {
-                    translate([plate_width, i * grid_unit, 0])
+                    translate([grid_right_edge, padding_near_y + i * grid_unit, 0])
                     rotate([0, 0, -90])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (depth_units == 1) {
-                translate([plate_width, 0.5 * grid_unit, 0])
+                translate([grid_right_edge, padding_near_y + 0.5 * grid_unit, 0])
                 rotate([0, 0, -90])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
         
         // Back edge cavities (if overridden to female)
+        // Position at grid boundary (accounting for padding)
         if (back_edge == "female") {
+            grid_back_edge = padding_near_y + depth_units * grid_unit;
             if (width_units > 1) {
                 for (i = [1 : max(1, width_units) - 1]) {
-                    translate([i * grid_unit, plate_depth, 0])
+                    translate([padding_near_x + i * grid_unit, grid_back_edge, 0])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (width_units == 1) {
-                translate([0.5 * grid_unit, plate_depth, 0])
+                translate([padding_near_x + 0.5 * grid_unit, grid_back_edge, 0])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
@@ -1093,7 +1118,16 @@ module female_cavity_3d(pattern, height) {
     const edgePatternModules = this.generateEdgePatternModules(config);
     
     // Generate male/female edge code (with override support)
-    const edgeCode = this.generateEdgeCode(segment, gridSize, plateHeight, edgePattern, config.edgeOverrides || []);
+    // Pass padding values so connectors are positioned correctly relative to grid boundaries
+    const edgeCode = this.generateEdgeCode(
+      segment, 
+      gridSize, 
+      plateHeight, 
+      edgePattern, 
+      config.edgeOverrides || [],
+      paddingNearX,
+      paddingNearY
+    );
     
     return `// Gridfinity Baseplate Segment [${segment.segmentX}, ${segment.segmentY}]
 // Part of a split baseplate system with interlocking male/female edges
@@ -1341,21 +1375,24 @@ module screw_holes() {
     gridSize: number, 
     plateHeight: number, 
     edgePattern: string,
-    edgeOverrides: SegmentEdgeOverride[] = []
+    edgeOverrides: SegmentEdgeOverride[] = [],
+    paddingNearX: number = 0,
+    paddingNearY: number = 0
   ): { maleTeeth: string; femaleCavities: string } {
     const maleTeeth: string[] = [];
     const femaleCavities: string[] = [];
     
     // Helper to get tooth positions - at grid cell boundaries
-    const getPositions = (units: number, forSingleUnit: boolean): number[] => {
+    // Positions are relative to the grid area (accounting for padding)
+    const getPositions = (units: number, forSingleUnit: boolean, paddingOffset: number): number[] => {
       const positions: number[] = [];
       if (units === 1 && forSingleUnit) {
-        // Single unit - put tooth at center
-        positions.push(0.5 * gridSize);
+        // Single unit - put tooth at center of grid area
+        positions.push(paddingOffset + 0.5 * gridSize);
       } else {
         // Multiple units - put teeth at grid boundaries (between cells)
         for (let i = 1; i < units; i++) {
-          positions.push(i * gridSize);
+          positions.push(paddingOffset + i * gridSize);
         }
       }
       return positions;
@@ -1367,22 +1404,26 @@ module screw_holes() {
     const leftEdgeType = this.getEdgeType(segment, 'left', edgeOverrides);
     const frontEdgeType = this.getEdgeType(segment, 'front', edgeOverrides);
     
+    // Calculate grid boundaries (where connectors should be positioned)
+    const gridRightEdge = paddingNearX + segment.gridUnitsX * gridSize;
+    const gridBackEdge = paddingNearY + segment.gridUnitsY * gridSize;
+    
     // RIGHT EDGE
     if (rightEdgeType === 'male') {
-      const positions = getPositions(segment.gridUnitsY, true);
+      const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         maleTeeth.push(`
             // Right edge male tooth at Y=${y}
-            translate([plate_width, ${y}, 0])
+            translate([${gridRightEdge}, ${y}, 0])
             rotate([0, 0, -90])
             male_tooth_3d("${edgePattern}", plate_height);`);
       }
     } else if (rightEdgeType === 'female') {
-      const positions = getPositions(segment.gridUnitsY, true);
+      const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         femaleCavities.push(`
         // Right edge female cavity at Y=${y}
-        translate([plate_width, ${y}, 0])
+        translate([${gridRightEdge}, ${y}, 0])
         rotate([0, 0, -90])
         female_cavity_3d("${edgePattern}", plate_height);`);
       }
@@ -1390,20 +1431,20 @@ module screw_holes() {
     
     // BACK EDGE
     if (backEdgeType === 'male') {
-      const positions = getPositions(segment.gridUnitsX, true);
+      const positions = getPositions(segment.gridUnitsX, true, paddingNearX);
       for (const x of positions) {
         maleTeeth.push(`
             // Back edge male tooth at X=${x}
-            translate([${x}, plate_depth, 0])
+            translate([${x}, ${gridBackEdge}, 0])
             rotate([0, 0, 0])
             male_tooth_3d("${edgePattern}", plate_height);`);
       }
     } else if (backEdgeType === 'female') {
-      const positions = getPositions(segment.gridUnitsX, true);
+      const positions = getPositions(segment.gridUnitsX, true, paddingNearX);
       for (const x of positions) {
         femaleCavities.push(`
         // Back edge female cavity at X=${x}
-        translate([${x}, plate_depth, 0])
+        translate([${x}, ${gridBackEdge}, 0])
         rotate([0, 0, 0])
         female_cavity_3d("${edgePattern}", plate_height);`);
       }
@@ -1411,7 +1452,7 @@ module screw_holes() {
     
     // LEFT EDGE
     if (leftEdgeType === 'female') {
-      const positions = getPositions(segment.gridUnitsY, true);
+      const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         femaleCavities.push(`
         // Left edge female cavity at Y=${y}
@@ -1420,7 +1461,7 @@ module screw_holes() {
         female_cavity_3d("${edgePattern}", plate_height);`);
       }
     } else if (leftEdgeType === 'male') {
-      const positions = getPositions(segment.gridUnitsY, true);
+      const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         maleTeeth.push(`
             // Left edge male tooth at Y=${y}
@@ -1432,7 +1473,7 @@ module screw_holes() {
     
     // FRONT EDGE
     if (frontEdgeType === 'female') {
-      const positions = getPositions(segment.gridUnitsX, true);
+      const positions = getPositions(segment.gridUnitsX, true, paddingNearX);
       for (const x of positions) {
         femaleCavities.push(`
         // Front edge female cavity at X=${x}
@@ -1441,7 +1482,7 @@ module screw_holes() {
         female_cavity_3d("${edgePattern}", plate_height);`);
       }
     } else if (frontEdgeType === 'male') {
-      const positions = getPositions(segment.gridUnitsX, true);
+      const positions = getPositions(segment.gridUnitsX, true, paddingNearX);
       for (const x of positions) {
         maleTeeth.push(`
             // Front edge male tooth at X=${x}

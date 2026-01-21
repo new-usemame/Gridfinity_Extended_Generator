@@ -511,14 +511,18 @@ export function calculateGridFromMm(
   const totalPaddingY = targetDepthMm - gridCoverageMmY;
   
   // Distribute padding based on alignment
+  // For "center" alignment, ensure exact equality by calculating one side and using remainder for the other
   let paddingNearX: number, paddingFarX: number;
   let paddingNearY: number, paddingFarY: number;
   
   if (paddingAlignment === 'center') {
-    paddingNearX = totalPaddingX / 2;
-    paddingFarX = totalPaddingX / 2;
-    paddingNearY = totalPaddingY / 2;
-    paddingFarY = totalPaddingY / 2;
+    // Calculate one side precisely, then the other as remainder to ensure exact equality
+    // Round to 3 decimal places for precision, then calculate remainder
+    paddingNearX = Math.round((totalPaddingX / 2) * 1000) / 1000;
+    paddingFarX = totalPaddingX - paddingNearX; // Ensure exact equality: paddingNearX + paddingFarX = totalPaddingX
+    
+    paddingNearY = Math.round((totalPaddingY / 2) * 1000) / 1000;
+    paddingFarY = totalPaddingY - paddingNearY; // Ensure exact equality: paddingNearY + paddingFarY = totalPaddingY
   } else if (paddingAlignment === 'near') {
     paddingNearX = totalPaddingX;
     paddingFarX = 0;
