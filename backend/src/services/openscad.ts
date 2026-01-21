@@ -349,17 +349,19 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             }
             
             // Left edge male teeth (if overridden to male)
-            // Position at grid boundary (using grid offset)
+            // Position at grid boundary (using grid offset) - NOT at plate edge (X=0)
+            // CRITICAL: When padding_near_x > 0, the wall extends from X=0 to X=grid_offset_x
+            // Teeth must be at the grid boundary (X=grid_offset_x), not at the plate edge
             if (left_edge == "male") {
                 if (depth_units > 1) {
                     for (i = [1 : max(1, depth_units) - 1]) {
-                        translate([0, grid_offset_y + i * grid_unit, 0])
+                        translate([grid_offset_x, grid_offset_y + i * grid_unit, 0])
                         rotate([0, 0, -90])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
                 }
                 if (depth_units == 1) {
-                    translate([0, grid_offset_y + 0.5 * grid_unit, 0])
+                    translate([grid_offset_x, grid_offset_y + 0.5 * grid_unit, 0])
                     rotate([0, 0, -90])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
@@ -425,17 +427,21 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         }
         
         // Left edge cavities
-        // Position at grid boundary (using grid offset)
+        // Position at grid boundary (using grid offset) - NOT at plate edge (X=0)
+        // CRITICAL: When padding_near_x > 0, the wall extends from X=0 to X=grid_offset_x
+        // Cavities must be at the grid boundary (X=grid_offset_x), not at the plate edge
+        // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
+        // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
         if (left_edge == "female") {
             if (depth_units > 1) {
                 for (i = [1 : max(1, depth_units) - 1]) {
-                    translate([0, grid_offset_y + i * grid_unit, 0])
+                    translate([grid_offset_x, grid_offset_y + i * grid_unit, 0])
                     rotate([0, 0, -90])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (depth_units == 1) {
-                translate([0, grid_offset_y + 0.5 * grid_unit, 0])
+                translate([grid_offset_x, grid_offset_y + 0.5 * grid_unit, 0])
                 rotate([0, 0, -90])
                 female_cavity_3d(edge_pattern, plate_height);
             }
@@ -1885,12 +1891,18 @@ module screw_holes() {
     }
     
     // LEFT EDGE
+    // CRITICAL: Position at grid boundary (X=paddingNearX), NOT at plate edge (X=0)
+    // When paddingNearX > 0, the wall extends from X=0 to X=paddingNearX
+    // Connectors must be at the grid boundary to preserve the wall
+    const gridLeftEdge = paddingNearX;  // Grid boundary, not plate edge
     if (leftEdgeType === 'female') {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         femaleCavities.push(`
-        // Left edge female cavity at Y=${y}
-        translate([0, ${y}, 0])
+        // Left edge female cavity at Y=${y}, X=${gridLeftEdge} (grid boundary)
+        // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
+        // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
+        translate([${gridLeftEdge}, ${y}, 0])
         rotate([0, 0, -90])
         female_cavity_3d("${edgePattern}", plate_height);`);
       }
@@ -1898,8 +1910,8 @@ module screw_holes() {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         maleTeeth.push(`
-            // Left edge male tooth at Y=${y}
-            translate([0, ${y}, 0])
+            // Left edge male tooth at Y=${y}, X=${gridLeftEdge} (grid boundary)
+            translate([${gridLeftEdge}, ${y}, 0])
             rotate([0, 0, -90])
             male_tooth_3d("${edgePattern}", plate_height);`);
       }
