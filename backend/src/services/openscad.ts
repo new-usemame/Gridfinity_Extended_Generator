@@ -1894,31 +1894,31 @@ module screw_holes() {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         maleTeeth.push(`
-            // Right edge male tooth at Y=${y} - COLOR: RED
-            color([1, 0, 0]) {
-                translate([${gridRightEdge}, ${y}, 0])
-                rotate([0, 0, -90])
-                male_tooth_3d("${edgePattern}", plate_height);
-                // Color marker
-                translate([${gridRightEdge}, ${y}, plate_height + 2])
-                sphere(r=2, $fn=16);
-            }`);
+            // Right edge male tooth at Y=${y} - MARKER: RED
+            translate([${gridRightEdge}, ${y}, 0])
+            rotate([0, 0, -90])
+            male_tooth_3d("${edgePattern}", plate_height);`);
+        // Add floating marker - RED cylinder (tall) for right male
+        maleTeeth.push(`
+            // Right edge male marker at Y=${y} - RED (tall cylinder)
+            translate([${gridRightEdge + 5}, ${y}, plate_height + 10])
+            cylinder(h=12, r=2.5, $fn=16);`);
       }
     } else if (rightEdgeType === 'female') {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         femaleCavities.push(`
-        // Right edge female cavity at Y=${y} - COLOR: PINK
+        // Right edge female cavity at Y=${y} - MARKER: PINK
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
         translate([${gridRightEdge}, ${y}, 0])
         rotate([0, 0, -90])
         female_cavity_3d("${edgePattern}", plate_height);`);
-        // Add color marker outside difference() - will be added to union
+        // Add floating marker - PINK cylinder (short) for right female
         maleTeeth.push(`
-            // Right edge female marker at Y=${y} - COLOR: PINK
-            color([1, 0.5, 0.8]) translate([${gridRightEdge}, ${y}, plate_height + 2])
-            sphere(r=2, $fn=16);`);
+            // Right edge female marker at Y=${y} - PINK (short cylinder)
+            translate([${gridRightEdge + 5}, ${y}, plate_height + 10])
+            cylinder(h=6, r=2.5, $fn=16);`);
       }
     }
     
@@ -1927,31 +1927,31 @@ module screw_holes() {
       const positions = getPositions(segment.gridUnitsX, true, paddingNearX);
       for (const x of positions) {
         maleTeeth.push(`
-            // Back edge male tooth at X=${x} - COLOR: BLUE
-            color([0, 0, 1]) {
-                translate([${x}, ${gridBackEdge}, 0])
-                rotate([0, 0, 0])
-                male_tooth_3d("${edgePattern}", plate_height);
-                // Color marker
-                translate([${x}, ${gridBackEdge}, plate_height + 2])
-                sphere(r=2, $fn=16);
-            }`);
+            // Back edge male tooth at X=${x} - MARKER: BLUE
+            translate([${x}, ${gridBackEdge}, 0])
+            rotate([0, 0, 0])
+            male_tooth_3d("${edgePattern}", plate_height);`);
+        // Add floating marker - BLUE box (large) for back male
+        maleTeeth.push(`
+            // Back edge male marker at X=${x} - BLUE (large box)
+            translate([${x}, ${gridBackEdge + 5}, plate_height + 10])
+            cube([8, 8, 12], center=true);`);
       }
     } else if (backEdgeType === 'female') {
       const positions = getPositions(segment.gridUnitsX, true, paddingNearX);
       for (const x of positions) {
         femaleCavities.push(`
-        // Back edge female cavity at X=${x} - COLOR: LIGHT BLUE
+        // Back edge female cavity at X=${x} - MARKER: LIGHT BLUE
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
         translate([${x}, ${gridBackEdge}, 0])
         rotate([0, 0, 0])
         female_cavity_3d("${edgePattern}", plate_height);`);
-        // Add color marker outside difference() - will be added to union
+        // Add floating marker - LIGHT BLUE box (small) for back female
         maleTeeth.push(`
-            // Back edge female marker at X=${x} - COLOR: LIGHT BLUE
-            color([0.5, 0.8, 1]) translate([${x}, ${gridBackEdge}, plate_height + 2])
-            sphere(r=2, $fn=16);`);
+            // Back edge female marker at X=${x} - LIGHT BLUE (small box)
+            translate([${x}, ${gridBackEdge + 5}, plate_height + 10])
+            cube([6, 6, 8], center=true);`);
       }
     }
     
@@ -1964,31 +1964,31 @@ module screw_holes() {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         femaleCavities.push(`
-        // Left edge female cavity at Y=${y}, X=${gridLeftEdge} (grid boundary) - COLOR: LIGHT GREEN
+        // Left edge female cavity at Y=${y}, X=${gridLeftEdge} (grid boundary) - MARKER: LIGHT GREEN
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
         translate([${gridLeftEdge}, ${y}, 0])
         rotate([0, 0, -90])
         female_cavity_3d("${edgePattern}", plate_height);`);
-        // Add color marker outside difference() - will be added to union
+        // Add floating marker - LIGHT GREEN cylinder (short) for left female
         maleTeeth.push(`
-            // Left edge female marker at Y=${y} - COLOR: LIGHT GREEN
-            color([0.5, 1, 0.5]) translate([${gridLeftEdge}, ${y}, plate_height + 2])
-            sphere(r=2, $fn=16);`);
+            // Left edge female marker at Y=${y} - LIGHT GREEN (short cylinder)
+            translate([${gridLeftEdge - 5}, ${y}, plate_height + 10])
+            cylinder(h=6, r=2.5, $fn=16);`);
       }
     } else if (leftEdgeType === 'male') {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         maleTeeth.push(`
-            // Left edge male tooth at Y=${y}, X=${gridLeftEdge} (grid boundary) - COLOR: GREEN
-            color([0, 1, 0]) {
-                translate([${gridLeftEdge}, ${y}, 0])
-                rotate([0, 0, -90])
-                male_tooth_3d("${edgePattern}", plate_height);
-                // Color marker
-                translate([${gridLeftEdge}, ${y}, plate_height + 2])
-                sphere(r=2, $fn=16);
-            }`);
+            // Left edge male tooth at Y=${y}, X=${gridLeftEdge} (grid boundary) - MARKER: GREEN
+            translate([${gridLeftEdge}, ${y}, 0])
+            rotate([0, 0, -90])
+            male_tooth_3d("${edgePattern}", plate_height);`);
+        // Add floating marker - GREEN cylinder (tall) for left male
+        maleTeeth.push(`
+            // Left edge male marker at Y=${y} - GREEN (tall cylinder)
+            translate([${gridLeftEdge - 5}, ${y}, plate_height + 10])
+            cylinder(h=12, r=2.5, $fn=16);`);
       }
     }
     
@@ -2003,28 +2003,28 @@ module screw_holes() {
     if (frontEdgeType === 'female') {
       for (const x of frontEdgePositions) {
         femaleCavities.push(`
-        // Front edge female cavity at X=${x}, Y=${gridFrontEdge} (grid boundary) - COLOR: ORANGE
+        // Front edge female cavity at X=${x}, Y=${gridFrontEdge} (grid boundary) - MARKER: ORANGE
         translate([${x}, ${gridFrontEdge}, 0])
         rotate([0, 0, 0])
         female_cavity_3d("${edgePattern}", plate_height);`);
-        // Add color marker outside difference() - will be added to union
+        // Add floating marker - ORANGE box (small) for front female
         maleTeeth.push(`
-            // Front edge female marker at X=${x} - COLOR: ORANGE
-            color([1, 0.5, 0]) translate([${x}, ${gridFrontEdge}, plate_height + 2])
-            sphere(r=2, $fn=16);`);
+            // Front edge female marker at X=${x} - ORANGE (small box)
+            translate([${x}, ${gridFrontEdge - 5}, plate_height + 10])
+            cube([6, 6, 8], center=true);`);
       }
     } else if (frontEdgeType === 'male') {
       for (const x of frontEdgePositions) {
         maleTeeth.push(`
-            // Front edge male tooth at X=${x}, Y=${gridFrontEdge} (grid boundary) - COLOR: YELLOW
-            color([1, 1, 0]) {
-                translate([${x}, ${gridFrontEdge}, 0])
-                rotate([0, 0, 0])
-                male_tooth_3d("${edgePattern}", plate_height);
-                // Color marker
-                translate([${x}, ${gridFrontEdge}, plate_height + 2])
-                sphere(r=2, $fn=16);
-            }`);
+            // Front edge male tooth at X=${x}, Y=${gridFrontEdge} (grid boundary) - MARKER: YELLOW
+            translate([${x}, ${gridFrontEdge}, 0])
+            rotate([0, 0, 0])
+            male_tooth_3d("${edgePattern}", plate_height);`);
+        // Add floating marker - YELLOW box (large) for front male
+        maleTeeth.push(`
+            // Front edge male marker at X=${x} - YELLOW (large box)
+            translate([${x}, ${gridFrontEdge - 5}, plate_height + 10])
+            cube([8, 8, 12], center=true);`);
       }
     }
     
