@@ -2678,22 +2678,24 @@ module dividers() {
     // They extend from X=wall_thickness to X=wall_thickness+inner_width
     // And are positioned at specific Y coordinates within the inner cavity
     if (dividers_y > 0) {
+        // Calculate spacing to evenly divide the inner space
+        // With dividers_y dividers, we create dividers_y + 1 compartments
         spacing = inner_depth / (dividers_y + 1);
         for (i = [1:dividers_y]) {
-            // Calculate the center position of the divider along Y
+            // Position divider at i * spacing from the inner wall start
+            // The divider should be centered at this position
             divider_center_y = wall_thickness + i * spacing;
+            // Position the bottom edge of the divider (divider extends divider_thickness in Y direction)
+            // This positions the divider so it's centered at divider_center_y
+            divider_bottom_y = divider_center_y - divider_thickness / 2;
             // Position divider within the inner cavity:
             // X: from wall_thickness to wall_thickness+inner_width (full width of inner cavity)
-            // Y: centered at divider_center_y (from divider_center_y - divider_thickness/2 to divider_center_y + divider_thickness/2)
+            // Y: from divider_bottom_y to divider_bottom_y+divider_thickness (centered at divider_center_y)
             // Z: from floor_thickness upward
-            // Create divider with [divider_thickness, inner_width, divider_height] then rotate 90° around Z
-            // After rotation: [inner_width, divider_thickness, divider_height]
-            // The rotation happens around the origin, so we need to translate first to position correctly
-            // Then rotate around the divider's center to avoid positioning issues
-            translate([wall_thickness + inner_width / 2, divider_center_y, floor_thickness])
-            rotate([0, 0, 90])
-            translate([-inner_width / 2, -divider_thickness / 2, 0])
-            divider_with_bevel(divider_thickness, inner_width, divider_height, inner_radius, divider_floor_bevel);
+            // Create divider directly with [inner_width, divider_thickness, divider_height] - no rotation needed!
+            // This matches the X divider pattern: create in correct orientation, just translate to position
+            translate([wall_thickness, divider_bottom_y, floor_thickness])
+            divider_with_bevel(inner_width, divider_thickness, divider_height, inner_radius, divider_floor_bevel);
         }
     }
 }
