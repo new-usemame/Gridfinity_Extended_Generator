@@ -2264,14 +2264,18 @@ module dividers() {
     // X dividers (vertical walls along Y axis)
     // These dividers run parallel to the Y axis and divide the box along the X direction
     if (dividers_x > 0) {
+        // Calculate spacing to evenly divide the inner space
+        // With dividers_x dividers, we create dividers_x + 1 compartments
         spacing = inner_width / (dividers_x + 1);
         for (i = [1:dividers_x]) {
-            // Calculate the center position of the divider
-            // i * spacing gives us the position from the start of the inner space
+            // Position divider at i * spacing from the inner wall start
+            // The divider should be centered at this position
             divider_center_x = wall_thickness + i * spacing;
-            // Position the left edge of the divider, ensuring it stays within bounds
+            // Position the left edge of the divider (divider extends divider_thickness to the right)
             divider_left_x = divider_center_x - divider_thickness / 2;
-            // Safety check: ensure divider doesn't extend beyond inner space
+            // Ensure divider stays within inner space bounds
+            // The divider extends from divider_left_x to divider_left_x + divider_thickness
+            // It must be between wall_thickness and wall_thickness + inner_width
             divider_left_x = max(wall_thickness, min(divider_left_x, wall_thickness + inner_width - divider_thickness));
             translate([divider_left_x, wall_thickness, floor_thickness])
             divider_with_bevel(divider_thickness, inner_depth, divider_height, inner_radius, divider_floor_bevel);
@@ -2283,15 +2287,17 @@ module dividers() {
     if (dividers_y > 0) {
         spacing = inner_depth / (dividers_y + 1);
         for (i = [1:dividers_y]) {
-            // Calculate the center position of the divider
-            // i * spacing gives us the position from the start of the inner space
+            // Calculate the center position of the divider along Y
             divider_center_y = wall_thickness + i * spacing;
-            // Position the bottom edge of the divider, ensuring it stays within bounds
-            divider_bottom_y = divider_center_y - divider_thickness / 2;
-            // Safety check: ensure divider doesn't extend beyond inner space
-            divider_bottom_y = max(wall_thickness, min(divider_bottom_y, wall_thickness + inner_depth - divider_thickness));
-            translate([wall_thickness, divider_bottom_y, floor_thickness])
+            // Position the divider: center it at divider_center_y along Y
+            // The divider_with_bevel creates [thickness, length, height]
+            // We call it with (divider_thickness, inner_width, ...) to create [divider_thickness, inner_width, height]
+            // After rotating 90° around Z, dimensions become [inner_width, divider_thickness, height]
+            // So it extends from X=wall_thickness to X=wall_thickness+inner_width (correct)
+            // And from Y=divider_center_y-divider_thickness/2 to Y=divider_center_y+divider_thickness/2 (centered)
+            translate([wall_thickness, divider_center_y, floor_thickness])
             rotate([0, 0, 90])
+            translate([0, -divider_thickness / 2, 0])
             divider_with_bevel(divider_thickness, inner_width, divider_height, inner_radius, divider_floor_bevel);
         }
     }
