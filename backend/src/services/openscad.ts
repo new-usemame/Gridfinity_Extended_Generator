@@ -1233,7 +1233,9 @@ module female_cavity_3d(pattern, height) {
     }
     
     // Determine if this segment should use fill mode (when padding > 0)
-    const useFillMode = (paddingNearX + paddingFarX + paddingNearY + paddingFarY) > 0;
+    // CRITICAL: Use effective padding values to account for wall extension added for half cells
+    // This ensures useFillMode is true when half cells need wall extension, even if original padding was 0
+    const useFillMode = (paddingNearX + effectivePaddingFarX + paddingNearY + effectivePaddingFarY) > 0;
     
     // Generate edge pattern modules
     const edgePatternModules = this.generateEdgePatternModules(config);
@@ -1282,10 +1284,11 @@ has_female_left = ${segment.hasConnectorLeft};
 has_female_front = ${segment.hasConnectorFront};
 
 /* [Padding] */
+// Note: padding_far_x/y may be increased to ensure minimum wall thickness when half cells are present
 padding_near_x = ${paddingNearX.toFixed(2)};
-padding_far_x = ${paddingFarX.toFixed(2)};
+padding_far_x = ${effectivePaddingFarX.toFixed(2)};
 padding_near_y = ${paddingNearY.toFixed(2)};
-padding_far_y = ${paddingFarY.toFixed(2)};
+padding_far_y = ${effectivePaddingFarY.toFixed(2)};
 
 /* [Constants] */
 clearance = 0.25;
