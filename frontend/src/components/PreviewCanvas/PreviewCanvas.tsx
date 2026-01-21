@@ -382,10 +382,11 @@ function CombinedSceneContent({
       )}
 
       {/* Box Model with Z offset */}
+      {/* Note: boxZOffset controls Front-Back position (OpenSCAD Y-axis = Three.js Z-axis) */}
       {boxGeometry && (
         <mesh 
           geometry={boxGeometry} 
-          position={[0, boxZOffset, 0]}
+          position={[0, 0, boxZOffset]}
         >
           <meshStandardMaterial
             color="#16a34a"

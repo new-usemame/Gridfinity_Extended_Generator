@@ -16,6 +16,24 @@ router.post('/', async (req: Request, res: Response) => {
 
     let result;
 
+    // #region agent log
+    const debugLogs: any[] = [];
+    if (type === 'box') {
+      // Log before generation
+      const preLog = {
+        location: 'generate.ts:POST /',
+        message: 'Box generation started',
+        data: { type, config: config as BoxConfig },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A'
+      };
+      debugLogs.push(preLog);
+      fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(preLog) }).catch(() => {});
+    }
+    // #endregion
+    
     if (type === 'box') {
       result = await openscadService.generateBox(config as BoxConfig);
     } else if (type === 'baseplate') {
@@ -31,7 +49,21 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid type. Must be "box" or "baseplate"' });
     }
 
-    res.json(result);
+    // #region agent log
+    const postLog = {
+      location: 'generate.ts:POST /',
+      message: 'Generation completed',
+      data: { type, success: true },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'A'
+    };
+    fetch('http://127.0.0.1:7246/ingest/1722e8ad-d31a-4263-9e70-0a1a9600939b', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(postLog) }).catch(() => {});
+    // #endregion
+
+    // Include debug logs in response for client-side console logging
+    res.json({ ...result, debugLogs });
   } catch (error) {
     console.error('Generation error:', error);
     res.status(500).json({ 

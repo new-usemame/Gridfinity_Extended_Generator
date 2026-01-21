@@ -144,8 +144,18 @@ export function Generator() {
     // Process responses
     let responseIndex = 0;
     if (generateBox) {
-      const boxResultData: GenerationResult = await responses[responseIndex].json();
-      setBoxResult(boxResultData);
+      const boxResultData: any = await responses[responseIndex].json();
+      // Log debug information to console if available
+      if (boxResultData.debugLogs && Array.isArray(boxResultData.debugLogs)) {
+        console.group('🔍 Box Generation Debug Logs');
+        boxResultData.debugLogs.forEach((log: any) => {
+          console.log(`[${log.location}] ${log.message}`, log.data);
+        });
+        console.groupEnd();
+      }
+      // Remove debugLogs before setting state
+      const { debugLogs, ...cleanResult } = boxResultData;
+      setBoxResult(cleanResult as GenerationResult);
       responseIndex++;
     } else {
       // If box is not being generated, keep existing result (don't clear it)
