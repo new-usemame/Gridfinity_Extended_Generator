@@ -534,6 +534,11 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
     let gridCoverageMmX: number | undefined;
     let gridCoverageMmY: number | undefined;
     
+    let paddingNearX: number | undefined;
+    let paddingFarX: number | undefined;
+    let paddingNearY: number | undefined;
+    let paddingFarY: number | undefined;
+    
     if (config.sizingMode === 'fill_area_mm' && gridCalc) {
       // Use floored values for totalUnits (for backwards compatibility)
       totalUnitsX = Math.floor(gridCalc.gridUnitsX);
@@ -544,6 +549,11 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
       // Pass grid coverage (what needs to fit on the bed, excluding padding)
       gridCoverageMmX = gridCalc.gridCoverageMmX;
       gridCoverageMmY = gridCalc.gridCoverageMmY;
+      // Pass padding values for distribution across segments
+      paddingNearX = gridCalc.paddingNearX;
+      paddingFarX = gridCalc.paddingFarX;
+      paddingNearY = gridCalc.paddingNearY;
+      paddingFarY = gridCalc.paddingFarY;
     } else {
       totalUnitsX = Math.floor(config.width);
       totalUnitsY = Math.floor(config.depth);
@@ -552,6 +562,11 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
       actualGridUnitsY = config.depth;
       gridCoverageMmX = config.width * config.gridSize;
       gridCoverageMmY = config.depth * config.gridSize;
+      // No padding in grid_units mode
+      paddingNearX = 0;
+      paddingFarX = 0;
+      paddingNearY = 0;
+      paddingFarY = 0;
     }
     
     return splitBaseplateForPrinter(
@@ -564,7 +579,11 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
       actualGridUnitsX,
       actualGridUnitsY,
       gridCoverageMmX,
-      gridCoverageMmY
+      gridCoverageMmY,
+      paddingNearX,
+      paddingFarX,
+      paddingNearY,
+      paddingFarY
     );
   }, [config.splitEnabled, config.sizingMode, config.width, config.depth, 
       config.printerBedWidth, config.printerBedDepth, config.gridSize, 

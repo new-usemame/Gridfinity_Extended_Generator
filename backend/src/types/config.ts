@@ -242,6 +242,10 @@ export interface SegmentInfo {
   hasConnectorRight: boolean;    // Connector on right edge
   hasConnectorFront: boolean;    // Connector on front edge
   hasConnectorBack: boolean;     // Connector on back edge
+  paddingNearX: number;          // Padding on left edge (mm) - only for first segment in X
+  paddingFarX: number;           // Padding on right edge (mm) - only for last segment in X
+  paddingNearY: number;          // Padding on front edge (mm) - only for first segment in Y
+  paddingFarY: number;           // Padding on back edge (mm) - only for last segment in Y
 }
 
 // Custom edge settings for a segment (overrides automatic male/female assignment)
@@ -304,7 +308,11 @@ export function splitBaseplateForPrinter(
   actualGridUnitsX?: number,
   actualGridUnitsY?: number,
   gridCoverageMmX?: number,
-  gridCoverageMmY?: number
+  gridCoverageMmY?: number,
+  paddingNearX?: number,
+  paddingFarX?: number,
+  paddingNearY?: number,
+  paddingFarY?: number
 ): SplitResult {
   // Use actual grid units from calculateGridFromMm if provided (accounts for half cells)
   // Otherwise fall back to the floored totalGridUnits values
@@ -417,6 +425,13 @@ export function splitBaseplateForPrinter(
       const hasConnectorFront = connectorEnabled && sy > 0;
       const hasConnectorBack = connectorEnabled && sy < segmentsY - 1;
       
+      // Assign padding based on segment position
+      // Padding is only on outer edges of the first/last segments
+      const segmentPaddingNearX = (sx === 0 && paddingNearX !== undefined) ? paddingNearX : 0;
+      const segmentPaddingFarX = (sx === segmentsX - 1 && paddingFarX !== undefined) ? paddingFarX : 0;
+      const segmentPaddingNearY = (sy === 0 && paddingNearY !== undefined) ? paddingNearY : 0;
+      const segmentPaddingFarY = (sy === segmentsY - 1 && paddingFarY !== undefined) ? paddingFarY : 0;
+      
       row.push({
         segmentX: sx,
         segmentY: sy,
@@ -425,7 +440,11 @@ export function splitBaseplateForPrinter(
         hasConnectorLeft,
         hasConnectorRight,
         hasConnectorFront,
-        hasConnectorBack
+        hasConnectorBack,
+        paddingNearX: segmentPaddingNearX,
+        paddingFarX: segmentPaddingFarX,
+        paddingNearY: segmentPaddingNearY,
+        paddingFarY: segmentPaddingFarY
       });
     }
     segments.push(row);

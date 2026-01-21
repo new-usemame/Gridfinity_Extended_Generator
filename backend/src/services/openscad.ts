@@ -53,6 +53,10 @@ export class OpenSCADService {
     let actualGridUnitsY: number | undefined;
     let gridCoverageMmX: number | undefined;
     let gridCoverageMmY: number | undefined;
+    let paddingNearX: number | undefined;
+    let paddingFarX: number | undefined;
+    let paddingNearY: number | undefined;
+    let paddingFarY: number | undefined;
     
     if (config.sizingMode === 'fill_area_mm') {
       const calc = calculateGridFromMm(
@@ -72,6 +76,11 @@ export class OpenSCADService {
       // Pass grid coverage (what needs to fit on the bed, excluding padding)
       gridCoverageMmX = calc.gridCoverageMmX;
       gridCoverageMmY = calc.gridCoverageMmY;
+      // Pass padding values for distribution across segments
+      paddingNearX = calc.paddingNearX;
+      paddingFarX = calc.paddingFarX;
+      paddingNearY = calc.paddingNearY;
+      paddingFarY = calc.paddingFarY;
     } else {
       totalGridUnitsX = Math.floor(config.width);
       totalGridUnitsY = Math.floor(config.depth);
@@ -80,6 +89,11 @@ export class OpenSCADService {
       actualGridUnitsY = config.depth;
       gridCoverageMmX = config.width * config.gridSize;
       gridCoverageMmY = config.depth * config.gridSize;
+      // No padding in grid_units mode
+      paddingNearX = 0;
+      paddingFarX = 0;
+      paddingNearY = 0;
+      paddingFarY = 0;
     }
 
     // Calculate split
@@ -93,7 +107,11 @@ export class OpenSCADService {
       actualGridUnitsX,
       actualGridUnitsY,
       gridCoverageMmX,
-      gridCoverageMmY
+      gridCoverageMmY,
+      paddingNearX,
+      paddingFarX,
+      paddingNearY,
+      paddingFarY
     );
 
     // Generate a combined preview SCAD (faster - single render)
@@ -407,6 +425,10 @@ module grid_socket() {
     let actualGridUnitsY: number | undefined;
     let gridCoverageMmX: number | undefined;
     let gridCoverageMmY: number | undefined;
+    let paddingNearX: number | undefined;
+    let paddingFarX: number | undefined;
+    let paddingNearY: number | undefined;
+    let paddingFarY: number | undefined;
     
     if (config.sizingMode === 'fill_area_mm') {
       const calc = calculateGridFromMm(
@@ -426,6 +448,11 @@ module grid_socket() {
       // Pass grid coverage (what needs to fit on the bed, excluding padding)
       gridCoverageMmX = calc.gridCoverageMmX;
       gridCoverageMmY = calc.gridCoverageMmY;
+      // Pass padding values for distribution across segments
+      paddingNearX = calc.paddingNearX;
+      paddingFarX = calc.paddingFarX;
+      paddingNearY = calc.paddingNearY;
+      paddingFarY = calc.paddingFarY;
     } else {
       totalGridUnitsX = Math.floor(config.width);
       totalGridUnitsY = Math.floor(config.depth);
@@ -434,6 +461,11 @@ module grid_socket() {
       actualGridUnitsY = config.depth;
       gridCoverageMmX = config.width * config.gridSize;
       gridCoverageMmY = config.depth * config.gridSize;
+      // No padding in grid_units mode
+      paddingNearX = 0;
+      paddingFarX = 0;
+      paddingNearY = 0;
+      paddingFarY = 0;
     }
 
     const splitInfo = splitBaseplateForPrinter(
@@ -446,7 +478,11 @@ module grid_socket() {
       actualGridUnitsX,
       actualGridUnitsY,
       gridCoverageMmX,
-      gridCoverageMmY
+      gridCoverageMmY,
+      paddingNearX,
+      paddingFarX,
+      paddingNearY,
+      paddingFarY
     );
 
     // Get segment info
@@ -1047,6 +1083,12 @@ module female_cavity_3d(pattern, height) {
     const gridSize = config.gridSize;
     const edgePattern = config.edgePattern;
     
+    // Get padding values (default to 0 if not provided)
+    const paddingNearX = segment.paddingNearX || 0;
+    const paddingFarX = segment.paddingFarX || 0;
+    const paddingNearY = segment.paddingNearY || 0;
+    const paddingFarY = segment.paddingFarY || 0;
+    
     // Generate edge pattern modules
     const edgePatternModules = this.generateEdgePatternModules(config);
     
@@ -1084,6 +1126,12 @@ has_male_back = ${segment.hasConnectorBack};
 has_female_left = ${segment.hasConnectorLeft};
 has_female_front = ${segment.hasConnectorFront};
 
+/* [Padding] */
+padding_near_x = ${paddingNearX.toFixed(2)};
+padding_far_x = ${paddingFarX.toFixed(2)};
+padding_near_y = ${paddingNearY.toFixed(2)};
+padding_far_y = ${paddingFarY.toFixed(2)};
+
 /* [Constants] */
 clearance = 0.25;
 socket_taper_height = socket_chamfer_height;
@@ -1094,8 +1142,9 @@ plate_height = socket_depth;
 $fn = 32;
 
 /* [Calculated] */
-plate_width = width_units * grid_unit;
-plate_depth = depth_units * grid_unit;
+// Plate dimensions include padding on outer edges
+plate_width = width_units * grid_unit + padding_near_x + padding_far_x;
+plate_depth = depth_units * grid_unit + padding_near_y + padding_far_y;
 
 ${edgePatternModules}
 
@@ -1113,9 +1162,10 @@ module gridfinity_segment() {
         }
         
         // Socket cutouts
+        // Position sockets accounting for padding on the near (left/front) edges
         for (gx = [0:width_units-1]) {
             for (gy = [0:depth_units-1]) {
-                translate([gx * grid_unit, gy * grid_unit, 0])
+                translate([padding_near_x + gx * grid_unit, padding_near_y + gy * grid_unit, 0])
                 grid_socket();
             }
         }
