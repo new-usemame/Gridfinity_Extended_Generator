@@ -44,7 +44,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           label="Width"
           value={config.width}
           min={0.5}
-          max={8}
+          max={20}
           step={0.5}
           unit="units"
           onChange={(v) => update('width', v)}
@@ -53,7 +53,7 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           label="Depth"
           value={config.depth}
           min={0.5}
-          max={8}
+          max={20}
           step={0.5}
           unit="units"
           onChange={(v) => update('depth', v)}
@@ -62,11 +62,14 @@ function BoxConfigPanel({ config, onChange }: { config: BoxConfig; onChange: (co
           label="Height"
           value={config.height}
           min={1}
-          max={10}
+          max={25}
           step={1}
           unit="units"
           onChange={(v) => update('height', v)}
         />
+        <p className="text-xs text-slate-500 dark:text-slate-500">
+          Each height unit is 7mm. Standard Gridfinity specification.
+        </p>
         <NumberInput
           label="Grid Unit Size"
           value={config.gridSize}
