@@ -504,6 +504,10 @@ export function splitBaseplateForPrinter(
         }
         // Otherwise, use the original padding (which is already >= minWallThickness or we want to preserve exact size)
       }
+      // Calculate if this segment has half cells (needed for wall check)
+      const segmentHasHalfCellX = gridUnitsX - Math.floor(gridUnitsX) >= 0.5;
+      const segmentHasHalfCellY = gridUnitsY - Math.floor(gridUnitsY) >= 0.5;
+      
       if (sx === segmentsX - 1) {
         // Last segment in X: ensure at least minWallThickness padding to create closing wall
         // But only if original padding was 0 (to avoid increasing total size)
@@ -513,6 +517,29 @@ export function splitBaseplateForPrinter(
           segmentPaddingFarX = minWallThickness;
         }
         // Otherwise, use the original padding (which is already >= minWallThickness or we want to preserve exact size)
+      } else if (segmentHasHalfCellX) {
+        // CRITICAL: Non-last segments with half cells on far edge MUST have closing wall
+        // Half cells extend to gridUnitsX * gridSize, and plate must extend beyond to create wall
+        const originalPaddingFarX = segmentPaddingFarX;
+        if (originalPaddingFarX < minWallThickness) {
+          // Add minimum wall to close the half cell
+          segmentPaddingFarX = minWallThickness;
+          // #region agent log
+          console.log(JSON.stringify({
+            location: 'splitBaseplateForPrinter:segment:half-cell-wall-fix',
+            message: `Segment [${sx}, ${sy}] adding wall for half cell on far X edge`,
+            data: {
+              sx, sy, gridUnitsX, segmentHasHalfCellX,
+              originalPaddingFarX, newPaddingFarX: segmentPaddingFarX,
+              minWallThickness, isLastX: false
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'D'
+          }));
+          // #endregion
+        }
       }
       if (sy === 0) {
         // First segment in Y: ensure at least minWallThickness padding to create closing wall on near edge (Y=0)
@@ -533,13 +560,36 @@ export function splitBaseplateForPrinter(
           segmentPaddingFarY = minWallThickness;
         }
         // Otherwise, use the original padding (which is already >= minWallThickness or we want to preserve exact size)
+      } else if (segmentHasHalfCellY) {
+        // CRITICAL: Non-last segments with half cells on far edge MUST have closing wall
+        // Half cells extend to gridUnitsY * gridSize, and plate must extend beyond to create wall
+        const originalPaddingFarY = segmentPaddingFarY;
+        if (originalPaddingFarY < minWallThickness) {
+          // Add minimum wall to close the half cell
+          segmentPaddingFarY = minWallThickness;
+          // #region agent log
+          console.log(JSON.stringify({
+            location: 'splitBaseplateForPrinter:segment:half-cell-wall-fix',
+            message: `Segment [${sx}, ${sy}] adding wall for half cell on far Y edge`,
+            data: {
+              sx, sy, gridUnitsY, segmentHasHalfCellY,
+              originalPaddingFarY, newPaddingFarY: segmentPaddingFarY,
+              minWallThickness, isLastY: false
+            },
+            timestamp: Date.now(),
+            sessionId: 'debug-session',
+            runId: 'run1',
+            hypothesisId: 'D'
+          }));
+          // #endregion
+        }
       }
       
       // #region agent log
       const segmentWidthMm = gridUnitsX * gridSize + segmentPaddingNearX + segmentPaddingFarX;
       const segmentDepthMm = gridUnitsY * gridSize + segmentPaddingNearY + segmentPaddingFarY;
-      const hasHalfCellX = gridUnitsX - Math.floor(gridUnitsX) >= 0.5;
-      const hasHalfCellY = gridUnitsY - Math.floor(gridUnitsY) >= 0.5;
+      const hasHalfCellX = segmentHasHalfCellX; // Use pre-calculated value
+      const hasHalfCellY = segmentHasHalfCellY; // Use pre-calculated value
       const isLastX = sx === segmentsX - 1;
       const isLastY = sy === segmentsY - 1;
       const exceedsBedX = segmentWidthMm > printerBedWidth;
@@ -572,15 +622,18 @@ export function splitBaseplateForPrinter(
           isLastX, isLastY, exceedsBedX, exceedsBedY,
           originalPaddingFarX: (isLastX && paddingFarX !== undefined) ? paddingFarX : 0,
           originalPaddingFarY: (isLastY && paddingFarY !== undefined) ? paddingFarY : 0,
-          wallAddedX: isLastX && segmentPaddingFarX >= minWallThickness,
-          wallAddedY: isLastY && segmentPaddingFarY >= minWallThickness,
+          wallAddedX: (isLastX || hasHalfCellX) && segmentPaddingFarX >= minWallThickness,
+          wallAddedY: (isLastY || hasHalfCellY) && segmentPaddingFarY >= minWallThickness,
           wallThicknessX: segmentPaddingFarX,
-          wallThicknessY: segmentPaddingFarY
+          wallThicknessY: segmentPaddingFarY,
+          wallAddedForHalfCellX: !isLastX && hasHalfCellX && segmentPaddingFarX >= minWallThickness,
+          wallAddedForHalfCellY: !isLastY && hasHalfCellY && segmentPaddingFarY >= minWallThickness,
+          minWallThickness
         },
         timestamp: Date.now(),
         sessionId: 'debug-session',
         runId: 'run1',
-        hypothesisId: 'A,B,C'
+        hypothesisId: 'A,B,C,D,E'
       }));
       // #endregion
       

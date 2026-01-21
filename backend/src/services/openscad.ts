@@ -1334,12 +1334,15 @@ module female_cavity_3d(pattern, height) {
         outerWidthMm, outerDepthMm,
         hasHalfCellX, hasHalfCellY,
         isLastSegmentX: paddingFarX >= minWallThickness,
-        isLastSegmentY: paddingFarY >= minWallThickness
+        isLastSegmentY: paddingFarY >= minWallThickness,
+        minWallThickness,
+        effectivePaddingFarXCalculation: `(${paddingFarX} >= ${minWallThickness}) ? ${paddingFarX} : (${hasHalfCellX} ? Math.max(${paddingFarX}, ${minWallThickness}) : ${paddingFarX})`,
+        wallNeededForHalfCellX: hasHalfCellX && paddingFarX < minWallThickness
       },
       timestamp: Date.now(),
       sessionId: 'debug-session',
       runId: 'run1',
-      hypothesisId: 'A,B'
+      hypothesisId: 'A,B,C,D'
     }));
     // #endregion
     
@@ -1356,6 +1359,17 @@ module female_cavity_3d(pattern, height) {
     // This ensures useFillMode is true when half cells need wall extension, even if original padding was 0
     const useFillMode = (paddingNearX + effectivePaddingFarX + paddingNearY + effectivePaddingFarY) > 0;
     
+    // Calculate expected plate dimensions for verification
+    const expectedPlateWidth = useFillMode ? outerWidthMm : gridWidth;
+    const expectedPlateDepth = useFillMode ? outerDepthMm : gridDepth;
+    const gridOffsetX = useFillMode ? paddingNearX : 0;
+    const gridOffsetY = useFillMode ? paddingNearY : 0;
+    // For half cell wall verification: wall should extend from (gridOffsetX + widthUnits * gridSize) to (expectedPlateWidth)
+    const halfCellEndX = gridOffsetX + widthUnits * gridSize;
+    const wallStartX = halfCellEndX;
+    const wallEndX = expectedPlateWidth;
+    const wallThicknessX = wallEndX - wallStartX;
+    
     // #region agent log
     console.log(JSON.stringify({
       location: 'generateSegmentScad:fill-mode-check',
@@ -1364,12 +1378,17 @@ module female_cavity_3d(pattern, height) {
         segmentX: segment.segmentX, segmentY: segment.segmentY,
         paddingNearX, effectivePaddingFarX, paddingNearY, effectivePaddingFarY,
         useFillMode, outerWidthMm, outerDepthMm,
-        gridWidth, gridDepth
+        gridWidth, gridDepth,
+        expectedPlateWidth, expectedPlateDepth,
+        gridOffsetX, gridOffsetY,
+        halfCellEndX, wallStartX, wallEndX, wallThicknessX,
+        hasHalfCellX, hasHalfCellY,
+        wallShouldExist: hasHalfCellX && wallThicknessX >= minWallThickness
       },
       timestamp: Date.now(),
       sessionId: 'debug-session',
       runId: 'run1',
-      hypothesisId: 'A,B'
+      hypothesisId: 'A,B,C,D,E'
     }));
     // #endregion
     
@@ -1421,6 +1440,9 @@ has_female_front = ${segment.hasConnectorFront};
 
 /* [Padding] */
 // Note: padding_far_x/y may be increased to ensure minimum wall thickness when half cells are present
+// CRITICAL: For segments with half cells (e.g., width_units=1.5), padding_far_x MUST be >= 0.5mm to create closing wall
+// Original padding: near_x=${paddingNearX.toFixed(2)}, far_x=${paddingFarX.toFixed(2)}, near_y=${paddingNearY.toFixed(2)}, far_y=${paddingFarY.toFixed(2)}
+// Effective padding (after half cell adjustment): far_x=${effectivePaddingFarX.toFixed(2)}, far_y=${effectivePaddingFarY.toFixed(2)}
 padding_near_x = ${paddingNearX.toFixed(2)};
 padding_far_x = ${effectivePaddingFarX.toFixed(2)};
 padding_near_y = ${paddingNearY.toFixed(2)};
@@ -1457,11 +1479,23 @@ outer_width_mm = ${outerWidthMm.toFixed(2)};
 outer_depth_mm = ${outerDepthMm.toFixed(2)};
 use_fill_mode = ${useFillMode};
 // Plate width calculation: grid_width already includes half cells (e.g., 7.5 * 42 = 315mm includes 21mm half cell)
-// When in fill mode: plate_width = width_units * grid_unit + padding_near_x + max(padding_far_x, 0.5mm) [when half cells exist]
+// When in fill mode: plate_width = width_units * grid_unit + padding_near_x + padding_far_x
 // When not in fill mode: plate_width = width_units * grid_unit
-// The plate always extends beyond half cells by at least 0.5mm to create the closing wall
+// CRITICAL: For segments with half cells on far edge, padding_far_x is guaranteed to be >= 0.5mm
+// This ensures plate_width extends beyond half cells to create the closing wall
+// Wall extends from X=(grid_offset_x + width_units * grid_unit) to X=plate_width
+// For width_units=1.5: half cell ends at grid_offset_x + 1.5*42 = grid_offset_x + 63mm
+// Wall should extend from X=63mm to X=plate_width (which includes padding_far_x >= 0.5mm)
 plate_width = use_fill_mode ? outer_width_mm : grid_width;
 plate_depth = use_fill_mode ? outer_depth_mm : grid_depth;
+
+// DEBUG: Verify wall calculation for half cells
+// For width_units=${widthUnits}, has_half_x=${hasHalfCellX}, padding_far_x=${effectivePaddingFarX.toFixed(2)}
+// grid_width = ${gridWidth.toFixed(2)}mm, outer_width_mm = ${outerWidthMm.toFixed(2)}mm
+// plate_width = ${(useFillMode ? outerWidthMm : gridWidth).toFixed(2)}mm
+// Half cell ends at: grid_offset_x + width_units * grid_unit = ${(useFillMode ? paddingNearX : 0).toFixed(2)} + ${widthUnits} * ${gridSize} = ${(useFillMode ? paddingNearX : 0) + widthUnits * gridSize}mm
+// Wall should extend from: ${(useFillMode ? paddingNearX : 0) + widthUnits * gridSize}mm to ${(useFillMode ? outerWidthMm : gridWidth)}mm
+// Wall thickness: ${((useFillMode ? outerWidthMm : gridWidth) - ((useFillMode ? paddingNearX : 0) + widthUnits * gridSize)).toFixed(2)}mm
 
 // Grid offset (where the grid starts within the plate)
 // When using fill mode with padding, offset the grid by the near padding amount
