@@ -342,25 +342,27 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         }
         
         // Half cells on X edge (far/right side) - AFTER full cells, at high X values
+        // Generate for all Y positions including the half Y row if it exists
         if (has_half_x) {
+            // Full Y cells
             for (gy = [0:full_cells_y-1]) {
                 translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + gy * grid_unit, 0])
                 grid_socket(half_cell_size, grid_unit);
             }
+            // Half Y row (if it exists) - this creates the corner half cell when both X and Y have half cells
+            if (has_half_y) {
+                translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
+                grid_socket(half_cell_size, half_cell_size);
+            }
         }
         
         // Half cells on Y edge (far/back side) - AFTER full cells, at high Y values
+        // Only generate for full X cells (corner is already handled above)
         if (has_half_y) {
             for (gx = [0:full_cells_x-1]) {
                 translate([grid_offset_x + gx * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
                 grid_socket(grid_unit, half_cell_size);
             }
-        }
-        
-        // Corner half cell (if both X and Y have half cells) - far corner at high X, high Y
-        if (has_half_x && has_half_y) {
-            translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
-            grid_socket(half_cell_size, half_cell_size);
         }
         
         // Left edge cavities
@@ -1309,25 +1311,27 @@ module gridfinity_segment() {
         }
         
         // Half cells on X edge (far/right side) - AFTER full cells, at high X values
+        // Generate for all Y positions including the half Y row if it exists
         if (has_half_x) {
+            // Full Y cells
             for (gy = [0:full_cells_y-1]) {
                 translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + gy * grid_unit, 0])
                 grid_socket(half_cell_size, grid_unit);
             }
+            // Half Y row (if it exists) - this creates the corner half cell when both X and Y have half cells
+            if (has_half_y) {
+                translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
+                grid_socket(half_cell_size, half_cell_size);
+            }
         }
         
         // Half cells on Y edge (far/back side) - AFTER full cells, at high Y values
+        // Only generate for full X cells (corner is already handled above)
         if (has_half_y) {
             for (gx = [0:full_cells_x-1]) {
                 translate([grid_offset_x + gx * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
                 grid_socket(grid_unit, half_cell_size);
             }
-        }
-        
-        // Corner half cell (if both X and Y have half cells) - far corner at high X, high Y
-        if (has_half_x && has_half_y) {
-            translate([grid_offset_x + full_cells_x * grid_unit, grid_offset_y + full_cells_y * grid_unit, 0])
-            grid_socket(half_cell_size, half_cell_size);
         }
         
         // Female cavities (cut into edges)
