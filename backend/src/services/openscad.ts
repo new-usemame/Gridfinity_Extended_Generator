@@ -459,41 +459,41 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         }
         
         // Right edge cavities (if overridden to female)
-        // CRITICAL FIX: Position at plate edge to remove thin wall when padding exists
-        // The cavity profile extends outward, so positioning at plate edge removes the barrier
+        // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
+        // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
         if (right_edge == "female") {
-            // Position at plate edge to ensure cavity extends all the way and removes thin wall
-            // The cavity profile extends outward from its center, so this removes padding_far_x wall
-            plate_right_edge = plate_width;
+            // Position at grid boundary (same position as male teeth) so cavity aligns properly
+            // The cavity profile extends inward, removing the wall between grid boundary and plate edge
+            grid_right_edge = grid_offset_x + width_units * grid_unit;
             if (depth_units > 1) {
                 for (i = [1 : max(1, depth_units) - 1]) {
-                    translate([plate_right_edge, grid_offset_y + i * grid_unit, 0])
+                    translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
                     rotate([0, 0, -90])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (depth_units == 1) {
-                translate([plate_right_edge, grid_offset_y + 0.5 * grid_unit, 0])
+                translate([grid_right_edge, grid_offset_y + 0.5 * grid_unit, 0])
                 rotate([0, 0, -90])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
         
         // Back edge cavities (if overridden to female)
-        // CRITICAL FIX: Position at plate edge to remove thin wall when padding exists
-        // The cavity profile extends outward, so positioning at plate edge removes the barrier
+        // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
+        // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
         if (back_edge == "female") {
-            // Position at plate edge to ensure cavity extends all the way and removes thin wall
-            // The cavity profile extends outward from its center, so this removes padding_far_y wall
-            plate_back_edge = plate_depth;
+            // Position at grid boundary (same position as male teeth) so cavity aligns properly
+            // The cavity profile extends inward, removing the wall between grid boundary and plate edge
+            grid_back_edge = grid_offset_y + depth_units * grid_unit;
             if (width_units > 1) {
                 for (i = [1 : max(1, width_units) - 1]) {
-                    translate([grid_offset_x + i * grid_unit, plate_back_edge, 0])
+                    translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
             }
             if (width_units == 1) {
-                translate([grid_offset_x + 0.5 * grid_unit, plate_back_edge, 0])
+                translate([grid_offset_x + 0.5 * grid_unit, grid_back_edge, 0])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
@@ -1838,10 +1838,6 @@ module screw_holes() {
     const gridRightEdge = paddingNearX + segment.gridUnitsX * gridSize;
     const gridBackEdge = paddingNearY + segment.gridUnitsY * gridSize;
     
-    // Calculate plate edges (for female cavities to remove thin walls)
-    const plateRightEdge = paddingNearX + segment.gridUnitsX * gridSize + paddingFarX;
-    const plateBackEdge = paddingNearY + segment.gridUnitsY * gridSize + paddingFarY;
-    
     // RIGHT EDGE
     if (rightEdgeType === 'male') {
       const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
@@ -1857,8 +1853,9 @@ module screw_holes() {
       for (const y of positions) {
         femaleCavities.push(`
         // Right edge female cavity at Y=${y}
-        // CRITICAL FIX: Position at plate edge (not grid boundary) to remove thin wall from padding_far_x
-        translate([${plateRightEdge}, ${y}, 0])
+        // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
+        // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
+        translate([${gridRightEdge}, ${y}, 0])
         rotate([0, 0, -90])
         female_cavity_3d("${edgePattern}", plate_height);`);
       }
@@ -1879,8 +1876,9 @@ module screw_holes() {
       for (const x of positions) {
         femaleCavities.push(`
         // Back edge female cavity at X=${x}
-        // CRITICAL FIX: Position at plate edge (not grid boundary) to remove thin wall from padding_far_y
-        translate([${x}, ${plateBackEdge}, 0])
+        // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
+        // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
+        translate([${x}, ${gridBackEdge}, 0])
         rotate([0, 0, 0])
         female_cavity_3d("${edgePattern}", plate_height);`);
       }
