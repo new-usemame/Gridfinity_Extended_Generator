@@ -1188,8 +1188,12 @@ module female_cavity_3d(pattern, height) {
     const gridWidth = widthUnits * gridSize;
     const gridDepth = depthUnits * gridSize;
     // Ensure plate extends to cover half cells: gridWidth already includes half cells when widthUnits is fractional
-    const outerWidthMm = gridWidth + paddingNearX + paddingFarX;
-    const outerDepthMm = gridDepth + paddingNearY + paddingFarY;
+    // CRITICAL: In Fill Area mm mode, outerWidthMm must be at least gridWidth to ensure half cells are closed
+    // The plate extends from 0 to outerWidthMm, and half cells extend to grid_offset_x + width_units * grid_unit
+    // So outerWidthMm must be >= grid_offset_x + width_units * grid_unit + padding_far_x (when in fill mode)
+    // Or >= width_units * grid_unit (when not in fill mode, where grid_offset_x = 0)
+    const outerWidthMm = Math.max(gridWidth + paddingNearX + paddingFarX, gridWidth);
+    const outerDepthMm = Math.max(gridDepth + paddingNearY + paddingFarY, gridDepth);
     
     // Validate calculated dimensions are reasonable
     if (outerWidthMm <= 0 || outerWidthMm > 10000) {
@@ -2284,6 +2288,8 @@ module dividers() {
     
     // X dividers (vertical walls along Y axis)
     // These dividers run parallel to the Y axis and divide the box along the X direction
+    // They extend from Y=wall_thickness to Y=wall_thickness+inner_depth
+    // And are positioned at specific X coordinates within the inner cavity
     if (dividers_x > 0) {
         // Calculate spacing to evenly divide the inner space
         // With dividers_x dividers, we create dividers_x + 1 compartments
@@ -2293,11 +2299,9 @@ module dividers() {
             // The divider should be centered at this position
             divider_center_x = wall_thickness + i * spacing;
             // Position the left edge of the divider (divider extends divider_thickness to the right)
+            // This positions the divider so it's centered at divider_center_x
             divider_left_x = divider_center_x - divider_thickness / 2;
-            // Ensure divider stays within inner space bounds
-            // The divider extends from divider_left_x to divider_left_x + divider_thickness
-            // It must be between wall_thickness and wall_thickness + inner_width
-            divider_left_x = max(wall_thickness, min(divider_left_x, wall_thickness + inner_width - divider_thickness));
+            // Position divider: X from divider_left_x to divider_left_x+divider_thickness, Y from wall_thickness to wall_thickness+inner_depth
             translate([divider_left_x, wall_thickness, floor_thickness])
             divider_with_bevel(divider_thickness, inner_depth, divider_height, inner_radius, divider_floor_bevel);
         }
@@ -2305,20 +2309,23 @@ module dividers() {
     
     // Y dividers (vertical walls along X axis)
     // These dividers run parallel to the X axis and divide the box along the Y direction
+    // They extend from X=wall_thickness to X=wall_thickness+inner_width
+    // And are positioned at specific Y coordinates within the inner cavity
     if (dividers_y > 0) {
         spacing = inner_depth / (dividers_y + 1);
         for (i = [1:dividers_y]) {
             // Calculate the center position of the divider along Y
             divider_center_y = wall_thickness + i * spacing;
-            // Position the divider: center it at divider_center_y along Y
-            // The divider_with_bevel creates [thickness, length, height]
-            // We call it with (divider_thickness, inner_width, ...) to create [divider_thickness, inner_width, height]
-            // After rotating 90° around Z, dimensions become [inner_width, divider_thickness, height]
-            // So it extends from X=wall_thickness to X=wall_thickness+inner_width (correct)
-            // And from Y=divider_center_y-divider_thickness/2 to Y=divider_center_y+divider_thickness/2 (centered)
-            translate([wall_thickness, divider_center_y, floor_thickness])
+            // The divider_with_bevel creates a cube [thickness, length, height]
+            // We want: X from wall_thickness to wall_thickness+inner_width, Y centered at divider_center_y
+            // Strategy: Create divider with [divider_thickness, inner_width, height]
+            // Then rotate 90° around Z to get [inner_width, divider_thickness, height]
+            // Position at [wall_thickness, divider_center_y - divider_thickness/2, floor_thickness]
+            // After rotation, it will extend:
+            //   X: from wall_thickness to wall_thickness + inner_width (correct)
+            //   Y: from divider_center_y - divider_thickness/2 to divider_center_y + divider_thickness/2 (centered)
+            translate([wall_thickness, divider_center_y - divider_thickness / 2, floor_thickness])
             rotate([0, 0, 90])
-            translate([0, -divider_thickness / 2, 0])
             divider_with_bevel(divider_thickness, inner_width, divider_height, inner_radius, divider_floor_bevel);
         }
     }
