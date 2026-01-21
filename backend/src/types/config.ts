@@ -482,11 +482,25 @@ export function splitBaseplateForPrinter(
         gridUnitsY = 1; // Non-last segments must be at least 1 full unit
       }
       
+      // Calculate if this segment has half cells (needed for connector and wall check)
+      // Use > 0.49 instead of >= 0.5 to account for floating point precision errors
+      const fractionalX = gridUnitsX - Math.floor(gridUnitsX);
+      const fractionalY = gridUnitsY - Math.floor(gridUnitsY);
+      const segmentHasHalfCellX = fractionalX > 0.49;  // More robust than >= 0.5
+      const segmentHasHalfCellY = fractionalY > 0.49;  // More robust than >= 0.5
+      
       // Determine connector positions (only on internal edges between segments)
-      const hasConnectorLeft = connectorEnabled && sx > 0;
-      const hasConnectorRight = connectorEnabled && sx < segmentsX - 1;
-      const hasConnectorFront = connectorEnabled && sy > 0;
-      const hasConnectorBack = connectorEnabled && sy < segmentsY - 1;
+      // CRITICAL FIX: Only place connectors on "strong connecting edges" (full grid boundaries)
+      // Skip connectors on "weak edges" (half cell boundaries) - move them to adjacent strong edges
+      // 
+      // For RIGHT edge: Only place connector if NOT a weak edge (no half cell on far X edge)
+      // For BACK edge: Only place connector if NOT a weak edge (no half cell on far Y edge)
+      // For LEFT edge: Place connector if normal position OR if previous segment has half cell on right (moved connector)
+      // For FRONT edge: Place connector if normal position OR if previous segment has half cell on back (moved connector)
+      let hasConnectorRight = connectorEnabled && sx < segmentsX - 1 && !segmentHasHalfCellX;
+      let hasConnectorBack = connectorEnabled && sy < segmentsY - 1 && !segmentHasHalfCellY;
+      let hasConnectorLeft = connectorEnabled && sx > 0;
+      let hasConnectorFront = connectorEnabled && sy > 0;
       
       // Assign padding based on segment position
       // Padding is only on outer edges of the first/last segments
@@ -500,12 +514,6 @@ export function splitBaseplateForPrinter(
       // Minimum wall thickness to ensure border is closed (similar to clearance between cells)
       // IMPORTANT: Only add minWallThickness if original padding was 0, to preserve total size
       const minWallThickness = 0.5;
-      // Calculate if this segment has half cells (needed for wall check)
-      // Use > 0.49 instead of >= 0.5 to account for floating point precision errors
-      const fractionalX = gridUnitsX - Math.floor(gridUnitsX);
-      const fractionalY = gridUnitsY - Math.floor(gridUnitsY);
-      const segmentHasHalfCellX = fractionalX > 0.49;  // More robust than >= 0.5
-      const segmentHasHalfCellY = fractionalY > 0.49;  // More robust than >= 0.5
       
       if (sx === segmentsX - 1) {
         // Last segment in X: ensure at least minWallThickness padding to create closing wall
@@ -642,6 +650,47 @@ export function splitBaseplateForPrinter(
       });
     }
     segments.push(row);
+  }
+  
+  // CRITICAL FIX: Second pass - Move connectors from weak edges to adjacent strong edges
+  // If a segment has a half cell on its far edge, the connector should be on the near edge of the next segment
+  // This ensures connectors are always on "strong connecting edges" (full grid boundaries) not "weak edges" (half cell boundaries)
+  if (connectorEnabled) {
+    for (let sy = 0; sy < segmentsY; sy++) {
+      for (let sx = 0; sx < segmentsX; sx++) {
+        const segment = segments[sy][sx];
+        
+        // Check if previous segment in X has a half cell on its right edge (weak edge)
+        // If previous segment would normally have a connector (not last segment) but doesn't (because of weak edge),
+        // then add connector to this segment's left edge (strong edge)
+        if (sx > 0) {
+          const prevSegment = segments[sy][sx - 1];
+          const prevFractionalX = prevSegment.gridUnitsX - Math.floor(prevSegment.gridUnitsX);
+          const prevHasHalfCellX = prevFractionalX > 0.49;
+          // Previous segment would have connector if: not last segment AND no half cell on far edge
+          // If it has half cell, connector was skipped - move it to this segment's left edge
+          if (prevHasHalfCellX && (sx - 1) < segmentsX - 1 && !prevSegment.hasConnectorRight) {
+            // Previous segment has half cell on right edge (weak edge) - move connector to strong edge here
+            segment.hasConnectorLeft = true;
+          }
+        }
+        
+        // Check if previous segment in Y has a half cell on its back edge (weak edge)
+        // If previous segment would normally have a connector (not last segment) but doesn't (because of weak edge),
+        // then add connector to this segment's front edge (strong edge)
+        if (sy > 0) {
+          const prevSegment = segments[sy - 1][sx];
+          const prevFractionalY = prevSegment.gridUnitsY - Math.floor(prevSegment.gridUnitsY);
+          const prevHasHalfCellY = prevFractionalY > 0.49;
+          // Previous segment would have connector if: not last segment AND no half cell on far edge
+          // If it has half cell, connector was skipped - move it to this segment's front edge
+          if (prevHasHalfCellY && (sy - 1) < segmentsY - 1 && !prevSegment.hasConnectorBack) {
+            // Previous segment has half cell on back edge (weak edge) - move connector to strong edge here
+            segment.hasConnectorFront = true;
+          }
+        }
+      }
+    }
   }
   
   // Validate total size matches expected (for fill_area_mm mode)
