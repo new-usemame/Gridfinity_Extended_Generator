@@ -336,6 +336,11 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // COLOR: RED for male, PINK for female
             if (right_edge == "male") {
                 grid_right_edge = grid_offset_x + width_units * grid_unit;
+                // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
+                // These positions mark boundaries between full cells where adjacent segments' full cells align.
+                // For segments with fractional units (e.g., depth_units = 1.5), max(2, depth_units) ensures
+                // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+                // For single-cell segments (depth_units = 1), connector is placed at cell center (position 0.5).
                 if (depth_units > 1) {
                     for (i = [1 : max(2, depth_units) - 1]) {
                         color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
@@ -355,8 +360,13 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // COLOR: BLUE for male, LIGHT BLUE for female
             if (back_edge == "male") {
                 grid_back_edge = grid_offset_y + depth_units * grid_unit;
+                // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
+                // These positions mark boundaries between full cells where adjacent segments' full cells align.
+                // For segments with fractional units (e.g., width_units = 1.5), max(2, width_units) ensures
+                // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+                // For single-cell segments (width_units = 1), connector is placed at cell center (position 0.5).
                 if (width_units > 1) {
-                    for (i = [1 : max(1, width_units) - 1]) {
+                    for (i = [1 : max(2, width_units) - 1]) {
                         color([0, 0, 1]) translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
@@ -373,8 +383,13 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // Teeth must be at the grid boundary (X=grid_offset_x), not at the plate edge
             // COLOR: GREEN for male, LIGHT GREEN for female
             if (left_edge == "male") {
+                // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
+                // These positions mark boundaries between full cells where adjacent segments' full cells align.
+                // For segments with fractional units (e.g., depth_units = 1.5), max(2, depth_units) ensures
+                // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+                // For single-cell segments (depth_units = 1), connector is placed at cell center (position 0.5).
                 if (depth_units > 1) {
-                    for (i = [1 : max(1, depth_units) - 1]) {
+                    for (i = [1 : max(2, depth_units) - 1]) {
                         color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + i * grid_unit, 0])
                         rotate([0, 0, -90])
                         male_tooth_3d(edge_pattern, plate_height);
@@ -393,8 +408,13 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // Teeth must be at the grid boundary (Y=grid_offset_y), not at the plate edge
             // COLOR: YELLOW for male, ORANGE for female
             if (front_edge == "male") {
+                // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
+                // These positions mark boundaries between full cells where adjacent segments' full cells align.
+                // For segments with fractional units (e.g., width_units = 1.5), max(2, width_units) ensures
+                // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+                // For single-cell segments (width_units = 1), connector is placed at cell center (position 0.5).
                 if (width_units > 1) {
-                    for (i = [1 : max(1, width_units) - 1]) {
+                    for (i = [1 : max(2, width_units) - 1]) {
                         color([1, 1, 0]) translate([grid_offset_x + i * grid_unit, grid_offset_y, 0])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
@@ -455,8 +475,13 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
         // COLOR: LIGHT GREEN for female
         if (left_edge == "female") {
+            // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
+            // These positions mark boundaries between full cells where adjacent segments' full cells align.
+            // For segments with fractional units (e.g., depth_units = 1.5), max(2, depth_units) ensures
+            // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+            // For single-cell segments (depth_units = 1), connector is placed at cell center (position 0.5).
             if (depth_units > 1) {
-                for (i = [1 : max(1, depth_units) - 1]) {
+                for (i = [1 : max(2, depth_units) - 1]) {
                     color([0.5, 1, 0.5]) translate([grid_offset_x, grid_offset_y + i * grid_unit, 0])
                     rotate([0, 0, -90])
                     female_cavity_3d(edge_pattern, plate_height);
@@ -475,8 +500,13 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         // Cavities must be at the grid boundary (Y=grid_offset_y), not at the plate edge
         // COLOR: ORANGE for female
         if (front_edge == "female") {
+            // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
+            // These positions mark boundaries between full cells where adjacent segments' full cells align.
+            // For segments with fractional units (e.g., width_units = 1.5), max(2, width_units) ensures
+            // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+            // For single-cell segments (width_units = 1), connector is placed at cell center (position 0.5).
             if (width_units > 1) {
-                for (i = [1 : max(1, width_units) - 1]) {
+                for (i = [1 : max(2, width_units) - 1]) {
                     color([1, 0.5, 0]) translate([grid_offset_x + i * grid_unit, grid_offset_y, 0])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
@@ -495,8 +525,13 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // Position at grid boundary (same position as male teeth) so cavity aligns properly
             // The cavity profile extends inward, removing the wall between grid boundary and plate edge
             grid_right_edge = grid_offset_x + width_units * grid_unit;
+            // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
+            // These positions mark boundaries between full cells where adjacent segments' full cells align.
+            // For segments with fractional units (e.g., depth_units = 1.5), max(2, depth_units) ensures
+            // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+            // For single-cell segments (depth_units = 1), connector is placed at cell center (position 0.5).
             if (depth_units > 1) {
-                for (i = [1 : max(1, depth_units) - 1]) {
+                for (i = [1 : max(2, depth_units) - 1]) {
                     color([1, 0.5, 0.8]) translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
                     rotate([0, 0, -90])
                     female_cavity_3d(edge_pattern, plate_height);
@@ -517,8 +552,13 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // Position at grid boundary (same position as male teeth) so cavity aligns properly
             // The cavity profile extends inward, removing the wall between grid boundary and plate edge
             grid_back_edge = grid_offset_y + depth_units * grid_unit;
+            // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
+            // These positions mark boundaries between full cells where adjacent segments' full cells align.
+            // For segments with fractional units (e.g., width_units = 1.5), max(2, width_units) ensures
+            // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+            // For single-cell segments (width_units = 1), connector is placed at cell center (position 0.5).
             if (width_units > 1) {
-                for (i = [1 : max(1, width_units) - 1]) {
+                for (i = [1 : max(2, width_units) - 1]) {
                     color([0.5, 0.8, 1]) translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
                     female_cavity_3d(edge_pattern, plate_height);
                 }
