@@ -338,6 +338,7 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
                 grid_right_edge = grid_offset_x + width_units * grid_unit;
                 if (depth_units > 1) {
                     // Multiple units - place at boundaries between cells (strong edges at corners)
+                    // Boundaries are at: grid_offset_y + 1*grid_unit, 2*grid_unit, ..., (depth_units-1)*grid_unit
                     for (i = [1 : max(1, depth_units) - 1]) {
                         color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
                         rotate([0, 0, -90])
@@ -345,12 +346,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
                     }
                 }
                 if (depth_units == 1) {
-                    // Single unit - place at corner boundaries (strong edges where cells meet)
-                    // Place at start (grid_offset_y) and end (grid_offset_y + grid_unit) boundaries
-                    color([1, 0, 0]) translate([grid_right_edge, grid_offset_y, 0])
-                    rotate([0, 0, -90])
-                    male_tooth_3d(edge_pattern, plate_height);
-                    color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + grid_unit, 0])
+                    // Single unit - place at the boundary where cells would meet (strong edge)
+                    // For a single cell, the boundary is at grid_offset_y + 1*grid_unit (where cell 0 ends and cell 1 would start)
+                    // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
+                    color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + 1 * grid_unit, 0])
                     rotate([0, 0, -90])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
@@ -363,17 +362,17 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
                 grid_back_edge = grid_offset_y + depth_units * grid_unit;
                 if (width_units > 1) {
                     // Multiple units - place at boundaries between cells (strong edges at corners)
+                    // Boundaries are at: grid_offset_x + 1*grid_unit, 2*grid_unit, ..., (width_units-1)*grid_unit
                     for (i = [1 : max(1, width_units) - 1]) {
                         color([0, 0, 1]) translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
                         male_tooth_3d(edge_pattern, plate_height);
                     }
                 }
                 if (width_units == 1) {
-                    // Single unit - place at corner boundaries (strong edges where cells meet)
-                    // Place at start (grid_offset_x) and end (grid_offset_x + grid_unit) boundaries
-                    color([0, 0, 1]) translate([grid_offset_x, grid_back_edge, 0])
-                    male_tooth_3d(edge_pattern, plate_height);
-                    color([0, 0, 1]) translate([grid_offset_x + grid_unit, grid_back_edge, 0])
+                    // Single unit - place at the boundary where cells would meet (strong edge)
+                    // For a single cell, the boundary is at grid_offset_x + 1*grid_unit (where cell 0 ends and cell 1 would start)
+                    // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
+                    color([0, 0, 1]) translate([grid_offset_x + 1 * grid_unit, grid_back_edge, 0])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
             }
@@ -393,12 +392,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
                     }
                 }
                 if (depth_units == 1) {
-                    // Single unit - place at corner boundaries (strong edges where cells meet)
-                    // Place at start (grid_offset_y) and end (grid_offset_y + grid_unit) boundaries
-                    color([0, 1, 0]) translate([grid_offset_x, grid_offset_y, 0])
-                    rotate([0, 0, -90])
-                    male_tooth_3d(edge_pattern, plate_height);
-                    color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + grid_unit, 0])
+                    // Single unit - place at the boundary where cells would meet (strong edge)
+                    // For a single cell, the boundary is at grid_offset_y + 1*grid_unit (where cell 0 ends and cell 1 would start)
+                    // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
+                    color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + 1 * grid_unit, 0])
                     rotate([0, 0, -90])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
@@ -418,11 +415,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
                     }
                 }
                 if (width_units == 1) {
-                    // Single unit - place at corner boundaries (strong edges where cells meet)
-                    // Place at start (grid_offset_x) and end (grid_offset_x + grid_unit) boundaries
-                    color([1, 1, 0]) translate([grid_offset_x, grid_offset_y, 0])
-                    male_tooth_3d(edge_pattern, plate_height);
-                    color([1, 1, 0]) translate([grid_offset_x + grid_unit, grid_offset_y, 0])
+                    // Single unit - place at the boundary where cells would meet (strong edge)
+                    // For a single cell, the boundary is at grid_offset_x + 1*grid_unit (where cell 0 ends and cell 1 would start)
+                    // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
+                    color([1, 1, 0]) translate([grid_offset_x + 1 * grid_unit, grid_offset_y, 0])
                     male_tooth_3d(edge_pattern, plate_height);
                 }
             }
@@ -485,11 +481,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
                 }
             }
             if (depth_units == 1) {
-                // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
-                color([0.5, 1, 0.5]) translate([grid_offset_x, grid_offset_y + 0, 0])
-                rotate([0, 0, -90])
-                female_cavity_3d(edge_pattern, plate_height);
-                color([0.5, 1, 0.5]) translate([grid_offset_x, grid_offset_y + grid_unit, 0])
+                // Single unit - place at the boundary where cells would meet (strong edge)
+                // For a single cell, the boundary is at grid_offset_y + 1*grid_unit (where cell 0 ends and cell 1 would start)
+                // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
+                color([0.5, 1, 0.5]) translate([grid_offset_x, grid_offset_y + 1 * grid_unit, 0])
                 rotate([0, 0, -90])
                 female_cavity_3d(edge_pattern, plate_height);
             }
@@ -508,10 +503,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
                 }
             }
             if (width_units == 1) {
-                // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
-                color([1, 0.5, 0]) translate([grid_offset_x + 0, grid_offset_y, 0])
-                female_cavity_3d(edge_pattern, plate_height);
-                color([1, 0.5, 0]) translate([grid_offset_x + grid_unit, grid_offset_y, 0])
+                // Single unit - place at the boundary where cells would meet (strong edge)
+                // For a single cell, the boundary is at grid_offset_x + 1*grid_unit (where cell 0 ends and cell 1 would start)
+                // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
+                color([1, 0.5, 0]) translate([grid_offset_x + 1 * grid_unit, grid_offset_y, 0])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
@@ -532,11 +527,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
                 }
             }
             if (depth_units == 1) {
-                // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
-                color([1, 0.5, 0.8]) translate([grid_right_edge, grid_offset_y + 0, 0])
-                rotate([0, 0, -90])
-                female_cavity_3d(edge_pattern, plate_height);
-                color([1, 0.5, 0.8]) translate([grid_right_edge, grid_offset_y + grid_unit, 0])
+                // Single unit - place at the boundary where cells would meet (strong edge)
+                // For a single cell, the boundary is at grid_offset_y + 1*grid_unit (where cell 0 ends and cell 1 would start)
+                // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
+                color([1, 0.5, 0.8]) translate([grid_right_edge, grid_offset_y + 1 * grid_unit, 0])
                 rotate([0, 0, -90])
                 female_cavity_3d(edge_pattern, plate_height);
             }
@@ -557,10 +551,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
                 }
             }
             if (width_units == 1) {
-                // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
-                color([0.5, 0.8, 1]) translate([grid_offset_x + 0, grid_back_edge, 0])
-                female_cavity_3d(edge_pattern, plate_height);
-                color([0.5, 0.8, 1]) translate([grid_offset_x + grid_unit, grid_back_edge, 0])
+                // Single unit - place at the boundary where cells would meet (strong edge)
+                // For a single cell, the boundary is at grid_offset_x + 1*grid_unit (where cell 0 ends and cell 1 would start)
+                // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
+                color([0.5, 0.8, 1]) translate([grid_offset_x + 1 * grid_unit, grid_back_edge, 0])
                 female_cavity_3d(edge_pattern, plate_height);
             }
         }
