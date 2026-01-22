@@ -359,22 +359,22 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // Position at grid boundary (using grid offset)
             // COLOR: BLUE for male, LIGHT BLUE for female
             // COMMENTED OUT FOR TESTING
-            // if (back_edge == "male") {
-            //     grid_back_edge = grid_offset_y + depth_units * grid_unit;
-            //     if (width_units > 1) {
-            //         for (i = [1 : max(1, width_units) - 1]) {
-            //             color([0, 0, 1]) translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
-            //             male_tooth_3d(edge_pattern, plate_height);
-            //         }
-            //     }
-            //     if (width_units == 1) {
-            //         // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
-            //         color([0, 0, 1]) translate([grid_offset_x + 0, grid_back_edge, 0])
-            //         male_tooth_3d(edge_pattern, plate_height);
-            //         color([0, 0, 1]) translate([grid_offset_x + grid_unit, grid_back_edge, 0])
-            //         male_tooth_3d(edge_pattern, plate_height);
-            //     }
-            // }
+            if (back_edge == "male") {
+                grid_back_edge = grid_offset_y + depth_units * grid_unit;
+                if (width_units > 1) {
+                    for (i = [1 : max(1, width_units) - 1]) {
+                        color([0, 0, 1]) translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
+                        male_tooth_3d(edge_pattern, plate_height);
+                    }
+                }
+                if (width_units == 1) {
+                    // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
+                    color([0, 0, 1]) translate([grid_offset_x + 0, grid_back_edge, 0])
+                    male_tooth_3d(edge_pattern, plate_height);
+                    color([0, 0, 1]) translate([grid_offset_x + grid_unit, grid_back_edge, 0])
+                    male_tooth_3d(edge_pattern, plate_height);
+                }
+            }
             
             // Left edge male teeth (if overridden to male)
             // Position at grid boundary (using grid offset) - NOT at plate edge (X=0)
