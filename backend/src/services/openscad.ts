@@ -323,102 +323,102 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
     grid_offset_y = use_fill_mode ? padding_near_y : 0;
     
     difference() {
-        union() {
-            // Main plate body
-            // CRITICAL: plate_depth = outer_depth_mm = grid_depth + padding_near_y + padding_far_y
-            // This creates walls on BOTH near and far edges when padding > 0
-            // Near wall: from Y=0 to Y=padding_near_y (grid_offset_y)
-            // Far wall: from Y=(grid_offset_y + grid_depth) to Y=plate_depth
-            rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
+        // union() {
+        //     // Main plate body
+        //     // CRITICAL: plate_depth = outer_depth_mm = grid_depth + padding_near_y + padding_far_y
+        //     // This creates walls on BOTH near and far edges when padding > 0
+        //     // Near wall: from Y=0 to Y=padding_near_y (grid_offset_y)
+        //     // Far wall: from Y=(grid_offset_y + grid_depth) to Y=plate_depth
+        //     rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
             
-            // Right edge teeth (male or female depending on type)
-            // Position at grid boundary (using grid offset)
-            // COLOR: RED for male, PINK for female
-            if (right_edge == "male") {
-                grid_right_edge = grid_offset_x + width_units * grid_unit;
-                if (depth_units > 1) {
-                    for (i = [1 : max(1, depth_units) - 1]) {
-                        color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
-                        rotate([0, 0, -90])
-                        male_tooth_3d(edge_pattern, plate_height);
-                    }
-                }
-                if (depth_units == 1) {
-                    // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
-                    color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + 0, 0])
-                    rotate([0, 0, -90])
-                    male_tooth_3d(edge_pattern, plate_height);
-                    color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + grid_unit, 0])
-                    rotate([0, 0, -90])
-                    male_tooth_3d(edge_pattern, plate_height);
-                }
-            }
+        //     // Right edge teeth (male or female depending on type)
+        //     // Position at grid boundary (using grid offset)
+        //     // COLOR: RED for male, PINK for female
+        //     if (right_edge == "male") {
+        //         grid_right_edge = grid_offset_x + width_units * grid_unit;
+        //         if (depth_units > 1) {
+        //             for (i = [1 : max(1, depth_units) - 1]) {
+        //                 color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
+        //                 rotate([0, 0, -90])
+        //                 male_tooth_3d(edge_pattern, plate_height);
+        //             }
+        //         }
+        //         if (depth_units == 1) {
+        //             // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
+        //             color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + 0, 0])
+        //             rotate([0, 0, -90])
+        //             male_tooth_3d(edge_pattern, plate_height);
+        //             color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + grid_unit, 0])
+        //             rotate([0, 0, -90])
+        //             male_tooth_3d(edge_pattern, plate_height);
+        //         }
+        //     }
             
-            // Back edge teeth
-            // Position at grid boundary (using grid offset)
-            // COLOR: BLUE for male, LIGHT BLUE for female
-            if (back_edge == "male") {
-                grid_back_edge = grid_offset_y + depth_units * grid_unit;
-                if (width_units > 1) {
-                    for (i = [1 : max(1, width_units) - 1]) {
-                        color([0, 0, 1]) translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
-                        male_tooth_3d(edge_pattern, plate_height);
-                    }
-                }
-                if (width_units == 1) {
-                    // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
-                    color([0, 0, 1]) translate([grid_offset_x + 0, grid_back_edge, 0])
-                    male_tooth_3d(edge_pattern, plate_height);
-                    color([0, 0, 1]) translate([grid_offset_x + grid_unit, grid_back_edge, 0])
-                    male_tooth_3d(edge_pattern, plate_height);
-                }
-            }
+        //     // Back edge teeth
+        //     // Position at grid boundary (using grid offset)
+        //     // COLOR: BLUE for male, LIGHT BLUE for female
+        //     if (back_edge == "male") {
+        //         grid_back_edge = grid_offset_y + depth_units * grid_unit;
+        //         if (width_units > 1) {
+        //             for (i = [1 : max(1, width_units) - 1]) {
+        //                 color([0, 0, 1]) translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
+        //                 male_tooth_3d(edge_pattern, plate_height);
+        //             }
+        //         }
+        //         if (width_units == 1) {
+        //             // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
+        //             color([0, 0, 1]) translate([grid_offset_x + 0, grid_back_edge, 0])
+        //             male_tooth_3d(edge_pattern, plate_height);
+        //             color([0, 0, 1]) translate([grid_offset_x + grid_unit, grid_back_edge, 0])
+        //             male_tooth_3d(edge_pattern, plate_height);
+        //         }
+        //     }
             
-            // Left edge male teeth (if overridden to male)
-            // Position at grid boundary (using grid offset) - NOT at plate edge (X=0)
-            // CRITICAL: When padding_near_x > 0, the wall extends from X=0 to X=grid_offset_x
-            // Teeth must be at the grid boundary (X=grid_offset_x), not at the plate edge
-            // COLOR: GREEN for male, LIGHT GREEN for female
-            if (left_edge == "male") {
-                if (depth_units > 1) {
-                    for (i = [1 : max(1, depth_units) - 1]) {
-                        color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + i * grid_unit, 0])
-                        rotate([0, 0, -90])
-                        male_tooth_3d(edge_pattern, plate_height);
-                    }
-                }
-                if (depth_units == 1) {
-                    // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
-                    color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + 0, 0])
-                    rotate([0, 0, -90])
-                    male_tooth_3d(edge_pattern, plate_height);
-                    color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + grid_unit, 0])
-                    rotate([0, 0, -90])
-                    male_tooth_3d(edge_pattern, plate_height);
-                }
-            }
+        //     // Left edge male teeth (if overridden to male)
+        //     // Position at grid boundary (using grid offset) - NOT at plate edge (X=0)
+        //     // CRITICAL: When padding_near_x > 0, the wall extends from X=0 to X=grid_offset_x
+        //     // Teeth must be at the grid boundary (X=grid_offset_x), not at the plate edge
+        //     // COLOR: GREEN for male, LIGHT GREEN for female
+        //     if (left_edge == "male") {
+        //         if (depth_units > 1) {
+        //             for (i = [1 : max(1, depth_units) - 1]) {
+        //                 color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + i * grid_unit, 0])
+        //                 rotate([0, 0, -90])
+        //                 male_tooth_3d(edge_pattern, plate_height);
+        //             }
+        //         }
+        //         if (depth_units == 1) {
+        //             // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
+        //             color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + 0, 0])
+        //             rotate([0, 0, -90])
+        //             male_tooth_3d(edge_pattern, plate_height);
+        //             color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + grid_unit, 0])
+        //             rotate([0, 0, -90])
+        //             male_tooth_3d(edge_pattern, plate_height);
+        //         }
+        //     }
             
-            // Front edge male teeth (if overridden to male)
-            // Position at grid boundary (using grid offset) - NOT at plate edge (Y=0)
-            // CRITICAL: When padding_near_y > 0, the wall extends from Y=0 to Y=grid_offset_y
-            // Teeth must be at the grid boundary (Y=grid_offset_y), not at the plate edge
-            // COLOR: YELLOW for male, ORANGE for female
-            if (front_edge == "male") {
-                if (width_units > 1) {
-                    for (i = [1 : max(1, width_units) - 1]) {
-                        color([1, 1, 0]) translate([grid_offset_x + i * grid_unit, grid_offset_y, 0])
-                        male_tooth_3d(edge_pattern, plate_height);
-                    }
-                }
-                if (width_units == 1) {
-                    // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
-                    color([1, 1, 0]) translate([grid_offset_x + 0, grid_offset_y, 0])
-                    male_tooth_3d(edge_pattern, plate_height);
-                    color([1, 1, 0]) translate([grid_offset_x + grid_unit, grid_offset_y, 0])
-                    male_tooth_3d(edge_pattern, plate_height);
-                }
-            }
-        }
+        //     // Front edge male teeth (if overridden to male)
+        //     // Position at grid boundary (using grid offset) - NOT at plate edge (Y=0)
+        //     // CRITICAL: When padding_near_y > 0, the wall extends from Y=0 to Y=grid_offset_y
+        //     // Teeth must be at the grid boundary (Y=grid_offset_y), not at the plate edge
+        //     // COLOR: YELLOW for male, ORANGE for female
+        //     if (front_edge == "male") {
+        //         if (width_units > 1) {
+        //             for (i = [1 : max(1, width_units) - 1]) {
+        //                 color([1, 1, 0]) translate([grid_offset_x + i * grid_unit, grid_offset_y, 0])
+        //                 male_tooth_3d(edge_pattern, plate_height);
+        //             }
+        //         }
+        //         if (width_units == 1) {
+        //             // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
+        //             color([1, 1, 0]) translate([grid_offset_x + 0, grid_offset_y, 0])
+        //             male_tooth_3d(edge_pattern, plate_height);
+        //             color([1, 1, 0]) translate([grid_offset_x + grid_unit, grid_offset_y, 0])
+        //             male_tooth_3d(edge_pattern, plate_height);
+        //         }
+        //     }
+        // }
         
         // Socket cutouts
         // Handle both full and half cells (same pattern as non-split baseplate)
