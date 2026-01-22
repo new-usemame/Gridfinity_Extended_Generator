@@ -336,15 +336,13 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // COLOR: RED for male, PINK for female
             if (right_edge == "male") {
                 grid_right_edge = grid_offset_x + width_units * grid_unit;
-                // COMMENTED OUT: Multiple units case - was placing connectors at boundaries between cells
-                // TODO: Replace with corner boundary placement (strong edge)
-                // if (depth_units > 1) {
-                //     for (i = [1 : max(1, depth_units) - 1]) {
-                //         color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
-                //         rotate([0, 0, -90])
-                //         male_tooth_3d(edge_pattern, plate_height);
-                //     }
-                // }
+                if (depth_units > 1) {
+                    for (i = [1 : max(1, depth_units) - 1]) {
+                        color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
+                        rotate([0, 0, -90])
+                        male_tooth_3d(edge_pattern, plate_height);
+                    }
+                }
                 // COMMENTED OUT: Single unit case - was placing connector on weak edge (center)
                 // TODO: Replace with corner boundary placement (strong edge)
                 // if (depth_units == 1) {
