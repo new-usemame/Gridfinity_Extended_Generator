@@ -331,9 +331,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // Far wall: from Y=(grid_offset_y + grid_depth) to Y=plate_depth
             rounded_rect_plate(plate_width, plate_depth, plate_height, corner_radius);
             
-            // // Right edge teeth (male or female depending on type)
-            // // Position at grid boundary (using grid offset)
-            // // COLOR: RED for male, PINK for female
+            // Right edge teeth (male or female depending on type)
+            // Position at grid boundary (using grid offset)
+            // COLOR: RED for male, PINK for female
+            // COMMENTED OUT FOR TESTING
             // if (right_edge == "male") {
             //     grid_right_edge = grid_offset_x + width_units * grid_unit;
             //     if (depth_units > 1) {
@@ -354,9 +355,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             //     }
             // }
             
-            // // Back edge teeth
-            // // Position at grid boundary (using grid offset)
-            // // COLOR: BLUE for male, LIGHT BLUE for female
+            // Back edge teeth
+            // Position at grid boundary (using grid offset)
+            // COLOR: BLUE for male, LIGHT BLUE for female
+            // COMMENTED OUT FOR TESTING
             // if (back_edge == "male") {
             //     grid_back_edge = grid_offset_y + depth_units * grid_unit;
             //     if (width_units > 1) {
@@ -374,11 +376,12 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             //     }
             // }
             
-            // // Left edge male teeth (if overridden to male)
-            // // Position at grid boundary (using grid offset) - NOT at plate edge (X=0)
-            // // CRITICAL: When padding_near_x > 0, the wall extends from X=0 to X=grid_offset_x
-            // // Teeth must be at the grid boundary (X=grid_offset_x), not at the plate edge
-            // // COLOR: GREEN for male, LIGHT GREEN for female
+            // Left edge male teeth (if overridden to male)
+            // Position at grid boundary (using grid offset) - NOT at plate edge (X=0)
+            // CRITICAL: When padding_near_x > 0, the wall extends from X=0 to X=grid_offset_x
+            // Teeth must be at the grid boundary (X=grid_offset_x), not at the plate edge
+            // COLOR: GREEN for male, LIGHT GREEN for female
+            // COMMENTED OUT FOR TESTING
             // if (left_edge == "male") {
             //     if (depth_units > 1) {
             //         for (i = [1 : max(1, depth_units) - 1]) {
@@ -398,11 +401,12 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             //     }
             // }
             
-            // // Front edge male teeth (if overridden to male)
-            // // Position at grid boundary (using grid offset) - NOT at plate edge (Y=0)
-            // // CRITICAL: When padding_near_y > 0, the wall extends from Y=0 to Y=grid_offset_y
-            // // Teeth must be at the grid boundary (Y=grid_offset_y), not at the plate edge
-            // // COLOR: YELLOW for male, ORANGE for female
+            // Front edge male teeth (if overridden to male)
+            // Position at grid boundary (using grid offset) - NOT at plate edge (Y=0)
+            // CRITICAL: When padding_near_y > 0, the wall extends from Y=0 to Y=grid_offset_y
+            // Teeth must be at the grid boundary (Y=grid_offset_y), not at the plate edge
+            // COLOR: YELLOW for male, ORANGE for female
+            // COMMENTED OUT FOR TESTING
             // if (front_edge == "male") {
             //     if (width_units > 1) {
             //         for (i = [1 : max(1, width_units) - 1]) {
