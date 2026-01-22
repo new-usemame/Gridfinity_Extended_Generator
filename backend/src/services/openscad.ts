@@ -1870,21 +1870,21 @@ module screw_holes() {
     const getPositions = (units: number, paddingOffset: number): number[] => {
       const positions: number[] = [];
       
-      if (units <= 1) {
-        // Single unit or less - put connectors at corner boundaries (start and end of grid area)
-        // These are strong edges where cells meet, not weak edges in the middle of cells
-        positions.push(paddingOffset + 0);        // Start boundary (corner)
-        if (units >= 1) {
-          positions.push(paddingOffset + gridSize); // End boundary (corner)
-        }
-      } else {
-        // Multiple units - put teeth at grid boundaries between cells (at corners where cells meet)
-        // For units=2: place at 1*gridSize (boundary between cell 0 and cell 1)
-        // For units=3: place at 1*gridSize and 2*gridSize (boundaries between cells)
-        for (let i = 1; i < units; i++) {
-          positions.push(paddingOffset + i * gridSize);
-        }
-      }
+    //   if (units <= 1) {
+    //     // Single unit or less - put connectors at corner boundaries (start and end of grid area)
+    //     // These are strong edges where cells meet, not weak edges in the middle of cells
+    //     positions.push(paddingOffset + 0);        // Start boundary (corner)
+    //     if (units >= 1) {
+    //       positions.push(paddingOffset + gridSize); // End boundary (corner)
+    //     }
+    //   } else {
+    //     // Multiple units - put teeth at grid boundaries between cells (at corners where cells meet)
+    //     // For units=2: place at 1*gridSize (boundary between cell 0 and cell 1)
+    //     // For units=3: place at 1*gridSize and 2*gridSize (boundaries between cells)
+    //     for (let i = 1; i < units; i++) {
+    //       positions.push(paddingOffset + i * gridSize);
+    //     }
+    //   }
       return positions;
     };
 
