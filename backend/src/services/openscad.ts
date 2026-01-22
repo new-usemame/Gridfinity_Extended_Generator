@@ -334,47 +334,31 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // Right edge teeth (male or female depending on type)
             // Position at grid boundary (using grid offset)
             // COLOR: RED for male, PINK for female
+            // CRITICAL FIX: Place connectors at corner boundaries (strong edges), not at cell centers (weak edges)
             if (right_edge == "male") {
                 grid_right_edge = grid_offset_x + width_units * grid_unit;
-                if (depth_units > 1) {
-                    // Multiple units - place at boundaries between cells (strong edges at corners)
-                    // Boundaries are at: grid_offset_y + 1*grid_unit, 2*grid_unit, ..., (depth_units-1)*grid_unit
-                    for (i = [1 : max(1, depth_units) - 1]) {
-                        color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
-                        rotate([0, 0, -90])
-                        male_tooth_3d(edge_pattern, plate_height);
-                    }
-                }
-                if (depth_units == 1) {
-                    // Single unit - place at the boundary where cells would meet (strong edge)
-                    // For a single cell, the boundary is at grid_offset_y + 1*grid_unit (where cell 0 ends and cell 1 would start)
-                    // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
-                    color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + 1 * grid_unit, 0])
-                    rotate([0, 0, -90])
-                    male_tooth_3d(edge_pattern, plate_height);
-                }
+                // Multiple units OR single unit - always place at corner boundaries (strong edges)
+                // Place at start (grid_offset_y) and end (grid_offset_y + depth_units * grid_unit) boundaries
+                color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + 0, 0])
+                rotate([0, 0, -90])
+                male_tooth_3d(edge_pattern, plate_height);
+                color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + depth_units * grid_unit, 0])
+                rotate([0, 0, -90])
+                male_tooth_3d(edge_pattern, plate_height);
             }
             
             // Back edge teeth
             // Position at grid boundary (using grid offset)
             // COLOR: BLUE for male, LIGHT BLUE for female
+            // CRITICAL FIX: Place connectors at corner boundaries (strong edges), not at cell centers (weak edges)
             if (back_edge == "male") {
                 grid_back_edge = grid_offset_y + depth_units * grid_unit;
-                if (width_units > 1) {
-                    // Multiple units - place at boundaries between cells (strong edges at corners)
-                    // Boundaries are at: grid_offset_x + 1*grid_unit, 2*grid_unit, ..., (width_units-1)*grid_unit
-                    for (i = [1 : max(1, width_units) - 1]) {
-                        color([0, 0, 1]) translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
-                        male_tooth_3d(edge_pattern, plate_height);
-                    }
-                }
-                if (width_units == 1) {
-                    // Single unit - place at the boundary where cells would meet (strong edge)
-                    // For a single cell, the boundary is at grid_offset_x + 1*grid_unit (where cell 0 ends and cell 1 would start)
-                    // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
-                    color([0, 0, 1]) translate([grid_offset_x + 1 * grid_unit, grid_back_edge, 0])
-                    male_tooth_3d(edge_pattern, plate_height);
-                }
+                // Multiple units OR single unit - always place at corner boundaries (strong edges)
+                // Place at start (grid_offset_x) and end (grid_offset_x + width_units * grid_unit) boundaries
+                color([0, 0, 1]) translate([grid_offset_x + 0, grid_back_edge, 0])
+                male_tooth_3d(edge_pattern, plate_height);
+                color([0, 0, 1]) translate([grid_offset_x + width_units * grid_unit, grid_back_edge, 0])
+                male_tooth_3d(edge_pattern, plate_height);
             }
             
             // Left edge male teeth (if overridden to male)
@@ -382,23 +366,16 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // CRITICAL: When padding_near_x > 0, the wall extends from X=0 to X=grid_offset_x
             // Teeth must be at the grid boundary (X=grid_offset_x), not at the plate edge
             // COLOR: GREEN for male, LIGHT GREEN for female
+            // CRITICAL FIX: Place connectors at corner boundaries (strong edges), not at cell centers (weak edges)
             if (left_edge == "male") {
-                if (depth_units > 1) {
-                    // Multiple units - place at boundaries between cells (strong edges at corners)
-                    for (i = [1 : max(1, depth_units) - 1]) {
-                        color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + i * grid_unit, 0])
-                        rotate([0, 0, -90])
-                        male_tooth_3d(edge_pattern, plate_height);
-                    }
-                }
-                if (depth_units == 1) {
-                    // Single unit - place at the boundary where cells would meet (strong edge)
-                    // For a single cell, the boundary is at grid_offset_y + 1*grid_unit (where cell 0 ends and cell 1 would start)
-                    // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
-                    color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + 1 * grid_unit, 0])
-                    rotate([0, 0, -90])
-                    male_tooth_3d(edge_pattern, plate_height);
-                }
+                // Multiple units OR single unit - always place at corner boundaries (strong edges)
+                // Place at start (grid_offset_y) and end (grid_offset_y + depth_units * grid_unit) boundaries
+                color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + 0, 0])
+                rotate([0, 0, -90])
+                male_tooth_3d(edge_pattern, plate_height);
+                color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + depth_units * grid_unit, 0])
+                rotate([0, 0, -90])
+                male_tooth_3d(edge_pattern, plate_height);
             }
             
             // Front edge male teeth (if overridden to male)
@@ -406,21 +383,14 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // CRITICAL: When padding_near_y > 0, the wall extends from Y=0 to Y=grid_offset_y
             // Teeth must be at the grid boundary (Y=grid_offset_y), not at the plate edge
             // COLOR: YELLOW for male, ORANGE for female
+            // CRITICAL FIX: Place connectors at corner boundaries (strong edges), not at cell centers (weak edges)
             if (front_edge == "male") {
-                if (width_units > 1) {
-                    // Multiple units - place at boundaries between cells (strong edges at corners)
-                    for (i = [1 : max(1, width_units) - 1]) {
-                        color([1, 1, 0]) translate([grid_offset_x + i * grid_unit, grid_offset_y, 0])
-                        male_tooth_3d(edge_pattern, plate_height);
-                    }
-                }
-                if (width_units == 1) {
-                    // Single unit - place at the boundary where cells would meet (strong edge)
-                    // For a single cell, the boundary is at grid_offset_x + 1*grid_unit (where cell 0 ends and cell 1 would start)
-                    // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
-                    color([1, 1, 0]) translate([grid_offset_x + 1 * grid_unit, grid_offset_y, 0])
-                    male_tooth_3d(edge_pattern, plate_height);
-                }
+                // Multiple units OR single unit - always place at corner boundaries (strong edges)
+                // Place at start (grid_offset_x) and end (grid_offset_x + width_units * grid_unit) boundaries
+                color([1, 1, 0]) translate([grid_offset_x + 0, grid_offset_y, 0])
+                male_tooth_3d(edge_pattern, plate_height);
+                color([1, 1, 0]) translate([grid_offset_x + width_units * grid_unit, grid_offset_y, 0])
+                male_tooth_3d(edge_pattern, plate_height);
             }
         }
         
@@ -472,22 +442,16 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
         // COLOR: LIGHT GREEN for female
+        // CRITICAL FIX: Place connectors at corner boundaries (strong edges), not at cell centers (weak edges)
         if (left_edge == "female") {
-            if (depth_units > 1) {
-                for (i = [1 : max(1, depth_units) - 1]) {
-                    color([0.5, 1, 0.5]) translate([grid_offset_x, grid_offset_y + i * grid_unit, 0])
-                    rotate([0, 0, -90])
-                    female_cavity_3d(edge_pattern, plate_height);
-                }
-            }
-            if (depth_units == 1) {
-                // Single unit - place at the boundary where cells would meet (strong edge)
-                // For a single cell, the boundary is at grid_offset_y + 1*grid_unit (where cell 0 ends and cell 1 would start)
-                // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
-                color([0.5, 1, 0.5]) translate([grid_offset_x, grid_offset_y + 1 * grid_unit, 0])
-                rotate([0, 0, -90])
-                female_cavity_3d(edge_pattern, plate_height);
-            }
+            // Multiple units OR single unit - always place at corner boundaries (strong edges)
+            // Place at start (grid_offset_y) and end (grid_offset_y + depth_units * grid_unit) boundaries
+            color([0.5, 1, 0.5]) translate([grid_offset_x, grid_offset_y + 0, 0])
+            rotate([0, 0, -90])
+            female_cavity_3d(edge_pattern, plate_height);
+            color([0.5, 1, 0.5]) translate([grid_offset_x, grid_offset_y + depth_units * grid_unit, 0])
+            rotate([0, 0, -90])
+            female_cavity_3d(edge_pattern, plate_height);
         }
         
         // Front edge cavities
@@ -495,68 +459,50 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         // CRITICAL: When padding_near_y > 0, the wall extends from Y=0 to Y=grid_offset_y
         // Cavities must be at the grid boundary (Y=grid_offset_y), not at the plate edge
         // COLOR: ORANGE for female
+        // CRITICAL FIX: Place connectors at corner boundaries (strong edges), not at cell centers (weak edges)
         if (front_edge == "female") {
-            if (width_units > 1) {
-                for (i = [1 : max(1, width_units) - 1]) {
-                    color([1, 0.5, 0]) translate([grid_offset_x + i * grid_unit, grid_offset_y, 0])
-                    female_cavity_3d(edge_pattern, plate_height);
-                }
-            }
-            if (width_units == 1) {
-                // Single unit - place at the boundary where cells would meet (strong edge)
-                // For a single cell, the boundary is at grid_offset_x + 1*grid_unit (where cell 0 ends and cell 1 would start)
-                // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
-                color([1, 0.5, 0]) translate([grid_offset_x + 1 * grid_unit, grid_offset_y, 0])
-                female_cavity_3d(edge_pattern, plate_height);
-            }
+            // Multiple units OR single unit - always place at corner boundaries (strong edges)
+            // Place at start (grid_offset_x) and end (grid_offset_x + width_units * grid_unit) boundaries
+            color([1, 0.5, 0]) translate([grid_offset_x + 0, grid_offset_y, 0])
+            female_cavity_3d(edge_pattern, plate_height);
+            color([1, 0.5, 0]) translate([grid_offset_x + width_units * grid_unit, grid_offset_y, 0])
+            female_cavity_3d(edge_pattern, plate_height);
         }
         
         // Right edge cavities (if overridden to female)
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
         // COLOR: PINK for female
+        // CRITICAL FIX: Place connectors at corner boundaries (strong edges), not at cell centers (weak edges)
         if (right_edge == "female") {
             // Position at grid boundary (same position as male teeth) so cavity aligns properly
             // The cavity profile extends inward, removing the wall between grid boundary and plate edge
             grid_right_edge = grid_offset_x + width_units * grid_unit;
-            if (depth_units > 1) {
-                for (i = [1 : max(1, depth_units) - 1]) {
-                    color([1, 0.5, 0.8]) translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
-                    rotate([0, 0, -90])
-                    female_cavity_3d(edge_pattern, plate_height);
-                }
-            }
-            if (depth_units == 1) {
-                // Single unit - place at the boundary where cells would meet (strong edge)
-                // For a single cell, the boundary is at grid_offset_y + 1*grid_unit (where cell 0 ends and cell 1 would start)
-                // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
-                color([1, 0.5, 0.8]) translate([grid_right_edge, grid_offset_y + 1 * grid_unit, 0])
-                rotate([0, 0, -90])
-                female_cavity_3d(edge_pattern, plate_height);
-            }
+            // Multiple units OR single unit - always place at corner boundaries (strong edges)
+            // Place at start (grid_offset_y) and end (grid_offset_y + depth_units * grid_unit) boundaries
+            color([1, 0.5, 0.8]) translate([grid_right_edge, grid_offset_y + 0, 0])
+            rotate([0, 0, -90])
+            female_cavity_3d(edge_pattern, plate_height);
+            color([1, 0.5, 0.8]) translate([grid_right_edge, grid_offset_y + depth_units * grid_unit, 0])
+            rotate([0, 0, -90])
+            female_cavity_3d(edge_pattern, plate_height);
         }
         
         // Back edge cavities (if overridden to female)
         // CRITICAL FIX: Position at grid boundary (same as male teeth) to properly align and remove wall
         // The cavity profile extends inward from the grid boundary, removing the wall between grid and plate edge
         // COLOR: LIGHT BLUE for female
+        // CRITICAL FIX: Place connectors at corner boundaries (strong edges), not at cell centers (weak edges)
         if (back_edge == "female") {
             // Position at grid boundary (same position as male teeth) so cavity aligns properly
             // The cavity profile extends inward, removing the wall between grid boundary and plate edge
             grid_back_edge = grid_offset_y + depth_units * grid_unit;
-            if (width_units > 1) {
-                for (i = [1 : max(1, width_units) - 1]) {
-                    color([0.5, 0.8, 1]) translate([grid_offset_x + i * grid_unit, grid_back_edge, 0])
-                    female_cavity_3d(edge_pattern, plate_height);
-                }
-            }
-            if (width_units == 1) {
-                // Single unit - place at the boundary where cells would meet (strong edge)
-                // For a single cell, the boundary is at grid_offset_x + 1*grid_unit (where cell 0 ends and cell 1 would start)
-                // This matches the multi-unit pattern which places at i*grid_unit where i >= 1
-                color([0.5, 0.8, 1]) translate([grid_offset_x + 1 * grid_unit, grid_back_edge, 0])
-                female_cavity_3d(edge_pattern, plate_height);
-            }
+            // Multiple units OR single unit - always place at corner boundaries (strong edges)
+            // Place at start (grid_offset_x) and end (grid_offset_x + width_units * grid_unit) boundaries
+            color([0.5, 0.8, 1]) translate([grid_offset_x + 0, grid_back_edge, 0])
+            female_cavity_3d(edge_pattern, plate_height);
+            color([0.5, 0.8, 1]) translate([grid_offset_x + width_units * grid_unit, grid_back_edge, 0])
+            female_cavity_3d(edge_pattern, plate_height);
         }
     }
 }
@@ -1893,24 +1839,15 @@ module screw_holes() {
     const maleTeeth: string[] = [];
     const femaleCavities: string[] = [];
     
-    // Helper to get tooth positions - at grid cell boundaries (corner boundaries where cells meet)
+    // Helper to get tooth positions - at grid cell boundaries
     // Positions are relative to the grid area (accounting for padding)
-    // Corner boundaries are at integer multiples of gridSize: 0, gridSize, 2*gridSize, etc.
-    // These are "strong edges" with more material, not "weak edges" in the middle of cells
-    const getPositions = (units: number, paddingOffset: number): number[] => {
+    const getPositions = (units: number, forSingleUnit: boolean, paddingOffset: number): number[] => {
       const positions: number[] = [];
-      
-      if (units <= 1) {
-        // Single unit or less - put connectors at corner boundaries (start and end of grid area)
-        // These are strong edges where cells meet, not weak edges in the middle of cells
-        positions.push(paddingOffset + 0);        // Start boundary (corner)
-        if (units >= 1) {
-          positions.push(paddingOffset + gridSize); // End boundary (corner)
-        }
+      if (units === 1 && forSingleUnit) {
+        // Single unit - put tooth at center of grid area
+        positions.push(paddingOffset + 0.5 * gridSize);
       } else {
-        // Multiple units - put teeth at grid boundaries between cells (at corners where cells meet)
-        // For units=2: place at 1*gridSize (boundary between cell 0 and cell 1)
-        // For units=3: place at 1*gridSize and 2*gridSize (boundaries between cells)
+        // Multiple units - put teeth at grid boundaries (between cells)
         for (let i = 1; i < units; i++) {
           positions.push(paddingOffset + i * gridSize);
         }
@@ -1930,7 +1867,7 @@ module screw_holes() {
     
     // RIGHT EDGE
     if (rightEdgeType === 'male') {
-      const positions = getPositions(segment.gridUnitsY, paddingNearY);
+      const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         maleTeeth.push(`
             // Right edge male tooth at Y=${y}
@@ -1939,7 +1876,7 @@ module screw_holes() {
             male_tooth_3d("${edgePattern}", plate_height);`);
       }
     } else if (rightEdgeType === 'female') {
-      const positions = getPositions(segment.gridUnitsY, paddingNearY);
+      const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         femaleCavities.push(`
         // Right edge female cavity at Y=${y}
@@ -1952,7 +1889,7 @@ module screw_holes() {
     
     // BACK EDGE
     if (backEdgeType === 'male') {
-      const positions = getPositions(segment.gridUnitsX, paddingNearX);
+      const positions = getPositions(segment.gridUnitsX, true, paddingNearX);
       for (const x of positions) {
         maleTeeth.push(`
             // Back edge male tooth at X=${x}
@@ -1961,7 +1898,7 @@ module screw_holes() {
             male_tooth_3d("${edgePattern}", plate_height);`);
       }
     } else if (backEdgeType === 'female') {
-      const positions = getPositions(segment.gridUnitsX, paddingNearX);
+      const positions = getPositions(segment.gridUnitsX, true, paddingNearX);
       for (const x of positions) {
         femaleCavities.push(`
         // Back edge female cavity at X=${x}
@@ -1978,7 +1915,7 @@ module screw_holes() {
     // Connectors must be at the grid boundary to preserve the wall
     const gridLeftEdge = paddingNearX;  // Grid boundary, not plate edge
     if (leftEdgeType === 'female') {
-      const positions = getPositions(segment.gridUnitsY, paddingNearY);
+      const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         femaleCavities.push(`
         // Left edge female cavity at Y=${y}, X=${gridLeftEdge} (grid boundary)
@@ -1988,7 +1925,7 @@ module screw_holes() {
         female_cavity_3d("${edgePattern}", plate_height);`);
       }
     } else if (leftEdgeType === 'male') {
-      const positions = getPositions(segment.gridUnitsY, paddingNearY);
+      const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
       for (const y of positions) {
         maleTeeth.push(`
             // Left edge male tooth at Y=${y}, X=${gridLeftEdge} (grid boundary)
@@ -2003,7 +1940,7 @@ module screw_holes() {
     // When paddingNearY > 0, the wall extends from Y=0 to Y=paddingNearY
     // Connectors must be at the grid boundary to preserve the wall
     const gridFrontEdge = paddingNearY;  // Grid boundary, not plate edge
-    const frontEdgePositions = getPositions(segment.gridUnitsX, paddingNearX);
+    const frontEdgePositions = getPositions(segment.gridUnitsX, true, paddingNearX);
     
     
     if (frontEdgeType === 'female') {
