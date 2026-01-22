@@ -1006,7 +1006,7 @@ function ConnectorMarkers({
               position={[threeRightX + markerOffset, markerHeight, threeZ]}
             >
               <cylinderGeometry args={[8, 8, 40, 16]} />
-              <meshBasicMaterial color="#ef4444" /> {/* Red for male */}
+              <meshBasicMaterial color="#ef4444" /> {/* Red - Case 1: First pass right edge */}
             </mesh>
           );
         }
@@ -1031,7 +1031,7 @@ function ConnectorMarkers({
               position={[threeLeftX - markerOffset, markerHeight, threeZ]}
             >
               <cylinderGeometry args={[6, 6, 20, 16]} />
-              <meshBasicMaterial color="#3b82f6" /> {/* Blue for female */}
+              <meshBasicMaterial color="#f59e0b" /> {/* Orange - Case 2: Second pass left edge */}
             </mesh>
           );
         }
@@ -1056,7 +1056,7 @@ function ConnectorMarkers({
               position={[threeX, markerHeight, threeBackZ - markerOffset]}
             >
               <boxGeometry args={[16, 40, 16]} />
-              <meshBasicMaterial color="#ef4444" /> {/* Red for male */}
+              <meshBasicMaterial color="#dc2626" /> {/* Dark Red - Case 3: First pass back edge */}
             </mesh>
           );
         }
@@ -1081,7 +1081,7 @@ function ConnectorMarkers({
               position={[threeX, markerHeight, threeFrontZ + markerOffset]}
             >
               <boxGeometry args={[12, 20, 12]} />
-              <meshBasicMaterial color="#3b82f6" /> {/* Blue for female */}
+              <meshBasicMaterial color="#f97316" /> {/* Bright Orange - Case 4: Second pass front edge */}
             </mesh>
           );
         }
