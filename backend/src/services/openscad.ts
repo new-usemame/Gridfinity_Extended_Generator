@@ -1863,19 +1863,26 @@ module screw_holes() {
     const maleTeeth: string[] = [];
     const femaleCavities: string[] = [];
     
-    // Helper to get tooth positions - at grid cell boundaries
+    // Helper to get tooth positions - at grid cell boundaries (corner boundaries where cells meet)
     // Positions are relative to the grid area (accounting for padding)
-    const getPositions = (units: number, forSingleUnit: boolean, paddingOffset: number): number[] => {
+    // Corner boundaries are at integer multiples of gridSize: 0, gridSize, 2*gridSize, etc.
+    // These are "strong edges" with more material, not "weak edges" in the middle of cells
+    const getPositions = (units: number, paddingOffset: number): number[] => {
       const positions: number[] = [];
-      if (units === 1 && forSingleUnit) {
-        // Single unit - put connectors at corner boundaries (where cells meet, strong edges)
-        // Place at both start and end boundaries, similar to multi-unit segments
-        positions.push(paddingOffset + 0);        // Start boundary
-        positions.push(paddingOffset + gridSize); // End boundary
+      
+      if (units <= 1) {
+        // Single unit or less - put connectors at corner boundaries (start and end of grid area)
+        // These are strong edges where cells meet, not weak edges in the middle of cells
+        positions.push(paddingOffset + 0);        // Start boundary (corner)
+        if (units >= 1) {
+          positions.push(paddingOffset + gridSize); // End boundary (corner)
+        }
       } else {
-        // Multiple units - put teeth at grid boundaries (between cells)
+        // Multiple units - put teeth at grid boundaries between cells (at corners where cells meet)
+        // For units=2: place at 1*gridSize (boundary between cell 0 and cell 1)
+        // For units=3: place at 1*gridSize and 2*gridSize (boundaries between cells)
         for (let i = 1; i < units; i++) {
-        //   positions.push(paddingOffset + i * gridSize);
+          positions.push(paddingOffset + i * gridSize);
         }
       }
       return positions;
@@ -1893,7 +1900,7 @@ module screw_holes() {
     
     // RIGHT EDGE
     if (rightEdgeType === 'male') {
-      const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
+      const positions = getPositions(segment.gridUnitsY, paddingNearY);
       for (const y of positions) {
         maleTeeth.push(`
             // Right edge male tooth at Y=${y}
@@ -1902,7 +1909,7 @@ module screw_holes() {
             male_tooth_3d("${edgePattern}", plate_height);`);
       }
     } else if (rightEdgeType === 'female') {
-      const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
+      const positions = getPositions(segment.gridUnitsY, paddingNearY);
       for (const y of positions) {
         femaleCavities.push(`
         // Right edge female cavity at Y=${y}
@@ -1915,7 +1922,7 @@ module screw_holes() {
     
     // BACK EDGE
     if (backEdgeType === 'male') {
-      const positions = getPositions(segment.gridUnitsX, true, paddingNearX);
+      const positions = getPositions(segment.gridUnitsX, paddingNearX);
       for (const x of positions) {
         maleTeeth.push(`
             // Back edge male tooth at X=${x}
@@ -1924,7 +1931,7 @@ module screw_holes() {
             male_tooth_3d("${edgePattern}", plate_height);`);
       }
     } else if (backEdgeType === 'female') {
-      const positions = getPositions(segment.gridUnitsX, true, paddingNearX);
+      const positions = getPositions(segment.gridUnitsX, paddingNearX);
       for (const x of positions) {
         femaleCavities.push(`
         // Back edge female cavity at X=${x}
@@ -1941,7 +1948,7 @@ module screw_holes() {
     // Connectors must be at the grid boundary to preserve the wall
     const gridLeftEdge = paddingNearX;  // Grid boundary, not plate edge
     if (leftEdgeType === 'female') {
-      const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
+      const positions = getPositions(segment.gridUnitsY, paddingNearY);
       for (const y of positions) {
         femaleCavities.push(`
         // Left edge female cavity at Y=${y}, X=${gridLeftEdge} (grid boundary)
@@ -1951,7 +1958,7 @@ module screw_holes() {
         female_cavity_3d("${edgePattern}", plate_height);`);
       }
     } else if (leftEdgeType === 'male') {
-      const positions = getPositions(segment.gridUnitsY, true, paddingNearY);
+      const positions = getPositions(segment.gridUnitsY, paddingNearY);
       for (const y of positions) {
         maleTeeth.push(`
             // Left edge male tooth at Y=${y}, X=${gridLeftEdge} (grid boundary)
@@ -1966,7 +1973,7 @@ module screw_holes() {
     // When paddingNearY > 0, the wall extends from Y=0 to Y=paddingNearY
     // Connectors must be at the grid boundary to preserve the wall
     const gridFrontEdge = paddingNearY;  // Grid boundary, not plate edge
-    const frontEdgePositions = getPositions(segment.gridUnitsX, true, paddingNearX);
+    const frontEdgePositions = getPositions(segment.gridUnitsX, paddingNearX);
     
     
     if (frontEdgeType === 'female') {
