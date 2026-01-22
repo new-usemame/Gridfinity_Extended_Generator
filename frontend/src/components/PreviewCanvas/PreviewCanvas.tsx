@@ -3,7 +3,7 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, Grid, Text, Billboard } from '@react-three/drei';
 import { STLLoader } from 'three-stdlib';
 import * as THREE from 'three';
-import { BoxConfig, BaseplateConfig, SplitResult } from '../../types/config';
+import { BoxConfig, BaseplateConfig, SplitResult, EdgeType, SegmentInfo } from '../../types/config';
 
 // Track if camera has been fitted to prevent resetting on geometry changes
 let cameraFittedForScene = false;
@@ -967,6 +967,39 @@ function ConnectorMarkers({
     }
   }
   
+  // Helper function to get edge type (considering overrides)
+  const getEdgeType = (segment: SegmentInfo, edge: 'left' | 'right' | 'front' | 'back'): EdgeType => {
+    // Check for override
+    const override = baseplateConfig.edgeOverrides?.find(
+      o => o.segmentX === segment.segmentX && o.segmentY === segment.segmentY
+    );
+    if (override) {
+      if (edge === 'left') return override.leftEdge;
+      if (edge === 'right') return override.rightEdge;
+      if (edge === 'front') return override.frontEdge;
+      if (edge === 'back') return override.backEdge;
+    }
+    
+    // Default automatic assignment
+    if (edge === 'right') return segment.hasConnectorRight ? 'male' : 'none';
+    if (edge === 'back') return segment.hasConnectorBack ? 'male' : 'none';
+    if (edge === 'left') return segment.hasConnectorLeft ? 'female' : 'none';
+    if (edge === 'front') return segment.hasConnectorFront ? 'female' : 'none';
+    return 'none';
+  };
+
+  // Color mapping for all 8 connector types
+  const connectorColors: Record<string, string> = {
+    'right-male': '#ef4444',      // Red - Right Edge Male
+    'right-female': '#ec4899',    // Pink - Right Edge Female
+    'back-male': '#dc2626',        // Dark Red - Back Edge Male
+    'back-female': '#f43f5e',      // Rose - Back Edge Female
+    'left-male': '#10b981',        // Green - Left Edge Male
+    'left-female': '#3b82f6',      // Blue - Left Edge Female
+    'front-male': '#f59e0b',       // Orange - Front Edge Male
+    'front-female': '#f97316',     // Bright Orange - Front Edge Female
+  };
+
   // Now transform these positions to Three.js coordinates
   // The baseplate is already transformed and positioned, so markers should align with it
   // Since baseplate min corner is at (0,0,0) after transformation,
@@ -987,62 +1020,72 @@ function ConnectorMarkers({
       // Note: OpenSCAD Y increases toward back, Three.js Z increases toward front
       // So: OpenSCAD high Y (back) → Three.js low Z (negative), OpenSCAD low Y (front) → Three.js high Z (positive)
       
-      // RIGHT EDGE markers (male connectors) - cylinders along Y axis
-      if (segment.hasConnectorRight) {
+      // Get edge types for all edges (considering overrides)
+      const rightEdgeType = getEdgeType(segment, 'right');
+      const leftEdgeType = getEdgeType(segment, 'left');
+      const backEdgeType = getEdgeType(segment, 'back');
+      const frontEdgeType = getEdgeType(segment, 'front');
+      
+      // RIGHT EDGE markers - cylinders along Y axis
+      if (rightEdgeType === 'male' || rightEdgeType === 'female') {
         const threeRightX = pos.endX; // OpenSCAD X → Three.js X (same)
+        const isMale = rightEdgeType === 'male';
+        const color = connectorColors[`right-${rightEdgeType}`];
+        const height = isMale ? 40 : 20;
+        const radius = isMale ? 8 : 6;
         
         // Place markers along the right edge (every grid unit in Y direction)
         const numMarkers = Math.max(1, Math.floor(segment.gridUnitsY));
         for (let i = 0; i < numMarkers; i++) {
           const scadY = pos.startY + (i + 0.5) * gridSize;
-          // OpenSCAD Y → Three.js -Z (negated)
-          // User reports baseplates are at negative OpenSCAD Y = positive Three.js Z
-          // But cylinders are in opposite direction, so we need to flip the sign
           const threeZ = scadY; // Flipped sign to match baseplate orientation
           
           markers.push(
             <mesh 
-              key={`right-male-${sx}-${sy}-${i}`}
+              key={`right-${rightEdgeType}-${sx}-${sy}-${i}`}
               position={[threeRightX + markerOffset, markerHeight, threeZ]}
             >
-              <cylinderGeometry args={[8, 8, 40, 16]} />
-              <meshBasicMaterial color="#ef4444" /> {/* Red - Case 1: First pass right edge */}
+              <cylinderGeometry args={[radius, radius, height, 16]} />
+              <meshBasicMaterial color={color} />
             </mesh>
           );
         }
       }
       
-      // LEFT EDGE markers (female connectors) - cylinders along Y axis
-      if (segment.hasConnectorLeft) {
+      // LEFT EDGE markers - cylinders along Y axis
+      if (leftEdgeType === 'male' || leftEdgeType === 'female') {
         const threeLeftX = pos.startX; // OpenSCAD X → Three.js X (same)
+        const isMale = leftEdgeType === 'male';
+        const color = connectorColors[`left-${leftEdgeType}`];
+        const height = isMale ? 40 : 20;
+        const radius = isMale ? 8 : 6;
         
         // Place markers along the left edge (every grid unit in Y direction)
         const numMarkers = Math.max(1, Math.floor(segment.gridUnitsY));
         for (let i = 0; i < numMarkers; i++) {
           const scadY = pos.startY + (i + 0.5) * gridSize;
-          // OpenSCAD Y → Three.js -Z (negated)
-          // User reports baseplates are at negative OpenSCAD Y = positive Three.js Z
-          // But cylinders are in opposite direction, so we need to flip the sign
           const threeZ = scadY; // Flipped sign to match baseplate orientation
           
           markers.push(
             <mesh 
-              key={`left-female-${sx}-${sy}-${i}`}
+              key={`left-${leftEdgeType}-${sx}-${sy}-${i}`}
               position={[threeLeftX - markerOffset, markerHeight, threeZ]}
             >
-              <cylinderGeometry args={[6, 6, 20, 16]} />
-              <meshBasicMaterial color="#f59e0b" /> {/* Orange - Case 2: Second pass left edge */}
+              <cylinderGeometry args={[radius, radius, height, 16]} />
+              <meshBasicMaterial color={color} />
             </mesh>
           );
         }
       }
       
-      // BACK EDGE markers (male connectors) - boxes along X axis
-      // Back edge in OpenSCAD = high Y, which becomes low (negative) Z in Three.js
-      // But user reports boxes are on far side, so flip sign to match cylinders
-      if (segment.hasConnectorBack) {
+      // BACK EDGE markers - boxes along X axis
+      if (backEdgeType === 'male' || backEdgeType === 'female') {
         const scadBackY = pos.endY; // Back edge is at endY in OpenSCAD
         const threeBackZ = scadBackY; // Flipped sign to match baseplate orientation
+        const isMale = backEdgeType === 'male';
+        const color = connectorColors[`back-${backEdgeType}`];
+        const height = isMale ? 40 : 20;
+        const size = isMale ? 16 : 12;
         
         // Place markers along the back edge (every grid unit in X direction)
         const numMarkers = Math.max(1, Math.floor(segment.gridUnitsX));
@@ -1052,22 +1095,24 @@ function ConnectorMarkers({
           
           markers.push(
             <mesh 
-              key={`back-male-${sx}-${sy}-${i}`}
+              key={`back-${backEdgeType}-${sx}-${sy}-${i}`}
               position={[threeX, markerHeight, threeBackZ - markerOffset]}
             >
-              <boxGeometry args={[16, 40, 16]} />
-              <meshBasicMaterial color="#dc2626" /> {/* Dark Red - Case 3: First pass back edge */}
+              <boxGeometry args={[size, height, size]} />
+              <meshBasicMaterial color={color} />
             </mesh>
           );
         }
       }
       
-      // FRONT EDGE markers (female connectors) - boxes along X axis
-      // Front edge in OpenSCAD = low Y, which becomes high (positive) Z in Three.js
-      // But user reports boxes are on far side, so flip sign to match cylinders
-      if (segment.hasConnectorFront) {
+      // FRONT EDGE markers - boxes along X axis
+      if (frontEdgeType === 'male' || frontEdgeType === 'female') {
         const scadFrontY = pos.startY; // Front edge is at startY in OpenSCAD
         const threeFrontZ = scadFrontY; // Flipped sign to match baseplate orientation
+        const isMale = frontEdgeType === 'male';
+        const color = connectorColors[`front-${frontEdgeType}`];
+        const height = isMale ? 40 : 20;
+        const size = isMale ? 16 : 12;
         
         // Place markers along the front edge (every grid unit in X direction)
         const numMarkers = Math.max(1, Math.floor(segment.gridUnitsX));
@@ -1077,11 +1122,11 @@ function ConnectorMarkers({
           
           markers.push(
             <mesh 
-              key={`front-female-${sx}-${sy}-${i}`}
+              key={`front-${frontEdgeType}-${sx}-${sy}-${i}`}
               position={[threeX, markerHeight, threeFrontZ + markerOffset]}
             >
-              <boxGeometry args={[12, 20, 12]} />
-              <meshBasicMaterial color="#f97316" /> {/* Bright Orange - Case 4: Second pass front edge */}
+              <boxGeometry args={[size, height, size]} />
+              <meshBasicMaterial color={color} />
             </mesh>
           );
         }
