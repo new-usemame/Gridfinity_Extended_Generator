@@ -1870,12 +1870,12 @@ module screw_holes() {
       if (units === 1 && forSingleUnit) {
         // Single unit - put connectors at corner boundaries (where cells meet, strong edges)
         // Place at both start and end boundaries, similar to multi-unit segments
-        // positions.push(paddingOffset + 0);        // Start boundary
-        // positions.push(paddingOffset + gridSize); // End boundary
+        positions.push(paddingOffset + 0);        // Start boundary
+        positions.push(paddingOffset + gridSize); // End boundary
       } else {
         // Multiple units - put teeth at grid boundaries (between cells)
         for (let i = 1; i < units; i++) {
-          positions.push(paddingOffset + i * gridSize);
+        //   positions.push(paddingOffset + i * gridSize);
         }
       }
       return positions;
