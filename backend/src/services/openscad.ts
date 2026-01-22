@@ -392,7 +392,9 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
                     color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + 0, 0])
                     rotate([0, 0, -90])
                     male_tooth_3d(edge_pattern, plate_height);
-                    
+                    color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + grid_unit, 0])
+                    rotate([0, 0, -90])
+                    male_tooth_3d(edge_pattern, plate_height);
                 }
             }
             
@@ -402,19 +404,19 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             // Teeth must be at the grid boundary (Y=grid_offset_y), not at the plate edge
             // COLOR: YELLOW for male, ORANGE for female
             if (front_edge == "male") {
-                if (width_units > 1) {
-                    for (i = [1 : max(1, width_units) - 1]) {
-                        color([1, 1, 0]) translate([grid_offset_x + i * grid_unit, grid_offset_y, 0])
-                        male_tooth_3d(edge_pattern, plate_height);
-                    }
-                }
-                if (width_units == 1) {
-                    // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
-                    color([1, 1, 0]) translate([grid_offset_x + 0, grid_offset_y, 0])
-                    male_tooth_3d(edge_pattern, plate_height);
-                    color([1, 1, 0]) translate([grid_offset_x + grid_unit, grid_offset_y, 0])
-                    male_tooth_3d(edge_pattern, plate_height);
-                }
+                // if (width_units > 1) {
+                //     for (i = [1 : max(1, width_units) - 1]) {
+                //         color([1, 1, 0]) translate([grid_offset_x + i * grid_unit, grid_offset_y, 0])
+                //         male_tooth_3d(edge_pattern, plate_height);
+                //     }
+                // }
+                // if (width_units == 1) {
+                //     // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
+                //     color([1, 1, 0]) translate([grid_offset_x + 0, grid_offset_y, 0])
+                //     male_tooth_3d(edge_pattern, plate_height);
+                //     color([1, 1, 0]) translate([grid_offset_x + grid_unit, grid_offset_y, 0])
+                //     male_tooth_3d(edge_pattern, plate_height);
+                // }
             }
         }
         
