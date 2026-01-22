@@ -337,7 +337,7 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             if (right_edge == "male") {
                 grid_right_edge = grid_offset_x + width_units * grid_unit;
                 if (depth_units > 1) {
-                    for (i = [1 : max(1, depth_units) - 2]) {
+                    for (i = [1 : max(2, depth_units) - 1]) {
                         color([1, 0, 0]) translate([grid_right_edge, grid_offset_y + i * grid_unit, 0])
                         rotate([0, 0, -90])
                         male_tooth_3d(edge_pattern, plate_height);
