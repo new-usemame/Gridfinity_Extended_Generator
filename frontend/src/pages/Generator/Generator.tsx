@@ -764,7 +764,6 @@ export function Generator() {
               isCombinedView={true}
               boxConfig={boxConfig}
               baseplateConfig={baseplateConfig}
-              splitInfo={multiSegmentResult?.splitInfo || null}
             />
           </div>
         </main>

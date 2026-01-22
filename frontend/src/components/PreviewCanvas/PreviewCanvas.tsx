@@ -3,7 +3,7 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, Grid, Text, Billboard } from '@react-three/drei';
 import { STLLoader } from 'three-stdlib';
 import * as THREE from 'three';
-import { BoxConfig, BaseplateConfig, SplitResult, EdgeType, SegmentInfo } from '../../types/config';
+import { BoxConfig, BaseplateConfig } from '../../types/config';
 
 // Track if camera has been fitted to prevent resetting on geometry changes
 let cameraFittedForScene = false;
@@ -17,7 +17,6 @@ interface PreviewCanvasProps {
   isCombinedView?: boolean;
   boxConfig?: BoxConfig;
   baseplateConfig?: BaseplateConfig;
-  splitInfo?: SplitResult | null;
 }
 
 export function PreviewCanvas({ 
@@ -27,8 +26,7 @@ export function PreviewCanvas({
   isLoading, 
   isCombinedView = false,
   boxConfig,
-  baseplateConfig,
-  splitInfo
+  baseplateConfig
 }: PreviewCanvasProps) {
   const [boxZOffset, setBoxZOffset] = useState(0); // mm offset for box position
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -161,10 +159,9 @@ export function PreviewCanvas({
               boxZOffset={boxZOffset}
               boxConfig={boxConfig}
               baseplateConfig={baseplateConfig}
-              splitInfo={splitInfo}
             />
           ) : (
-            <SceneContent stlUrl={stlUrl || null} splitInfo={splitInfo} />
+            <SceneContent stlUrl={stlUrl || null} />
           )}
         </Suspense>
       </Canvas>
@@ -219,15 +216,13 @@ function CombinedSceneContent({
   baseplateStlUrl, 
   boxZOffset,
   boxConfig: _boxConfig,
-  baseplateConfig: _baseplateConfig,
-  splitInfo
+  baseplateConfig: _baseplateConfig
 }: { 
   boxStlUrl: string | null; 
   baseplateStlUrl: string | null;
   boxZOffset: number;
   boxConfig?: BoxConfig;
   baseplateConfig?: BaseplateConfig;
-  splitInfo?: SplitResult | null;
 }) {
   const [boxGeometry, setBoxGeometry] = useState<THREE.BufferGeometry | null>(null);
   const [baseplateGeometry, setBaseplateGeometry] = useState<THREE.BufferGeometry | null>(null);
@@ -394,15 +389,6 @@ function CombinedSceneContent({
         </mesh>
       )}
 
-      {/* Connector Markers for Split Baseplates */}
-      {splitInfo && baseplateGeometry && _baseplateConfig && _baseplateConfig.connectorEnabled && (
-        <ConnectorMarkers 
-          splitInfo={splitInfo} 
-          baseplateConfig={_baseplateConfig}
-          baseplateGeometry={baseplateGeometry}
-        />
-      )}
-
       {/* Box Model with Z offset */}
       {/* Note: boxZOffset controls Front-Back position (OpenSCAD Y-axis = Three.js Z-axis) */}
       {boxGeometry && (
@@ -435,7 +421,7 @@ function CombinedSceneContent({
   );
 }
 
-function SceneContent({ stlUrl, splitInfo }: { stlUrl: string | null; splitInfo?: SplitResult | null }) {
+function SceneContent({ stlUrl }: { stlUrl: string | null }) {
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
 
   useEffect(() => {
@@ -523,15 +509,6 @@ function SceneContent({ stlUrl, splitInfo }: { stlUrl: string | null; splitInfo?
 
       {/* Model */}
       {geometry && <ModelMesh geometry={geometry} />}
-
-      {/* Connector Markers for Split Baseplates */}
-      {splitInfo && geometry && (
-        <ConnectorMarkers 
-          splitInfo={splitInfo} 
-          baseplateConfig={null}
-          baseplateGeometry={geometry}
-        />
-      )}
 
       {/* Camera Controls */}
       <OrbitControls
@@ -897,242 +874,3 @@ function AxisIndicator({ size = 30 }: { size?: number }) {
   );
 }
 
-// Connector Markers Component - Renders visual markers for connectors in Three.js
-function ConnectorMarkers({ 
-  splitInfo, 
-  baseplateConfig, 
-  baseplateGeometry 
-}: { 
-  splitInfo: SplitResult; 
-  baseplateConfig: BaseplateConfig | null;
-  baseplateGeometry: THREE.BufferGeometry;
-}) {
-  if (!baseplateConfig || !splitInfo || splitInfo.segments.length === 0) {
-    return null;
-  }
-
-  const gridSize = baseplateConfig.gridSize;
-  const markers: JSX.Element[] = [];
-  
-  // Get baseplate bounding box to determine plate height and position
-  baseplateGeometry.computeBoundingBox();
-  const bbox = baseplateGeometry.boundingBox;
-  if (!bbox) return null;
-  
-  const plateHeight = bbox.max.y;
-  const markerHeight = plateHeight + 20; // 20mm above plate
-  const markerOffset = 15; // Distance from edge
-  
-  // The baseplate geometry has been transformed and translated so its min corner is at (0,0,0)
-  // We need to calculate marker positions in the same transformed coordinate space
-  // Transformation: OpenSCAD X→Three.js X, OpenSCAD Y→Three.js -Z, OpenSCAD Z→Three.js Y
-  // After transformation, the geometry is translated so min corner is at origin
-
-  // Calculate cumulative positions for each segment in OpenSCAD coordinates
-  const segmentPositions: Array<{ startX: number; startY: number; endX: number; endY: number }> = [];
-  
-  for (let sy = 0; sy < splitInfo.segmentsY; sy++) {
-    for (let sx = 0; sx < splitInfo.segmentsX; sx++) {
-      const segment = splitInfo.segments[sy][sx];
-      if (!segment) continue;
-      
-      // Calculate start position: sum of all previous segments
-      let startX = 0;
-      let startY = 0;
-      
-      // Sum all previous columns in this row
-      for (let prevSx = 0; prevSx < sx; prevSx++) {
-        const prevSegment = splitInfo.segments[sy][prevSx];
-        if (prevSegment) {
-          startX += prevSegment.gridUnitsX * gridSize + prevSegment.paddingNearX + prevSegment.paddingFarX;
-        }
-      }
-      
-      // Sum all previous rows
-      for (let prevSy = 0; prevSy < sy; prevSy++) {
-        const prevSegment = splitInfo.segments[prevSy][0];
-        if (prevSegment) {
-          startY += prevSegment.gridUnitsY * gridSize + prevSegment.paddingNearY + prevSegment.paddingFarY;
-        }
-      }
-      
-      // Add padding for this segment
-      startX += segment.paddingNearX;
-      startY += segment.paddingNearY;
-      
-      const endX = startX + segment.gridUnitsX * gridSize;
-      const endY = startY + segment.gridUnitsY * gridSize;
-      
-      segmentPositions.push({ startX, startY, endX, endY });
-    }
-  }
-  
-  // Helper function to get edge type (considering overrides)
-  const getEdgeType = (segment: SegmentInfo, edge: 'left' | 'right' | 'front' | 'back'): EdgeType => {
-    // Check for override
-    const override = baseplateConfig.edgeOverrides?.find(
-      o => o.segmentX === segment.segmentX && o.segmentY === segment.segmentY
-    );
-    if (override) {
-      if (edge === 'left') return override.leftEdge;
-      if (edge === 'right') return override.rightEdge;
-      if (edge === 'front') return override.frontEdge;
-      if (edge === 'back') return override.backEdge;
-    }
-    
-    // Default automatic assignment
-    if (edge === 'right') return segment.hasConnectorRight ? 'male' : 'none';
-    if (edge === 'back') return segment.hasConnectorBack ? 'male' : 'none';
-    if (edge === 'left') return segment.hasConnectorLeft ? 'female' : 'none';
-    if (edge === 'front') return segment.hasConnectorFront ? 'female' : 'none';
-    return 'none';
-  };
-
-  // Color mapping for all 8 connector types
-  const connectorColors: Record<string, string> = {
-    'right-male': '#ef4444',      // Red - Right Edge Male
-    'right-female': '#ec4899',    // Pink - Right Edge Female
-    'back-male': '#dc2626',        // Dark Red - Back Edge Male
-    'back-female': '#f43f5e',      // Rose - Back Edge Female
-    'left-male': '#10b981',        // Green - Left Edge Male
-    'left-female': '#3b82f6',      // Blue - Left Edge Female
-    'front-male': '#f59e0b',       // Orange - Front Edge Male
-    'front-female': '#f97316',     // Bright Orange - Front Edge Female
-  };
-
-  // Now transform these positions to Three.js coordinates
-  // The baseplate is already transformed and positioned, so markers should align with it
-  // Since baseplate min corner is at (0,0,0) after transformation,
-  // and our OpenSCAD coordinates start at (0,0,0), they should align directly
-
-  // Iterate through all segments
-  let segmentIndex = 0;
-  for (let sy = 0; sy < splitInfo.segmentsY; sy++) {
-    for (let sx = 0; sx < splitInfo.segmentsX; sx++) {
-      const segment = splitInfo.segments[sy][sx];
-      if (!segment) continue;
-      
-      const pos = segmentPositions[segmentIndex];
-      segmentIndex++;
-      
-      // Transform OpenSCAD coordinates to Three.js coordinates
-      // Transformation: OpenSCAD X→Three.js X, OpenSCAD Y→Three.js -Z, OpenSCAD Z→Three.js Y
-      // Note: OpenSCAD Y increases toward back, Three.js Z increases toward front
-      // So: OpenSCAD high Y (back) → Three.js low Z (negative), OpenSCAD low Y (front) → Three.js high Z (positive)
-      
-      // Get edge types for all edges (considering overrides)
-      const rightEdgeType = getEdgeType(segment, 'right');
-      const leftEdgeType = getEdgeType(segment, 'left');
-      const backEdgeType = getEdgeType(segment, 'back');
-      const frontEdgeType = getEdgeType(segment, 'front');
-      
-      // RIGHT EDGE markers - cylinders along Y axis
-      if (rightEdgeType === 'male' || rightEdgeType === 'female') {
-        const threeRightX = pos.endX; // OpenSCAD X → Three.js X (same)
-        const isMale = rightEdgeType === 'male';
-        const color = connectorColors[`right-${rightEdgeType}`];
-        const height = isMale ? 40 : 20;
-        const radius = isMale ? 8 : 6;
-        
-        // Place markers along the right edge (every grid unit in Y direction)
-        const numMarkers = Math.max(1, Math.floor(segment.gridUnitsY));
-        for (let i = 0; i < numMarkers; i++) {
-          const scadY = pos.startY + (i + 0.5) * gridSize;
-          const threeZ = scadY; // Flipped sign to match baseplate orientation
-          
-          markers.push(
-            <mesh 
-              key={`right-${rightEdgeType}-${sx}-${sy}-${i}`}
-              position={[threeRightX + markerOffset, markerHeight, threeZ]}
-            >
-              <cylinderGeometry args={[radius, radius, height, 16]} />
-              <meshBasicMaterial color={color} />
-            </mesh>
-          );
-        }
-      }
-      
-      // LEFT EDGE markers - cylinders along Y axis
-      if (leftEdgeType === 'male' || leftEdgeType === 'female') {
-        const threeLeftX = pos.startX; // OpenSCAD X → Three.js X (same)
-        const isMale = leftEdgeType === 'male';
-        const color = connectorColors[`left-${leftEdgeType}`];
-        const height = isMale ? 40 : 20;
-        const radius = isMale ? 8 : 6;
-        
-        // Place markers along the left edge (every grid unit in Y direction)
-        const numMarkers = Math.max(1, Math.floor(segment.gridUnitsY));
-        for (let i = 0; i < numMarkers; i++) {
-          const scadY = pos.startY + (i + 0.5) * gridSize;
-          const threeZ = scadY; // Flipped sign to match baseplate orientation
-          
-          markers.push(
-            <mesh 
-              key={`left-${leftEdgeType}-${sx}-${sy}-${i}`}
-              position={[threeLeftX - markerOffset, markerHeight, threeZ]}
-            >
-              <cylinderGeometry args={[radius, radius, height, 16]} />
-              <meshBasicMaterial color={color} />
-            </mesh>
-          );
-        }
-      }
-      
-      // BACK EDGE markers - boxes along X axis
-      if (backEdgeType === 'male' || backEdgeType === 'female') {
-        const scadBackY = pos.endY; // Back edge is at endY in OpenSCAD
-        const threeBackZ = scadBackY; // Flipped sign to match baseplate orientation
-        const isMale = backEdgeType === 'male';
-        const color = connectorColors[`back-${backEdgeType}`];
-        const height = isMale ? 40 : 20;
-        const size = isMale ? 16 : 12;
-        
-        // Place markers along the back edge (every grid unit in X direction)
-        const numMarkers = Math.max(1, Math.floor(segment.gridUnitsX));
-        for (let i = 0; i < numMarkers; i++) {
-          const scadX = pos.startX + (i + 0.5) * gridSize;
-          const threeX = scadX; // OpenSCAD X → Three.js X (same)
-          
-          markers.push(
-            <mesh 
-              key={`back-${backEdgeType}-${sx}-${sy}-${i}`}
-              position={[threeX, markerHeight, threeBackZ - markerOffset]}
-            >
-              <boxGeometry args={[size, height, size]} />
-              <meshBasicMaterial color={color} />
-            </mesh>
-          );
-        }
-      }
-      
-      // FRONT EDGE markers - boxes along X axis
-      if (frontEdgeType === 'male' || frontEdgeType === 'female') {
-        const scadFrontY = pos.startY; // Front edge is at startY in OpenSCAD
-        const threeFrontZ = scadFrontY; // Flipped sign to match baseplate orientation
-        const isMale = frontEdgeType === 'male';
-        const color = connectorColors[`front-${frontEdgeType}`];
-        const height = isMale ? 40 : 20;
-        const size = isMale ? 16 : 12;
-        
-        // Place markers along the front edge (every grid unit in X direction)
-        const numMarkers = Math.max(1, Math.floor(segment.gridUnitsX));
-        for (let i = 0; i < numMarkers; i++) {
-          const scadX = pos.startX + (i + 0.5) * gridSize;
-          const threeX = scadX; // OpenSCAD X → Three.js X (same)
-          
-          markers.push(
-            <mesh 
-              key={`front-${frontEdgeType}-${sx}-${sy}-${i}`}
-              position={[threeX, markerHeight, threeFrontZ + markerOffset]}
-            >
-              <boxGeometry args={[size, height, size]} />
-              <meshBasicMaterial color={color} />
-            </mesh>
-          );
-        }
-      }
-    }
-  }
-
-  return <group>{markers}</group>;
-}
