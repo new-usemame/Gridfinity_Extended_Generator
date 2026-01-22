@@ -386,13 +386,7 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
                     }
                 }
                 if (depth_units == 1) {
-                    // Single unit - put connectors at corner boundaries (strong edges), not center (weak edge)
-                    color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + 0, 0])
-                    rotate([0, 0, -90])
-                    male_tooth_3d(edge_pattern, plate_height);
-                    color([0, 1, 0]) translate([grid_offset_x, grid_offset_y + grid_unit, 0])
-                    rotate([0, 0, -90])
-                    male_tooth_3d(edge_pattern, plate_height);
+                    
                 }
             }
             
