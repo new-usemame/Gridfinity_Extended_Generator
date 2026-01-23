@@ -1,9 +1,17 @@
-// @ts-ignore - bad-words has incorrect type definitions
-import Filter from 'bad-words';
+// Lazy load bad-words to avoid ES module compatibility issues
+let filterInstance: any = null;
 
-const filter = new (Filter as any)();
+async function getFilter() {
+  if (!filterInstance) {
+    // Dynamic import to avoid ES module issues at startup
+    const badWordsModule = await import('bad-words');
+    const Filter = (badWordsModule as any).default || badWordsModule;
+    filterInstance = new (Filter as any)();
+  }
+  return filterInstance;
+}
 
-export function validateUsername(username: string): { valid: boolean; error?: string } {
+export async function validateUsername(username: string): Promise<{ valid: boolean; error?: string }> {
   // Check length
   if (username.length < 3) {
     return { valid: false, error: 'Username must be at least 3 characters long' };
@@ -18,9 +26,16 @@ export function validateUsername(username: string): { valid: boolean; error?: st
     return { valid: false, error: 'Username can only contain letters, numbers, underscores, and hyphens' };
   }
 
-  // Check for profanity
-  if (filter.isProfane(username)) {
-    return { valid: false, error: 'Username contains inappropriate content' };
+  // Check for profanity (lazy loaded)
+  try {
+    const filter = await getFilter();
+    if (filter.isProfane(username)) {
+      return { valid: false, error: 'Username contains inappropriate content' };
+    }
+  } catch (err) {
+    // If bad-words fails to load, skip profanity check but log the error
+    console.error('Failed to load profanity filter:', err);
+    // Continue without profanity check rather than blocking the request
   }
 
   return { valid: true };

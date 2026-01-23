@@ -21,7 +21,7 @@ router.post('/scores', async (req: Request, res: Response) => {
 
     // If user is authenticated and provided username
     if (userId && username) {
-      const validation = validateUsername(username);
+      const validation = await validateUsername(username);
       if (!validation.valid) {
         return res.status(400).json({ error: validation.error });
       }
