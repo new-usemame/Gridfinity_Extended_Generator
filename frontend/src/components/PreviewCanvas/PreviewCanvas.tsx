@@ -70,7 +70,7 @@ export function PreviewCanvas({
   }, []);
 
   const hasModel = isCombinedView 
-    ? (boxStlUrl && baseplateStlUrl)
+    ? (boxStlUrl || baseplateStlUrl)
     : stlUrl;
 
   // Calculate Position Control position based on container size

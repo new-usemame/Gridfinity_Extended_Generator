@@ -87,6 +87,9 @@ export async function initializeDatabase() {
         id SERIAL PRIMARY KEY,
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
+        public_username TEXT UNIQUE,
+        username_public BOOLEAN DEFAULT false,
+        has_completed_first_game BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -126,6 +129,26 @@ export async function initializeDatabase() {
     await dbExec(`
       CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON feedback(user_id)
     `);
+
+    await dbExec(`
+      CREATE TABLE IF NOT EXISTS game_scores (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        score INTEGER NOT NULL,
+        elapsed_time_ms INTEGER,
+        public_username TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    await dbExec(`
+      CREATE INDEX IF NOT EXISTS idx_game_scores_score ON game_scores(score DESC)
+    `);
+
+    await dbExec(`
+      CREATE INDEX IF NOT EXISTS idx_game_scores_user_id ON game_scores(user_id)
+    `);
   } else if (sqliteDb) {
     // SQLite schema (synchronous execution)
     sqliteDb.exec(`
@@ -133,6 +156,9 @@ export async function initializeDatabase() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
+        public_username TEXT UNIQUE,
+        username_public INTEGER DEFAULT 0,
+        has_completed_first_game INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -172,6 +198,26 @@ export async function initializeDatabase() {
     sqliteDb.exec(`
       CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON feedback(user_id)
     `);
+
+    sqliteDb.exec(`
+      CREATE TABLE IF NOT EXISTS game_scores (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        score INTEGER NOT NULL,
+        elapsed_time_ms INTEGER,
+        public_username TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    sqliteDb.exec(`
+      CREATE INDEX IF NOT EXISTS idx_game_scores_score ON game_scores(score DESC)
+    `);
+
+    sqliteDb.exec(`
+      CREATE INDEX IF NOT EXISTS idx_game_scores_user_id ON game_scores(user_id)
+    `);
   }
 }
 
@@ -204,6 +250,22 @@ export const userDb = {
   findById: async (id: number) => {
     const result = await dbQuery('SELECT id, email, created_at FROM users WHERE id = ?', [id]);
     return result.row as { id: number; email: string; created_at: string } | undefined;
+  },
+
+  findByPublicUsername: async (username: string, excludeUserId?: number) => {
+    if (excludeUserId) {
+      const result = await dbQuery(
+        'SELECT id, email, public_username FROM users WHERE LOWER(public_username) = LOWER(?) AND id != ?',
+        [username, excludeUserId]
+      );
+      return result.row as { id: number; email: string; public_username: string } | undefined;
+    } else {
+      const result = await dbQuery(
+        'SELECT id, email, public_username FROM users WHERE LOWER(public_username) = LOWER(?)',
+        [username]
+      );
+      return result.row as { id: number; email: string; public_username: string } | undefined;
+    }
   },
 };
 
@@ -322,6 +384,116 @@ export const feedbackDb = {
        WHERE id = ? AND user_id = ?`,
       [title, content, id, userId]
     );
+  },
+};
+
+// Game scores operations
+export interface GameScore {
+  id: number;
+  user_id: number | null;
+  score: number;
+  elapsed_time_ms: number | null;
+  public_username: string | null;
+  created_at: string;
+}
+
+export const gameScoresDb = {
+  create: async (score: number, elapsedTimeMs: number | null = null, userId: number | null = null, publicUsername: string | null = null): Promise<number> => {
+    if (usePostgres && pgPool) {
+      const result = await dbQuery(
+        'INSERT INTO game_scores (score, elapsed_time_ms, user_id, public_username) VALUES (?, ?, ?, ?) RETURNING id',
+        [score, elapsedTimeMs, userId, publicUsername]
+      );
+      return Number(result.lastInsertRowid);
+    } else if (sqliteDb) {
+      const result = await dbQuery(
+        'INSERT INTO game_scores (score, elapsed_time_ms, user_id, public_username) VALUES (?, ?, ?, ?)',
+        [score, elapsedTimeMs, userId, publicUsername]
+      );
+      return Number(result.lastInsertRowid);
+    }
+    throw new Error('No database connection available');
+  },
+
+  getLeaderboard: async (limit: number = 100, requestingUserId: number | null = null): Promise<Array<GameScore & { rank: number }>> => {
+    // Get top scores - prioritize those with public usernames, but include all for ranking
+    const result = await dbQuery(
+      `SELECT 
+        gs.*,
+        ROW_NUMBER() OVER (ORDER BY gs.score DESC, gs.id ASC) as rank
+      FROM game_scores gs
+      ORDER BY gs.score DESC, gs.id ASC
+      LIMIT ?`,
+      [limit * 2] // Get more to filter
+    );
+    let rows = (result.rows || []) as Array<GameScore & { rank: number }>;
+    
+    // Filter to show public usernames first, then include user's own score if authenticated
+    const publicRows = rows.filter(r => r.public_username !== null).slice(0, limit);
+    const userRow = requestingUserId ? rows.find(r => r.user_id === requestingUserId) : null;
+    
+    // Combine: public rows + user's row if not already included
+    const finalRows = [...publicRows];
+    if (userRow && !finalRows.find(r => r.user_id === requestingUserId)) {
+      finalRows.push(userRow);
+    }
+    
+    // Sort by rank
+    finalRows.sort((a, b) => a.rank - b.rank);
+    
+    return finalRows.slice(0, limit);
+  },
+
+  getUserHighScore: async (userId: number): Promise<GameScore | null> => {
+    const result = await dbQuery(
+      'SELECT * FROM game_scores WHERE user_id = ? ORDER BY score DESC LIMIT 1',
+      [userId]
+    );
+    return (result.row as GameScore) || null;
+  },
+
+  getUserRank: async (userId: number): Promise<number | null> => {
+    // Get user's high score
+    const userHighScore = await gameScoresDb.getUserHighScore(userId);
+    if (!userHighScore) {
+      return null;
+    }
+
+    // Count how many scores are higher than user's high score
+    const result = await dbQuery(
+      `SELECT COUNT(*) + 1 as rank
+       FROM game_scores
+       WHERE score > ? OR (score = ? AND id < ?)`,
+      [userHighScore.score, userHighScore.score, userHighScore.id]
+    );
+    return result.row ? Number(result.row.rank) : null;
+  },
+
+  updateUserUsername: async (userId: number, username: string | null, isPublic: boolean) => {
+    // Update user's public_username and username_public
+    await dbQuery(
+      `UPDATE users
+       SET public_username = ?, username_public = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [username, isPublic ? 1 : 0, userId]
+    );
+    
+    // Update all game_scores for this user with the public_username if public
+    if (isPublic && username) {
+      await dbQuery(
+        `UPDATE game_scores
+         SET public_username = ?
+         WHERE user_id = ?`,
+        [username, userId]
+      );
+    } else {
+      await dbQuery(
+        `UPDATE game_scores
+         SET public_username = NULL
+         WHERE user_id = ?`,
+        [userId]
+      );
+    }
   },
 };
 

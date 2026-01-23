@@ -6,6 +6,7 @@ import { About } from './pages/About/About';
 import { Features } from './pages/Features/Features';
 import { Comparison } from './pages/Comparison/Comparison';
 import { Donate } from './pages/Donate/Donate';
+import { Leaderboard } from './pages/Leaderboard/Leaderboard';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/features" element={<Features />} />
         <Route path="/comparison" element={<Comparison />} />
         <Route path="/donate" element={<Donate />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
       </Routes>
     </Layout>
   );

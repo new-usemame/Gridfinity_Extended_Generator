@@ -9,6 +9,7 @@ import { SavedConfigsDropdown } from '../../components/SavedConfigsDropdown/Save
 import type { SavedConfigsDropdownRef } from '../../components/SavedConfigsDropdown/SavedConfigsDropdown';
 import { AuthModal } from '../../components/AuthModal/AuthModal';
 import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
+import { Game2048Modal } from '../../components/Game2048/Game2048Modal';
 import { useAuth } from '../../contexts/AuthContext';
 import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, GenerationResult, MultiSegmentResult, normalizeBoxConfig, normalizeBaseplateConfig } from '../../types/config';
 import { compareConfigs } from '../../utils/configComparison';
@@ -31,7 +32,7 @@ export function Generator() {
   const jsonButtonRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [jsonDropdownPosition, setJsonDropdownPosition] = useState({ top: 0, right: 0 });
-  const [mode, setMode] = useState<'easy' | 'pro' | 'expert'>('expert');
+  const [mode, setMode] = useState<'easy' | 'pro' | 'expert'>('pro');
 
   // Enforce hardcoded values when in Easy/Pro mode
   useEffect(() => {
@@ -705,6 +706,18 @@ export function Generator() {
           setPendingSave(false);
           // If user just signed in and we have pending save after auth, it will be handled by useEffect
         }} 
+      />
+
+      {/* Game 2048 Modal - shows during generation */}
+      <Game2048Modal
+        isOpen={isGenerating}
+        isGenerating={isGenerating}
+      />
+
+      {/* Game 2048 Modal - shows during generation */}
+      <Game2048Modal
+        isOpen={isGenerating}
+        isGenerating={isGenerating}
       />
 
       {/* Save Dialog */}

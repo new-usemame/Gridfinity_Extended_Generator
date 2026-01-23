@@ -109,6 +109,18 @@ export function Navigation() {
         Donate
       </Link>
 
+      {/* Leaderboard */}
+      <Link
+        to="/leaderboard"
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+          isActive('/leaderboard')
+            ? 'bg-green-600 dark:bg-green-500 text-white shadow-lg shadow-green-500/25'
+            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+        }`}
+      >
+        Leaderboard
+      </Link>
+
       {/* Auth Button or User Indicator */}
       {!user && (
         <button
