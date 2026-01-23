@@ -7,6 +7,7 @@ import { NumberInput } from './NumberInput';
 
 interface ConfigPanelProps {
   type: 'box' | 'baseplate';
+  mode: 'easy' | 'pro' | 'expert';
   boxConfig: BoxConfig;
   baseplateConfig: BaseplateConfig;
   onBoxConfigChange: (config: BoxConfig) => void;
@@ -15,19 +16,814 @@ interface ConfigPanelProps {
 
 export function ConfigPanel({
   type,
+  mode,
   boxConfig,
   baseplateConfig,
   onBoxConfigChange,
   onBaseplateConfigChange
 }: ConfigPanelProps) {
   if (type === 'box') {
-    return (
-      <BoxConfigPanel config={boxConfig} onChange={onBoxConfigChange} />
-    );
+    if (mode === 'expert') {
+      return (
+        <BoxConfigPanel config={boxConfig} onChange={onBoxConfigChange} />
+      );
+    } else if (mode === 'pro') {
+      return (
+        <ProBoxConfigPanel 
+          config={boxConfig} 
+          baseplateConfig={baseplateConfig}
+          onChange={onBoxConfigChange}
+          onBaseplateConfigChange={onBaseplateConfigChange}
+        />
+      );
+    } else {
+      // Easy mode
+      return (
+        <EasyBoxConfigPanel config={boxConfig} onChange={onBoxConfigChange} />
+      );
+    }
   }
 
+  // Baseplate
+  if (mode === 'expert') {
+    return (
+      <BaseplateConfigPanel config={baseplateConfig} onChange={onBaseplateConfigChange} />
+    );
+  } else if (mode === 'pro') {
+    return (
+      <ProBaseplateConfigPanel 
+        config={baseplateConfig}
+        onChange={onBaseplateConfigChange}
+      />
+    );
+  } else {
+    // Easy mode
+    return (
+      <EasyBaseplateConfigPanel config={baseplateConfig} onChange={onBaseplateConfigChange} />
+    );
+  }
+}
+
+// Pro Mode Box Panel
+function ProBoxConfigPanel({ 
+  config, 
+  baseplateConfig,
+  onChange,
+  onBaseplateConfigChange
+}: { 
+  config: BoxConfig; 
+  baseplateConfig: BaseplateConfig;
+  onChange: (config: BoxConfig) => void;
+  onBaseplateConfigChange: (config: BaseplateConfig) => void;
+}) {
+  // Enforce hardcoded values
+  const enforceHardcoded = useCallback((newConfig: BoxConfig): BoxConfig => {
+    return {
+      ...newConfig,
+      preventBottomOverhangs: true,
+      flatBase: 'off',
+    };
+  }, []);
+
+  const update = <K extends keyof BoxConfig>(key: K, value: BoxConfig[K]) => {
+    const updated = enforceHardcoded({ ...config, [key]: value });
+    onChange(updated);
+  };
+
+  // Update multiple fields for unified controls
+  const updateCornerRadius = (value: number) => {
+    const updated = enforceHardcoded({
+      ...config,
+      cornerRadius: value,
+      feetCornerRadius: value,
+    });
+    onChange(updated);
+  };
+
+  const updateFootTaperAngle = (value: number) => {
+    const updated = enforceHardcoded({
+      ...config,
+      footChamferAngle: value,
+      lipChamferAngle: value,
+      bottomOverhangChamferAngle: value,
+    });
+    onChange(updated);
+    // Also update socket chamfer angle in baseplate
+    onBaseplateConfigChange({
+      ...baseplateConfig,
+      socketChamferAngle: value,
+      syncSocketWithFoot: true,
+    });
+  };
+
+  const updateFootTaperHeight = (value: number) => {
+    const updated = enforceHardcoded({
+      ...config,
+      footChamferHeight: value,
+      lipChamferHeight: value,
+    });
+    onChange(updated);
+    // Also update socket chamfer height in baseplate
+    onBaseplateConfigChange({
+      ...baseplateConfig,
+      socketChamferHeight: value,
+      syncSocketWithFoot: true,
+    });
+  };
+
+  const updateFootCornerRadius = (value: number) => {
+    const updated = enforceHardcoded({
+      ...config,
+      footBottomCornerRadius: value,
+    });
+    onChange(updated);
+    // Also update socket bottom corner radius in baseplate
+    onBaseplateConfigChange({
+      ...baseplateConfig,
+      socketBottomCornerRadius: value,
+      syncSocketWithFoot: true,
+    });
+  };
+
   return (
-    <BaseplateConfigPanel config={baseplateConfig} onChange={onBaseplateConfigChange} />
+    <div className="p-3 space-y-2.5">
+      {/* Box Section */}
+      <CollapsibleSection title="Box" icon="📦" defaultOpen>
+        {/* 2a: Width, Depth, Height */}
+        <SliderInput
+          label="Width"
+          value={config.width}
+          min={0.5}
+          max={20}
+          step={0.5}
+          unit="units"
+          onChange={(v) => update('width', v)}
+        />
+        <SliderInput
+          label="Depth"
+          value={config.depth}
+          min={0.5}
+          max={20}
+          step={0.5}
+          unit="units"
+          onChange={(v) => update('depth', v)}
+        />
+        <SliderInput
+          label="Height"
+          value={config.height}
+          min={1}
+          max={25}
+          step={1}
+          unit="units"
+          onChange={(v) => update('height', v)}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-500">
+          Each height unit is 7mm. Standard Gridfinity specification.
+        </p>
+        
+        {/* 2b: Grid Unit Size */}
+        <NumberInput
+          label="Grid Unit Size"
+          value={config.gridSize}
+          min={30}
+          max={60}
+          step={1}
+          unit="mm"
+          onChange={(v) => update('gridSize', v)}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-500">
+          Standard Gridfinity is 42mm.
+        </p>
+
+        {/* 2c: Wall Thickness */}
+        <SliderInput
+          label="Wall Thickness"
+          value={config.wallThickness}
+          min={0.8}
+          max={2.4}
+          step={0.05}
+          unit="mm"
+          onChange={(v) => update('wallThickness', v)}
+        />
+
+        {/* 2d: Floor Thickness */}
+        <SliderInput
+          label="Floor Thickness"
+          value={config.floorThickness}
+          min={0.7}
+          max={2}
+          step={0.1}
+          unit="mm"
+          onChange={(v) => update('floorThickness', v)}
+        />
+
+        {/* 2e: Bevel Floor-Wall Edge */}
+        <ToggleInput
+          label="Bevel Floor-Wall Edge"
+          value={config.innerEdgeBevel}
+          onChange={(v) => update('innerEdgeBevel', v)}
+        />
+
+        {/* 2f: Corner Radius (sets both cornerRadius and feetCornerRadius) */}
+        <SliderInput
+          label="Corner Radius"
+          value={config.cornerRadius}
+          min={0}
+          max={5}
+          step={0.25}
+          unit="mm"
+          onChange={updateCornerRadius}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-500">
+          Rounds the vertical edges and the corner radius of the top of the feet. Standard: 3.75mm.
+        </p>
+
+        {/* 2g: Lip Style */}
+        <SelectInput
+          label="Lip Style"
+          value={config.lipStyle}
+          options={[
+            { value: 'perfect_fit', label: 'Perfect Fit Lip' },
+            { value: 'standard', label: 'Standard (Full)' },
+            { value: 'reduced', label: 'Reduced' },
+            { value: 'minimum', label: 'Minimum' },
+            { value: 'none', label: 'None (Non-stackable)' }
+          ]}
+          onChange={(v) => update('lipStyle', v as BoxConfig['lipStyle'])}
+        />
+
+        {/* 2h-i: Dividers X, Y */}
+        <NumberInput
+          label="Dividers X (Left-Right)"
+          value={config.dividersX}
+          min={0}
+          max={10}
+          step={1}
+          onChange={(v) => update('dividersX', v)}
+        />
+        <NumberInput
+          label="Dividers Y (Front-Back)"
+          value={config.dividersY}
+          min={0}
+          max={10}
+          step={1}
+          onChange={(v) => update('dividersY', v)}
+        />
+
+        {/* 2j: Divider Height */}
+        {(config.dividersX > 0 || config.dividersY > 0) && (
+          <>
+            <SliderInput
+              label="Divider Height"
+              value={config.dividerHeight}
+              min={0}
+              max={100}
+              step={1}
+              unit="%"
+              onChange={(v) => update('dividerHeight', v)}
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-500">
+              Adjust the height of dividers as a percentage of available space (from floor to lip).
+            </p>
+          </>
+        )}
+
+        {/* 2k: Bevel Divider-Floor Edge */}
+        {(config.dividersX > 0 || config.dividersY > 0) && (
+          <ToggleInput
+            label="Bevel Divider-Floor Edge"
+            value={config.dividerFloorBevel}
+            onChange={(v) => update('dividerFloorBevel', v)}
+          />
+        )}
+      </CollapsibleSection>
+
+      {/* Feet (Base) - Unified Controls */}
+      <CollapsibleSection title="Feet (Base)" icon="👣">
+        {/* 5a: Corner Radius (sets both footBottomCornerRadius and socketBottomCornerRadius) */}
+        <SliderInput
+          label="Corner Radius"
+          value={config.footBottomCornerRadius}
+          min={0}
+          max={10}
+          step={0.25}
+          unit="mm"
+          onChange={updateFootCornerRadius}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-500">
+          Corner radius of the bottom of the foot and socket.
+        </p>
+
+        {/* 5b: Foot Taper Angle (sets footChamferAngle, lipChamferAngle, socketChamferAngle, bottomOverhangChamferAngle) */}
+        <SliderInput
+          label="Foot Taper Angle"
+          value={config.footChamferAngle}
+          min={30}
+          max={75}
+          step={1}
+          unit="°"
+          onChange={updateFootTaperAngle}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-500">
+          45° = standard. Higher = steeper taper. Lower = gentler taper.
+        </p>
+
+        {/* 5c: Foot Taper Height (sets footChamferHeight, lipChamferHeight, socketChamferHeight) */}
+        <SliderInput
+          label="Foot Taper Height"
+          value={config.footChamferHeight}
+          min={2}
+          max={8}
+          step={0.25}
+          unit="mm"
+          onChange={updateFootTaperHeight}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-500">
+          Total height of the foot, lip, and socket chamfer. Standard: 4.75mm.
+        </p>
+      </CollapsibleSection>
+    </div>
+  );
+}
+
+// Pro Mode Baseplate Panel
+function ProBaseplateConfigPanel({ 
+  config, 
+  onChange 
+}: { 
+  config: BaseplateConfig; 
+  onChange: (config: BaseplateConfig) => void;
+}) {
+  // Enforce hardcoded values
+  const enforceHardcoded = useCallback((newConfig: BaseplateConfig): BaseplateConfig => {
+    return {
+      ...newConfig,
+      sizingMode: 'fill_area_mm', // Fixed to fill_area_mm in Pro mode
+      cornerSegments: 32,
+      syncSocketWithFoot: true,
+    };
+  }, []);
+
+  const update = <K extends keyof BaseplateConfig>(key: K, value: BaseplateConfig[K]) => {
+    const updated = enforceHardcoded({ ...config, [key]: value });
+    onChange(updated);
+  };
+
+  // Calculate grid preview for fill_area_mm mode
+  const gridCalc = useMemo(() => {
+    return calculateGridFromMm(
+      config.targetWidthMm,
+      config.targetDepthMm,
+      config.gridSize,
+      config.allowHalfCellsX,
+      config.allowHalfCellsY,
+      config.paddingAlignment
+    );
+  }, [config.targetWidthMm, config.targetDepthMm, config.gridSize, 
+      config.allowHalfCellsX, config.allowHalfCellsY, config.paddingAlignment]);
+
+  // Calculate split preview
+  const splitCalc = useMemo(() => {
+    if (!config.splitEnabled) return null;
+    
+    const totalUnitsX = Math.floor(gridCalc.gridUnitsX);
+    const totalUnitsY = Math.floor(gridCalc.gridUnitsY);
+    
+    return splitBaseplateForPrinter(
+      totalUnitsX,
+      totalUnitsY,
+      config.printerBedWidth,
+      config.printerBedDepth,
+      config.gridSize,
+      config.connectorEnabled,
+      gridCalc.gridUnitsX,
+      gridCalc.gridUnitsY,
+      gridCalc.gridCoverageMmX,
+      gridCalc.gridCoverageMmY,
+      gridCalc.paddingNearX,
+      gridCalc.paddingFarX,
+      gridCalc.paddingNearY,
+      gridCalc.paddingFarY
+    );
+  }, [config.splitEnabled, config.printerBedWidth, config.printerBedDepth, config.gridSize, 
+      config.connectorEnabled, gridCalc]);
+
+  return (
+    <div className="p-3 space-y-2.5">
+      {/* Baseplate Section (Fill Area mode only) */}
+      <CollapsibleSection title="Baseplate" icon="📏" defaultOpen>
+        {/* 3a: Sizing Mode - Fixed to fill_area_mm (no control) */}
+        <p className="text-xs text-slate-500 dark:text-slate-500 mb-2">
+          Sizing Mode: Fill Area (mm) - Fixed in Pro mode
+        </p>
+
+        {/* 3b: Target Width */}
+        <NumberInput
+          label="Target Width"
+          value={config.targetWidthMm}
+          min={42}
+          max={1000}
+          step={1}
+          unit="mm"
+          onChange={(v) => update('targetWidthMm', v)}
+        />
+
+        {/* 3c: Target Depth */}
+        <NumberInput
+          label="Target Depth"
+          value={config.targetDepthMm}
+          min={42}
+          max={1000}
+          step={1}
+          unit="mm"
+          onChange={(v) => update('targetDepthMm', v)}
+        />
+        
+        {/* 3d: Allow Half Cells (Width) */}
+        <ToggleInput
+          label="Allow Half Cells (Width)"
+          value={config.allowHalfCellsX}
+          onChange={(v) => update('allowHalfCellsX', v)}
+        />
+
+        {/* 3e: Allow Half Cells (Depth) */}
+        <ToggleInput
+          label="Allow Half Cells (Depth)"
+          value={config.allowHalfCellsY}
+          onChange={(v) => update('allowHalfCellsY', v)}
+        />
+
+        {/* 3f: Padding Alignment */}
+        <SelectInput
+          label="Padding Alignment"
+          value={config.paddingAlignment}
+          options={[
+            { value: 'center', label: 'Center (Equal padding both sides)' },
+            { value: 'near', label: 'Near (Padding on left/front)' },
+            { value: 'far', label: 'Far (Padding on right/back)' }
+          ]}
+          onChange={(v) => update('paddingAlignment', v as BaseplateConfig['paddingAlignment'])}
+        />
+
+        {/* 3g: Grid Unit Size */}
+        <NumberInput
+          label="Grid Unit Size"
+          value={config.gridSize}
+          min={30}
+          max={60}
+          step={1}
+          unit="mm"
+          onChange={(v) => update('gridSize', v)}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-500">
+          Standard Gridfinity is 42mm. Must match your bins.
+        </p>
+
+        {/* 3h: Corner Radius */}
+        <SliderInput
+          label="Corner Radius"
+          value={config.cornerRadius}
+          min={0}
+          max={20}
+          step={0.25}
+          unit="mm"
+          onChange={(v) => update('cornerRadius', v)}
+        />
+
+        {/* Grid Calculation Preview */}
+        {gridCalc && (
+          <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
+            <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2">CALCULATED GRID</h4>
+            <div className="space-y-1 text-xs">
+              <p className="text-slate-300">
+                <span className="text-slate-500">Grid size:</span>{' '}
+                <span className="font-mono text-emerald-300">
+                  {gridCalc.gridUnitsX} x {gridCalc.gridUnitsY}
+                </span>{' '}
+                units
+                {(gridCalc.hasHalfCellX || gridCalc.hasHalfCellY) && (
+                  <span className="text-amber-400 ml-1">
+                    ({gridCalc.hasHalfCellX && 'half-X'}{gridCalc.hasHalfCellX && gridCalc.hasHalfCellY && ', '}{gridCalc.hasHalfCellY && 'half-Y'})
+                  </span>
+                )}
+              </p>
+              <p className="text-slate-300">
+                <span className="text-slate-500">Grid coverage:</span>{' '}
+                <span className="font-mono">{gridCalc.gridCoverageMmX.toFixed(1)}mm x {gridCalc.gridCoverageMmY.toFixed(1)}mm</span>
+              </p>
+              {(gridCalc.totalPaddingX > 0 || gridCalc.totalPaddingY > 0) && (
+                <p className="text-slate-300">
+                  <span className="text-slate-500">Edge padding:</span>{' '}
+                  <span className="font-mono text-amber-300">
+                    {gridCalc.paddingNearX.toFixed(1)}/{gridCalc.paddingFarX.toFixed(1)}mm (L/R), {gridCalc.paddingNearY.toFixed(1)}/{gridCalc.paddingFarY.toFixed(1)}mm (F/B)
+                  </span>
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </CollapsibleSection>
+
+      {/* Printer Bed Splitting - Same as Expert */}
+      <CollapsibleSection title="Printer Bed Splitting" icon="✂️">
+        <ToggleInput
+          label="Enable Splitting"
+          value={config.splitEnabled}
+          onChange={(v) => update('splitEnabled', v)}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-500">
+          Split large baseplates into smaller segments that fit on your 3D printer bed.
+        </p>
+
+        {config.splitEnabled && (
+          <>
+            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+              <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">PRINTER BED SIZE</h4>
+              <NumberInput
+                label="Bed Width"
+                value={config.printerBedWidth}
+                min={50}
+                max={1000}
+                step={5}
+                unit="mm"
+                onChange={(v) => update('printerBedWidth', v)}
+              />
+              <NumberInput
+                label="Bed Depth"
+                value={config.printerBedDepth}
+                min={50}
+                max={1000}
+                step={5}
+                unit="mm"
+                onChange={(v) => update('printerBedDepth', v)}
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-500">
+                Common sizes: Ender 3 (220x220), Prusa MK3 (250x210), Bambu X1 (256x256)
+              </p>
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+              <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">INTERLOCKING EDGES</h4>
+              <ToggleInput
+                label="Enable Interlocking Edges"
+                value={config.connectorEnabled}
+                onChange={(v) => {
+                  const updates: Partial<BaseplateConfig> = { connectorEnabled: v };
+                  if (v && !config.edgePattern) {
+                    updates.edgePattern = 'wineglass';
+                    updates.toothDepth = 6;
+                  }
+                  onChange(enforceHardcoded({ ...config, ...updates }));
+                }}
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-500">
+                Add male/female interlocking edges between segments - snaps together without separate connectors.
+              </p>
+              
+              {config.connectorEnabled && (
+                <>
+                  <SelectInput
+                    label="Edge Pattern"
+                    value={config.edgePattern}
+                    options={[
+                      { value: 'wineglass', label: '1. Wine Glass (Swoopy Bulb)' },
+                      { value: 'dovetail', label: '2. Dovetail (Trapezoidal)' },
+                      { value: 'rectangular', label: '3. Rectangular (Square)' },
+                      { value: 'triangular', label: '4. Triangular (Sawtooth)' },
+                      { value: 'puzzle', label: '5. Puzzle (Jigsaw Bulb)' },
+                      { value: 'tslot', label: '6. T-Slot (T-Hook)' },
+                      { value: 'puzzle_smooth', label: '7. Puzzle Smooth (Concave)' },
+                      { value: 'tslot_smooth', label: '8. T-Slot Smooth (Concave)' }
+                    ]}
+                    onChange={(v) => {
+                      const pattern = v as BaseplateConfig['edgePattern'];
+                      const updates: Partial<BaseplateConfig> = { edgePattern: pattern };
+                      if (pattern === 'wineglass') {
+                        updates.toothDepth = 6;
+                      }
+                      onChange(enforceHardcoded({ ...config, ...updates }));
+                    }}
+                  />
+                  <div className="p-2 bg-slate-100 dark:bg-slate-700/50 rounded text-xs text-slate-600 dark:text-slate-400">
+                    {config.edgePattern === 'dovetail' && '▷ Trapezoidal teeth - wider at tip than base (classic woodworking style)'}
+                    {config.edgePattern === 'rectangular' && '▷ Simple square blocks that interlock'}
+                    {config.edgePattern === 'triangular' && '▷ Pointed zigzag pattern (sawtooth)'}
+                    {config.edgePattern === 'puzzle' && '▷ Round bulbous tabs like jigsaw puzzle pieces'}
+                    {config.edgePattern === 'tslot' && '▷ T-shaped hooks that lock in place'}
+                    {config.edgePattern === 'puzzle_smooth' && '▷ Puzzle bulb with concave hourglass stem - smooth for 3D printing'}
+                    {config.edgePattern === 'tslot_smooth' && '▷ T-slot with concave stem - no sharp corners'}
+                    {config.edgePattern === 'wineglass' && '▷ Wine glass shape - concave stem flowing into rounded bulb top'}
+                  </div>
+                  
+                  <SliderInput
+                    label="Tooth Depth"
+                    value={config.toothDepth}
+                    min={1}
+                    max={20}
+                    step={0.5}
+                    unit="mm"
+                    onChange={(v) => update('toothDepth', v)}
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-500">
+                    Overall height of the connector shape.
+                  </p>
+                  
+                  <SliderInput
+                    label="Tooth Width"
+                    value={config.toothWidth}
+                    min={2}
+                    max={20}
+                    step={0.5}
+                    unit="mm"
+                    onChange={(v) => update('toothWidth', v)}
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-500">
+                    Width of each tooth at the base.
+                  </p>
+                  
+                  {(config.edgePattern === 'puzzle_smooth' || 
+                    config.edgePattern === 'tslot_smooth' || 
+                    config.edgePattern === 'wineglass') && (
+                    <>
+                      <SliderInput
+                        label="Concave Depth"
+                        value={config.concaveDepth ?? 50}
+                        min={0}
+                        max={100}
+                        step={5}
+                        unit="%"
+                        onChange={(v) => update('concaveDepth', v)}
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-500">
+                        How deep the inward swoop curves. 0% = nearly straight, 100% = deep hourglass.
+                      </p>
+                    </>
+                  )}
+                  
+                  {config.edgePattern === 'wineglass' && (
+                    <>
+                      <SliderInput
+                        label="Bulb Shape (Circular vs Ovular)"
+                        value={config.wineglassAspectRatio ?? 1.0}
+                        min={0.5}
+                        max={2.0}
+                        step={0.1}
+                        unit=""
+                        onChange={(v) => update('wineglassAspectRatio', v)}
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-500">
+                        1.0 = circular, &lt;1.0 = taller (ovular vertically), &gt;1.0 = wider (ovular horizontally).
+                      </p>
+                    </>
+                  )}
+                  
+                  <SliderInput
+                    label="Roof Peak Intensity"
+                    value={config.connectorRoofIntensity ?? 0}
+                    min={0}
+                    max={200}
+                    step={5}
+                    unit="%"
+                    onChange={(v) => update('connectorRoofIntensity', v)}
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-500">
+                    Adds a peaked "^" roof to connector tops. 0% = flat, 100% = standard peak height, up to 200% for more intense peaks.
+                  </p>
+                  
+                  {config.connectorRoofIntensity > 0 && (
+                    <>
+                      <SliderInput
+                        label="Roof Depth"
+                        value={config.connectorRoofDepth ?? 0}
+                        min={0}
+                        max={100}
+                        step={5}
+                        unit="%"
+                        onChange={(v) => update('connectorRoofDepth', v)}
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-500">
+                        How far down from the top the roof starts. 0% = roof at very top, 100% = roof at base.
+                      </p>
+                    </>
+                  )}
+                  
+                  <SliderInput
+                    label="Fit Tolerance"
+                    value={config.connectorTolerance}
+                    min={0.05}
+                    max={1.0}
+                    step={0.05}
+                    unit="mm"
+                    onChange={(v) => update('connectorTolerance', v)}
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-500">
+                    Typical FDM tolerance: 0.3mm. Increase if fit is too tight.
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Split Calculation Preview */}
+            {splitCalc && (
+              <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
+                <h4 className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 mb-2">SPLIT PREVIEW</h4>
+                <div className="space-y-1 text-xs">
+                  {splitCalc.needsSplit ? (
+                    <>
+                      <p className="text-slate-300">
+                        <span className="text-slate-500">Segments:</span>{' '}
+                        <span className="font-mono text-cyan-300">
+                          {splitCalc.segmentsX} x {splitCalc.segmentsY}
+                        </span>{' '}
+                        ({splitCalc.totalSegments} pieces)
+                      </p>
+                      <p className="text-slate-300">
+                        <span className="text-slate-500">Max segment size:</span>{' '}
+                        <span className="font-mono">
+                          {splitCalc.maxSegmentUnitsX} x {splitCalc.maxSegmentUnitsY} units
+                        </span>
+                      </p>
+                      <p className="text-slate-300">
+                        <span className="text-slate-500">Segment dimensions:</span>{' '}
+                        <span className="font-mono">
+                          {(splitCalc.maxSegmentUnitsX * config.gridSize).toFixed(0)}mm x {(splitCalc.maxSegmentUnitsY * config.gridSize).toFixed(0)}mm
+                        </span>
+                      </p>
+                      {config.connectorEnabled && (
+                        <p className="text-emerald-400 mt-2">
+                          Interlocking edges enabled - click edges below to customize
+                        </p>
+                      )}
+                      
+                      {/* Interactive segment edge editor */}
+                      {config.connectorEnabled && (
+                        <SegmentEdgeEditor 
+                          splitInfo={splitCalc}
+                          config={config}
+                          onChange={onChange}
+                        />
+                      )}
+                      
+                      {/* Simple grid preview when connectors disabled */}
+                      {!config.connectorEnabled && (
+                        <div className="mt-3 p-2 bg-slate-200 dark:bg-slate-800 rounded">
+                          <p className="text-slate-600 dark:text-slate-500 text-[10px] mb-1">Segment Layout:</p>
+                          <div 
+                            className="grid gap-1" 
+                            style={{ 
+                              gridTemplateColumns: `repeat(${splitCalc.segmentsX}, 1fr)`,
+                              maxWidth: '150px'
+                            }}
+                          >
+                            {splitCalc.segments.flat().map((seg, i) => (
+                              <div 
+                                key={i}
+                                className="bg-cyan-600/30 border border-cyan-500/50 rounded text-[8px] text-center py-1 text-cyan-300"
+                              >
+                                {seg.gridUnitsX}x{seg.gridUnitsY}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-emerald-400">
+                      No splitting needed - baseplate fits on printer bed!
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </CollapsibleSection>
+    </div>
+  );
+}
+
+// Easy Mode Placeholders
+function EasyBoxConfigPanel({ }: { config: BoxConfig; onChange: (config: BoxConfig) => void }) {
+  return (
+    <div className="p-3 space-y-2.5">
+      <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Easy mode controls will be specified separately.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function EasyBaseplateConfigPanel({ }: { config: BaseplateConfig; onChange: (config: BaseplateConfig) => void }) {
+  return (
+    <div className="p-3 space-y-2.5">
+      <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Easy mode controls will be specified separately.
+        </p>
+      </div>
+    </div>
   );
 }
 

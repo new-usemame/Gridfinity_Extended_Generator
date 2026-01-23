@@ -31,6 +31,30 @@ export function Generator() {
   const jsonButtonRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [jsonDropdownPosition, setJsonDropdownPosition] = useState({ top: 0, right: 0 });
+  const [mode, setMode] = useState<'easy' | 'pro' | 'expert'>('expert');
+
+  // Enforce hardcoded values when in Easy/Pro mode
+  useEffect(() => {
+    if (mode === 'easy' || mode === 'pro') {
+      setBoxConfig(prev => ({
+        ...prev,
+        preventBottomOverhangs: true,
+        flatBase: 'off',
+      }));
+      setBaseplateConfig(prev => ({
+        ...prev,
+        cornerSegments: 32,
+        syncSocketWithFoot: true,
+      }));
+      // In Pro mode, also enforce sizingMode for baseplate
+      if (mode === 'pro') {
+        setBaseplateConfig(prev => ({
+          ...prev,
+          sizingMode: 'fill_area_mm',
+        }));
+      }
+    }
+  }, [mode]);
 
   // Sync socket chamfer with foot chamfer when enabled
   // Always sync bottom corner radius between foot and socket
@@ -476,6 +500,39 @@ export function Generator() {
           {/* Right side: Theme Toggle, Auth, Save, User Dropdown and Controls */}
           <div className="flex items-center gap-3">
             <ThemeToggle />
+            {/* Mode Selector */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1 border border-slate-300 dark:border-slate-700">
+              <button
+                onClick={() => setMode('easy')}
+                className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${
+                  mode === 'easy'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Easy
+              </button>
+              <button
+                onClick={() => setMode('pro')}
+                className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${
+                  mode === 'pro'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Pro
+              </button>
+              <button
+                onClick={() => setMode('expert')}
+                className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${
+                  mode === 'expert'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Expert
+              </button>
+            </div>
             <div className="h-6 w-px bg-slate-300 dark:bg-slate-700"></div>
             {/* Auth UI - Leftmost on right side */}
             {!user ? (
@@ -733,6 +790,7 @@ export function Generator() {
           <div className="flex-1 overflow-y-auto min-h-0">
             <ConfigPanel
               type={activeEditor}
+              mode={mode}
               boxConfig={boxConfig}
               baseplateConfig={baseplateConfig}
               onBoxConfigChange={handleBoxConfigChange}
