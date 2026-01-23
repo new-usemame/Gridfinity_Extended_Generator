@@ -3124,8 +3124,10 @@ module screw_holes() {
 
     try {
       // Run OpenSCAD to generate STL
+      // Using --hardwarnings to fail fast on errors and --quiet to reduce overhead
+      // Note: OpenSCAD is single-threaded, so more vCPUs help with concurrent requests, not individual render speed
       const openscadCmd = process.env.OPENSCAD_PATH || 'openscad';
-      const cmd = `${openscadCmd} -o "${stlFilePath}" "${scadFilePath}"`;
+      const cmd = `${openscadCmd} --hardwarnings --quiet -o "${stlFilePath}" "${scadFilePath}"`;
       
       await execAsync(cmd, { timeout: timeoutMs }); // Configurable timeout (default 5 minutes for large models)
 
