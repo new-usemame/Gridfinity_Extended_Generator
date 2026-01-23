@@ -151,9 +151,9 @@ export const defaultBoxConfig: BoxConfig = {
   width: 2,
   depth: 2,
   height: 3,
-  wallThickness: 0.95,
+  wallThickness: 1.5,
   floorThickness: 0.7,
-  innerEdgeBevel: false,  // Default false = no bevel (disabled by default)
+  innerEdgeBevel: true,
   magnetEnabled: false,
   magnetDiameter: 6.5,
   magnetDepth: 2.4,
@@ -169,8 +169,8 @@ export const defaultBoxConfig: BoxConfig = {
   labelWidth: 100,
   dividersX: 0,
   dividersY: 0,
-  dividerHeight: 100,  // Default 100% = full height (matches original behavior)
-  dividerFloorBevel: false,  // Default false = no bevel (disabled by default)
+  dividerHeight: 100,
+  dividerFloorBevel: false,
   lipStyle: 'perfect_fit',
   flatBase: 'off',
   efficientFloor: 'off',
@@ -178,24 +178,24 @@ export const defaultBoxConfig: BoxConfig = {
   taperedCornerSize: 10,
   wallPattern: 'none',
   wallPatternSpacing: 2,
-  cornerRadius: 3.75,
-  preventBottomOverhangs: true,  // Enabled by default for better printing
-  bottomOverhangChamferAngle: 45,  // 45 degrees = standard chamfer
+  cornerRadius: 4,
+  preventBottomOverhangs: true,
+  bottomOverhangChamferAngle: 60,
   feetCornerRadius: 3.75,
-  footBottomCornerRadius: 0.5,  // Minimum safe value for bottom corner radius
+  footBottomCornerRadius: 6,
   gridSize: 42,
-  footChamferAngle: 45,      // 45 degrees = standard Gridfinity
-  footChamferHeight: 4.75,   // Standard total height: 0.8 + 1.8 + 2.15 = 4.75mm
-  lipChamferAngle: 45,       // 45 degrees = standard Gridfinity (matches foot)
-  lipChamferHeight: 4.4      // Standard total height: 0.7 + 1.8 + 1.9 = 4.4mm
+  footChamferAngle: 60,
+  footChamferHeight: 5,
+  lipChamferAngle: 60,
+  lipChamferHeight: 5
 };
 
 export const defaultBaseplateConfig: BaseplateConfig = {
-  sizingMode: 'grid_units',
-  width: 3,
-  depth: 3,
-  targetWidthMm: 200,
-  targetDepthMm: 200,
+  sizingMode: 'fill_area_mm',
+  width: 8,
+  depth: 8,
+  targetWidthMm: 130,
+  targetDepthMm: 130,
   allowHalfCellsX: true,
   allowHalfCellsY: true,
   paddingAlignment: 'center',
@@ -209,26 +209,26 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   centerScrew: false,
   weightCavity: false,
   removeBottomTaper: false,
-  cornerRadius: 3.75,
+  cornerRadius: 8,
   cornerSegments: 32,
   gridSize: 42,
-  socketChamferAngle: 45,      // Should match footChamferAngle for proper fit
-  socketChamferHeight: 4.75,   // Should match footChamferHeight for proper fit
-  socketBottomCornerRadius: 0.5,  // Matches foot bottom corner radius default
-  syncSocketWithFoot: true,    // Auto-sync with foot by default
+  socketChamferAngle: 60,
+  socketChamferHeight: 5,
+  socketBottomCornerRadius: 6,
+  syncSocketWithFoot: true,
   splitEnabled: false,
-  printerBedWidth: 220,        // Common printer bed size (Ender 3, Prusa, etc.)
-  printerBedDepth: 220,
-  connectorEnabled: true,      // Enable interlocking edges by default when splitting
-  connectorTolerance: 0.3,     // Standard FDM tolerance
-  edgePattern: 'wineglass',    // Default to first option (Wine Glass pattern)
-  toothDepth: 6,               // 6mm tooth depth (default for wineglass)
-  toothWidth: 6,               // 6mm tooth width at base
-  concaveDepth: 50,            // 50% concave swoop depth (0=shallow, 100=deep)
-  wineglassAspectRatio: 1.0,   // 1.0 = circular (default)
-  connectorRoofIntensity: 0,   // 0 = flat (default), higher = more peaked roof
-  connectorRoofDepth: 0,       // 0 = roof at top (default), higher = roof starts lower
-  edgeOverrides: []            // Empty - use automatic male/female assignment
+  printerBedWidth: 220,
+  printerBedDepth: 210,
+  connectorEnabled: true,
+  connectorTolerance: 0.3,
+  edgePattern: 'wineglass',
+  toothDepth: 5,
+  toothWidth: 5,
+  concaveDepth: 0,
+  wineglassAspectRatio: 1.3,
+  connectorRoofIntensity: 100,
+  connectorRoofDepth: 0,
+  edgeOverrides: []
 };
 
 // Generation result type
