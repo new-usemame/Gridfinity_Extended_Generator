@@ -50,6 +50,19 @@ if (process.env.NODE_ENV === 'production') {
     });
   });
   
+  // Root path - serve frontend in production, but ensure it always responds for healthcheck
+  app.get('/', (_req, res) => {
+    const indexPath = path.join(frontendPath, 'index.html');
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error('Error serving index.html:', err);
+        // Fallback to healthcheck response if frontend not available
+        res.json({ status: 'ok', service: 'gridfinity-generator', timestamp: new Date().toISOString() });
+      }
+    });
+  });
+  
+  // Catch-all for other routes - serve frontend
   app.get('*', (_req, res) => {
     const indexPath = path.join(frontendPath, 'index.html');
     res.sendFile(indexPath, (err) => {
@@ -58,6 +71,11 @@ if (process.env.NODE_ENV === 'production') {
         res.status(500).send('Frontend not available');
       }
     });
+  });
+} else {
+  // Root path health check (for Railway healthcheck in non-production)
+  app.get('/', (_req, res) => {
+    res.json({ status: 'ok', service: 'gridfinity-generator', timestamp: new Date().toISOString() });
   });
 }
 

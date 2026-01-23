@@ -6,5 +6,5 @@ watchPatterns = ["**/*"]
 [deploy]
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
-healthcheckPath = "/"
+healthcheckPath = "/api/health"
 healthcheckTimeout = 300
