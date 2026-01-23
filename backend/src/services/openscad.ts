@@ -2252,8 +2252,8 @@ module gridfinity_foot() {
     // This is what fits into the baseplate socket
     // Angle and height control the taper steepness and size
     
-    // Use user-specified feet corner radius, default to standard 3.75mm
-    foot_radius = feet_corner_radius > 0 ? feet_corner_radius : gf_corner_radius;
+    // Use user-specified feet corner radius (0 means no rounding)
+    foot_radius = feet_corner_radius;
     foot_full_size = grid_unit - clearance * 2;  // 41.5mm at top
     
     // Bottom size - calculated from chamfer angle and height
@@ -2324,8 +2324,8 @@ module walls_with_bottom_chamfer(width, depth, height, radius, chamfer_height, c
 
 module gridfinity_walls() {
     wall_height = box_height - base_height;
-    // Use the standard Gridfinity corner radius or user override
-    outer_radius = corner_radius > 0 ? corner_radius : gf_corner_radius;
+    // Use user-specified corner radius (0 means no rounding)
+    outer_radius = corner_radius;
     inner_radius = max(0, outer_radius - wall_thickness);
     
     // Chamfer height for overhang prevention (fixed at 0.3mm, angle is user-controlled)
@@ -2392,7 +2392,7 @@ module tapered_corner_cutouts(wall_height, outer_radius) {
     // Create tapered cutouts at the top internal corners for easier item access
     taper_size = tapered_corner_size;
     taper_height = wall_height * 0.6;
-    setback = outer_radius > 0 ? outer_radius : gf_corner_radius;
+    setback = outer_radius;
     
     // All four corners
     for (pos = [[setback, setback], [box_width - setback, setback], 
