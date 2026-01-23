@@ -390,11 +390,11 @@ function CombinedSceneContent({
       )}
 
       {/* Box Model with Z offset */}
-      {/* Note: boxZOffset controls Front-Back position (OpenSCAD Y-axis = Three.js Z-axis) */}
+      {/* Note: boxZOffset controls Up-Down position (OpenSCAD Z-axis = Three.js Y-axis) */}
       {boxGeometry && (
         <mesh 
           geometry={boxGeometry} 
-          position={[0, 0, boxZOffset]}
+          position={[0, boxZOffset, 0]}
         >
           <meshStandardMaterial
             color="#16a34a"
@@ -644,7 +644,7 @@ function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.Bu
         // This handles the combined view where boxGeometry is offset
         if (geometries.length > 1 && index === geometries.length - 1 && boxZOffset !== 0) {
           const adjustedBox = geo.boundingBox.clone();
-          adjustedBox.translate(new THREE.Vector3(0, 0, boxZOffset));
+          adjustedBox.translate(new THREE.Vector3(0, boxZOffset, 0));
           box.union(adjustedBox);
         } else {
           box.union(geo.boundingBox);
