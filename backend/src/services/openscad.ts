@@ -338,8 +338,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
                 grid_right_edge = grid_offset_x + width_units * grid_unit;
                 // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
                 // These positions mark boundaries between full cells where adjacent segments' full cells align.
-                // For segments with fractional units (e.g., depth_units = 1.5), ceil() rounds up to 2, ensuring
-                // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+                // For segments with fractional units (e.g., depth_units = 1.5, 4.5), ceil() rounds up the fractional
+                // part to count all full-cell boundaries. We subtract 1 to get internal connector positions.
+                // Example: depth_units = 1.5 (1 full cell + 0.5 half cell) → ceil(1.5) = 2 → 2-1 = 1 connector at position 1.
+                // Example: depth_units = 4.5 (4 full cells + 0.5 half cell) → ceil(4.5) = 5 → 5-1 = 4 connectors at positions 1,2,3,4.
                 // For single-cell segments (depth_units = 1), connector is placed at cell center (position 0.5).
                 if (depth_units > 1) {
                     for (i = [1 : max(1, ceil(depth_units)) - 1]) {
@@ -362,8 +364,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
                 grid_back_edge = grid_offset_y + depth_units * grid_unit;
                 // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
                 // These positions mark boundaries between full cells where adjacent segments' full cells align.
-                // For segments with fractional units (e.g., width_units = 1.5), ceil() rounds up to 2, ensuring
-                // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+                // For segments with fractional units (e.g., width_units = 1.5, 4.5), ceil() rounds up the fractional
+                // part to count all full-cell boundaries. We subtract 1 to get internal connector positions.
+                // Example: width_units = 1.5 (1 full cell + 0.5 half cell) → ceil(1.5) = 2 → 2-1 = 1 connector at position 1.
+                // Example: width_units = 4.5 (4 full cells + 0.5 half cell) → ceil(4.5) = 5 → 5-1 = 4 connectors at positions 1,2,3,4.
                 // For single-cell segments (width_units = 1), connector is placed at cell center (position 0.5).
                 if (width_units > 1) {
                     for (i = [1 : max(1, ceil(width_units)) - 1]) {
@@ -385,8 +389,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             if (left_edge == "male") {
                 // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
                 // These positions mark boundaries between full cells where adjacent segments' full cells align.
-                // For segments with fractional units (e.g., depth_units = 1.5), ceil() rounds up to 2, ensuring
-                // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+                // For segments with fractional units (e.g., depth_units = 1.5, 4.5), ceil() rounds up the fractional
+                // part to count all full-cell boundaries. We subtract 1 to get internal connector positions.
+                // Example: depth_units = 1.5 (1 full cell + 0.5 half cell) → ceil(1.5) = 2 → 2-1 = 1 connector at position 1.
+                // Example: depth_units = 4.5 (4 full cells + 0.5 half cell) → ceil(4.5) = 5 → 5-1 = 4 connectors at positions 1,2,3,4.
                 // For single-cell segments (depth_units = 1), connector is placed at cell center (position 0.5).
                 if (depth_units > 1) {
                     for (i = [1 : max(1, ceil(depth_units)) - 1]) {
@@ -410,8 +416,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             if (front_edge == "male") {
                 // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
                 // These positions mark boundaries between full cells where adjacent segments' full cells align.
-                // For segments with fractional units (e.g., width_units = 1.5), ceil() rounds up to 2, ensuring
-                // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+                // For segments with fractional units (e.g., width_units = 1.5, 4.5), ceil() rounds up the fractional
+                // part to count all full-cell boundaries. We subtract 1 to get internal connector positions.
+                // Example: width_units = 1.5 (1 full cell + 0.5 half cell) → ceil(1.5) = 2 → 2-1 = 1 connector at position 1.
+                // Example: width_units = 4.5 (4 full cells + 0.5 half cell) → ceil(4.5) = 5 → 5-1 = 4 connectors at positions 1,2,3,4.
                 // For single-cell segments (width_units = 1), connector is placed at cell center (position 0.5).
                 if (width_units > 1) {
                     for (i = [1 : max(1, ceil(width_units)) - 1]) {
@@ -477,8 +485,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         if (left_edge == "female") {
             // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
             // These positions mark boundaries between full cells where adjacent segments' full cells align.
-            // For segments with fractional units (e.g., depth_units = 1.5), ceil() rounds up to 2, ensuring
-            // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+            // For segments with fractional units (e.g., depth_units = 1.5, 4.5), ceil() rounds up the fractional
+            // part to count all full-cell boundaries. We subtract 1 to get internal connector positions.
+            // Example: depth_units = 1.5 (1 full cell + 0.5 half cell) → ceil(1.5) = 2 → 2-1 = 1 connector at position 1.
+            // Example: depth_units = 4.5 (4 full cells + 0.5 half cell) → ceil(4.5) = 5 → 5-1 = 4 connectors at positions 1,2,3,4.
             // For single-cell segments (depth_units = 1), connector is placed at cell center (position 0.5).
             if (depth_units > 1) {
                 for (i = [1 : max(1, ceil(depth_units)) - 1]) {
@@ -502,8 +512,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
         if (front_edge == "female") {
             // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
             // These positions mark boundaries between full cells where adjacent segments' full cells align.
-            // For segments with fractional units (e.g., width_units = 1.5), ceil() rounds up to 2, ensuring
-            // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+            // For segments with fractional units (e.g., width_units = 1.5, 4.5), ceil() rounds up the fractional
+            // part to count all full-cell boundaries. We subtract 1 to get internal connector positions.
+            // Example: width_units = 1.5 (1 full cell + 0.5 half cell) → ceil(1.5) = 2 → 2-1 = 1 connector at position 1.
+            // Example: width_units = 4.5 (4 full cells + 0.5 half cell) → ceil(4.5) = 5 → 5-1 = 4 connectors at positions 1,2,3,4.
             // For single-cell segments (width_units = 1), connector is placed at cell center (position 0.5).
             if (width_units > 1) {
                 for (i = [1 : max(1, ceil(width_units)) - 1]) {
@@ -527,8 +539,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             grid_right_edge = grid_offset_x + width_units * grid_unit;
             // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
             // These positions mark boundaries between full cells where adjacent segments' full cells align.
-            // For segments with fractional units (e.g., depth_units = 1.5), ceil() rounds up to 2, ensuring
-            // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+            // For segments with fractional units (e.g., depth_units = 1.5, 4.5), ceil() rounds up the fractional
+            // part to count all full-cell boundaries. We subtract 1 to get internal connector positions.
+            // Example: depth_units = 1.5 (1 full cell + 0.5 half cell) → ceil(1.5) = 2 → 2-1 = 1 connector at position 1.
+            // Example: depth_units = 4.5 (4 full cells + 0.5 half cell) → ceil(4.5) = 5 → 5-1 = 4 connectors at positions 1,2,3,4.
             // For single-cell segments (depth_units = 1), connector is placed at cell center (position 0.5).
             if (depth_units > 1) {
                 for (i = [1 : max(1, ceil(depth_units)) - 1]) {
@@ -554,8 +568,10 @@ module segment_base(width_units, depth_units, left_edge, right_edge, front_edge,
             grid_back_edge = grid_offset_y + depth_units * grid_unit;
             // Connector placement: Place at full-cell boundary positions (integer grid units: 1, 2, 3...)
             // These positions mark boundaries between full cells where adjacent segments' full cells align.
-            // For segments with fractional units (e.g., width_units = 1.5), ceil() rounds up to 2, ensuring
-            // connectors are placed at the end of the last full cell (position 1), not at fractional positions.
+            // For segments with fractional units (e.g., width_units = 1.5, 4.5), ceil() rounds up the fractional
+            // part to count all full-cell boundaries. We subtract 1 to get internal connector positions.
+            // Example: width_units = 1.5 (1 full cell + 0.5 half cell) → ceil(1.5) = 2 → 2-1 = 1 connector at position 1.
+            // Example: width_units = 4.5 (4 full cells + 0.5 half cell) → ceil(4.5) = 5 → 5-1 = 4 connectors at positions 1,2,3,4.
             // For single-cell segments (width_units = 1), connector is placed at cell center (position 0.5).
             if (width_units > 1) {
                 for (i = [1 : max(1, ceil(width_units)) - 1]) {
