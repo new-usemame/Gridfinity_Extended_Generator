@@ -1034,7 +1034,7 @@ function BaseplateConfigPanel({ config, onChange }: { config: BaseplateConfig; o
           label="Corner Radius"
           value={config.cornerRadius}
           min={0}
-          max={5}
+          max={20}
           step={0.25}
           unit="mm"
           onChange={(v) => update('cornerRadius', v)}
