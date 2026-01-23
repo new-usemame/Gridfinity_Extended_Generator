@@ -1,15 +1,72 @@
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit - let the server continue
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Don't exit immediately - log and try to continue
+});
+
+console.log('Starting server initialization...');
+console.log('PORT:', process.env.PORT);
+console.log('NODE_ENV:', process.env.NODE_ENV);
+
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+
+console.log('Express imported, loading routes...');
+
 import { generateRouter } from './routes/generate.js';
 import { filesRouter } from './routes/files.js';
 import { authRouter } from './routes/auth.js';
 import { preferencesRouter } from './routes/preferences.js';
 import { feedbackRouter } from './routes/feedback.js';
 import { gameRouter } from './routes/game.js';
+import { isDatabaseReady, getDatabaseError } from './services/database.js';
+
+console.log('Routes imported, creating app...');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+console.log('App created, setting up middleware...');
+
+// Health check - register FIRST before any other routes
+// This ensures Railway can check health even if other routes fail
+app.get('/api/health', (_req, res) => {
+  try {
+    const dbReady = isDatabaseReady();
+    const dbError = getDatabaseError();
+    
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      database: {
+        ready: dbReady,
+        error: dbError ? dbError.message : null
+      }
+    });
+  } catch (err) {
+    // Even if database check fails, return ok status
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      database: {
+        ready: false,
+        error: err instanceof Error ? err.message : 'Unknown error'
+      }
+    });
+  }
+});
+
+// Root path health check (for Railway fallback)
+app.get('/', (_req, res) => {
+  res.json({ status: 'ok', service: 'gridfinity-generator', timestamp: new Date().toISOString() });
+});
 
 // Middleware
 app.use(cors());
@@ -25,11 +82,6 @@ app.use('/api/auth', authRouter);
 app.use('/api/preferences', preferencesRouter);
 app.use('/api/feedback', feedbackRouter);
 app.use('/api/game', gameRouter);
-
-// Health check
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
@@ -51,6 +103,7 @@ if (process.env.NODE_ENV === 'production') {
   });
   
   // Root path - serve frontend in production, but ensure it always responds for healthcheck
+  // Note: This will override the root handler above, but that's ok - we want frontend in production
   app.get('/', (_req, res) => {
     const indexPath = path.join(frontendPath, 'index.html');
     res.sendFile(indexPath, (err) => {
@@ -72,13 +125,19 @@ if (process.env.NODE_ENV === 'production') {
       }
     });
   });
-} else {
-  // Root path health check (for Railway healthcheck in non-production)
-  app.get('/', (_req, res) => {
-    res.json({ status: 'ok', service: 'gridfinity-generator', timestamp: new Date().toISOString() });
-  });
 }
 
-app.listen(Number(PORT), '0.0.0.0', () => {
-  console.log(`Gridfinity Generator backend running on port ${PORT}`);
-});
+try {
+  app.listen(Number(PORT), '0.0.0.0', () => {
+    console.log(`✓ Gridfinity Generator backend running on port ${PORT}`);
+    console.log(`✓ Health check available at http://0.0.0.0:${PORT}/api/health`);
+    console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`✓ Server is ready to accept connections`);
+  }).on('error', (err: Error) => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
+} catch (error) {
+  console.error('Error starting server:', error);
+  process.exit(1);
+}

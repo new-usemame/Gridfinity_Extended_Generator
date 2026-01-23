@@ -30,6 +30,10 @@ if (usePostgres) {
   });
 }
 
+// Track database initialization status
+let dbInitialized = false;
+let dbInitializationError: Error | null = null;
+
 // Convert SQLite-style ? parameters to PostgreSQL $1, $2, etc.
 function convertQuery(query: string): string {
   if (!usePostgres) return query;
@@ -80,6 +84,7 @@ async function dbExec(query: string): Promise<void> {
 
 // Initialize schema
 export async function initializeDatabase() {
+  try {
   if (usePostgres && pgPool) {
     // PostgreSQL schema
     await dbExec(`
@@ -219,6 +224,24 @@ export async function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS idx_game_scores_user_id ON game_scores(user_id)
     `);
   }
+  dbInitialized = true;
+  dbInitializationError = null;
+  } catch (err) {
+    dbInitialized = false;
+    dbInitializationError = err instanceof Error ? err : new Error(String(err));
+    console.error('Database initialization failed (server will continue):', err);
+    // Don't exit - allow server to start even if DB isn't ready
+  }
+}
+
+// Check if database is initialized
+export function isDatabaseReady(): boolean {
+  return dbInitialized;
+}
+
+// Get database initialization error
+export function getDatabaseError(): Error | null {
+  return dbInitializationError;
 }
 
 // User operations
@@ -497,10 +520,10 @@ export const gameScoresDb = {
   },
 };
 
-// Initialize on import
+// Initialize on import (non-blocking - server will start even if DB fails)
 initializeDatabase().catch(err => {
-  console.error('Failed to initialize database:', err);
-  process.exit(1);
+  // Error already logged in initializeDatabase
+  // Server will continue to run, but database operations may fail
 });
 
 // Cleanup on process exit
