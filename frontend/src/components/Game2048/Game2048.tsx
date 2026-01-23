@@ -332,21 +332,34 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
   };
 
   const getTileColor = (value: number): string => {
-    if (value === 0) return 'bg-slate-300 dark:bg-slate-700';
+    if (value === 0) return 'bg-white/10 dark:bg-white/10';
     const colors: Record<number, string> = {
-      2: 'bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-100',
-      4: 'bg-green-200 dark:bg-green-800/40 text-green-900 dark:text-green-100',
-      8: 'bg-green-300 dark:bg-green-700/50 text-green-900 dark:text-green-100',
-      16: 'bg-green-400 dark:bg-green-600/60 text-white',
-      32: 'bg-green-500 dark:bg-green-500 text-white',
-      64: 'bg-green-600 dark:bg-green-400 text-white',
-      128: 'bg-cyan-400 dark:bg-cyan-600 text-white',
-      256: 'bg-cyan-500 dark:bg-cyan-500 text-white',
-      512: 'bg-cyan-600 dark:bg-cyan-400 text-white',
-      1024: 'bg-cyan-700 dark:bg-cyan-300 text-white',
-      2048: 'bg-gradient-to-br from-green-500 to-cyan-500 text-white',
+      2: 'bg-green-50 dark:bg-green-900/20 text-green-900 dark:text-green-100',
+      4: 'bg-green-100 dark:bg-green-800/30 text-green-900 dark:text-green-100',
+      8: 'bg-green-200 dark:bg-green-700/40 text-green-900 dark:text-green-100',
+      16: 'bg-green-300 dark:bg-green-600/50 text-green-900 dark:text-green-100',
+      32: 'bg-green-400 dark:bg-green-500/60 text-white',
+      64: 'bg-green-500 dark:bg-green-400 text-white',
+      128: 'bg-green-600 dark:bg-green-500 text-white',
+      256: 'bg-cyan-400 dark:bg-cyan-600 text-white',
+      512: 'bg-cyan-500 dark:bg-cyan-500 text-white',
+      1024: 'bg-cyan-600 dark:bg-cyan-400 text-white',
+      2048: 'bg-gradient-to-br from-green-500 to-cyan-500 dark:from-green-400 dark:to-cyan-400 text-white',
+      4096: 'bg-gradient-to-br from-green-600 to-cyan-600 dark:from-green-500 dark:to-cyan-500 text-white',
+      8192: 'bg-gradient-to-br from-cyan-500 to-green-500 dark:from-cyan-400 dark:to-green-400 text-white',
     };
-    return colors[value] || 'bg-slate-400 dark:bg-slate-600 text-white';
+    // For values beyond our defined colors, use a gradient based on value
+    if (!colors[value]) {
+      // Cycle through green-cyan gradients for very high values
+      const gradientIndex = Math.floor(Math.log2(value) / 2) % 3;
+      const gradients = [
+        'bg-gradient-to-br from-green-500 to-cyan-500 dark:from-green-400 dark:to-cyan-400',
+        'bg-gradient-to-br from-cyan-500 to-green-500 dark:from-cyan-400 dark:to-green-400',
+        'bg-gradient-to-br from-green-600 to-cyan-600 dark:from-green-500 dark:to-cyan-500',
+      ];
+      return `${gradients[gradientIndex]} text-white`;
+    }
+    return colors[value];
   };
 
   return (
@@ -370,7 +383,7 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
       </div>
 
       {/* Game Board */}
-      <div className="bg-slate-200 dark:bg-slate-800 rounded-xl p-2 sm:p-4 relative">
+      <div className="bg-transparent rounded-xl p-2 sm:p-4 relative">
         <div className="grid grid-cols-4 gap-2">
           {board.map((row, i) =>
             row.map((cell, j) => (
@@ -388,12 +401,12 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
 
         {/* Game Over Overlay */}
         {(gameOver || won) && (
-          <div className="absolute inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center rounded-xl">
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-4 text-center">
-              <div className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+          <div className="absolute inset-0 bg-black/70 dark:bg-black/80 flex items-center justify-center rounded-xl">
+            <div className="bg-black/80 dark:bg-black/90 border border-slate-300/50 dark:border-slate-600/50 rounded-xl p-4 text-center">
+              <div className="text-lg font-bold text-white mb-2">
                 {won ? 'You Win!' : 'Game Over'}
               </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+              <div className="text-sm text-white/80 dark:text-white/80 mb-4">
                 Score: {score} | Time: {formatTime(elapsedTime)}
               </div>
               <button

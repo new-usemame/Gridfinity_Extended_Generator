@@ -60,7 +60,7 @@ export function Leaderboard({ limit = 10, compact = false }: LeaderboardProps) {
   if (loading) {
     return (
       <div className="text-center py-4">
-        <div className="text-sm text-slate-600 dark:text-slate-400">Loading...</div>
+        <div className="text-sm text-white/70 dark:text-white/70">Loading...</div>
       </div>
     );
   }
@@ -68,27 +68,27 @@ export function Leaderboard({ limit = 10, compact = false }: LeaderboardProps) {
   if (error) {
     return (
       <div className="text-center py-4">
-        <div className="text-sm text-red-600 dark:text-red-400">{error}</div>
+        <div className="text-sm text-red-300 dark:text-red-300">{error}</div>
       </div>
     );
   }
 
   return (
     <div className={compact ? 'space-y-1' : 'space-y-2'}>
-      <div className={`font-semibold text-slate-600 dark:text-slate-400 ${compact ? 'text-xs mb-2' : 'text-sm mb-3'}`}>
+      <div className={`font-semibold text-white/90 dark:text-white/90 ${compact ? 'text-xs mb-2' : 'text-sm mb-3'}`}>
         Leaderboard
       </div>
       
       {userRank !== null && (
-        <div className="mb-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-xs">
-          <div className="text-green-600 dark:text-green-400 font-medium">
+        <div className="mb-2 p-2 bg-green-500/20 dark:bg-green-500/20 border border-green-500/30 dark:border-green-500/30 rounded text-xs">
+          <div className="text-green-300 dark:text-green-300 font-medium">
             You are ranked #{userRank}
           </div>
         </div>
       )}
 
       {leaderboard.length === 0 ? (
-        <div className={`text-slate-500 dark:text-slate-500 ${compact ? 'text-xs' : 'text-sm'} py-4 text-center`}>
+        <div className={`text-white/60 dark:text-white/60 ${compact ? 'text-xs' : 'text-sm'} py-4 text-center`}>
           No scores yet
         </div>
       ) : (
@@ -98,19 +98,19 @@ export function Leaderboard({ limit = 10, compact = false }: LeaderboardProps) {
               key={`${entry.rank}-${entry.username}-${entry.score}`}
               className={`flex items-center justify-between px-2 py-1 rounded ${
                 entry.isCurrentUser
-                  ? 'bg-green-50 dark:bg-green-900/20'
-                  : 'hover:bg-slate-100 dark:hover:bg-slate-800/50'
+                  ? 'bg-green-500/20 dark:bg-green-500/20 border border-green-500/30'
+                  : 'hover:bg-white/5 dark:hover:bg-white/5'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <span className={`font-mono ${compact ? 'text-xs w-6' : 'text-sm w-8'} text-green-600 dark:text-green-400 flex-shrink-0`}>
+                <span className={`font-mono ${compact ? 'text-xs w-6' : 'text-sm w-8'} text-green-300 dark:text-green-300 flex-shrink-0`}>
                   #{entry.rank}
                 </span>
-                <span className={`${compact ? 'text-xs' : 'text-sm'} text-slate-700 dark:text-slate-300 truncate`}>
+                <span className={`${compact ? 'text-xs' : 'text-sm'} text-white/90 dark:text-white/90 truncate`}>
                   {entry.username}
                 </span>
               </div>
-              <span className={`${compact ? 'text-xs' : 'text-sm'} font-semibold text-slate-900 dark:text-white flex-shrink-0 ml-2`}>
+              <span className={`${compact ? 'text-xs' : 'text-sm'} font-semibold text-white dark:text-white flex-shrink-0 ml-2`}>
                 {entry.score.toLocaleString()}
               </span>
             </div>

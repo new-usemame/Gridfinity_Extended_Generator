@@ -63,10 +63,12 @@ app.get('/api/health', (_req, res) => {
   }
 });
 
-// Root path health check (for Railway fallback)
-app.get('/', (_req, res) => {
-  res.json({ status: 'ok', service: 'gridfinity-generator', timestamp: new Date().toISOString() });
-});
+// Root path health check (only in development - production serves frontend)
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/', (_req, res) => {
+    res.json({ status: 'ok', service: 'gridfinity-generator', timestamp: new Date().toISOString() });
+  });
+}
 
 // Middleware
 app.use(cors());
