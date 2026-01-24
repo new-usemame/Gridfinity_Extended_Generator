@@ -6,7 +6,7 @@ import { SelectInput } from './SelectInput';
 import { NumberInput } from './NumberInput';
 
 interface ConfigPanelProps {
-  type: 'box' | 'baseplate';
+  type: 'box' | 'baseplate' | 'combined';
   mode: 'easy' | 'pro' | 'expert';
   boxConfig: BoxConfig;
   baseplateConfig: BaseplateConfig;
@@ -22,6 +22,34 @@ export function ConfigPanel({
   onBoxConfigChange,
   onBaseplateConfigChange
 }: ConfigPanelProps) {
+  if (type === 'combined') {
+    // Combined editor is intended for Easy/Pro modes. Expert stays tabbed.
+    if (mode === 'pro') {
+      return (
+        <div className="space-y-2.5">
+          <ProBoxConfigPanel
+            config={boxConfig}
+            baseplateConfig={baseplateConfig}
+            onChange={onBoxConfigChange}
+            onBaseplateConfigChange={onBaseplateConfigChange}
+          />
+          <ProBaseplateConfigPanel
+            config={baseplateConfig}
+            onChange={onBaseplateConfigChange}
+          />
+        </div>
+      );
+    }
+
+    // Easy mode (placeholder until specified)
+    return (
+      <div className="space-y-2.5">
+        <EasyBoxConfigPanel config={boxConfig} onChange={onBoxConfigChange} />
+        <EasyBaseplateConfigPanel config={baseplateConfig} onChange={onBaseplateConfigChange} />
+      </div>
+    );
+  }
+
   if (type === 'box') {
     if (mode === 'expert') {
       return (
@@ -148,7 +176,7 @@ function ProBoxConfigPanel({
   return (
     <div className="p-3 space-y-2.5">
       {/* Box Section */}
-      <CollapsibleSection title="Box" icon="📦" defaultOpen>
+      <CollapsibleSection title="Box" icon="📦">
         {/* 2a: Width, Depth, Height */}
         <SliderInput
           label="Width"
@@ -411,7 +439,7 @@ function ProBaseplateConfigPanel({
   return (
     <div className="p-3 space-y-2.5">
       {/* Baseplate Section (Fill Area mode only) */}
-      <CollapsibleSection title="Baseplate" icon="📏" defaultOpen>
+      <CollapsibleSection title="Baseplate" icon="📏">
         {/* 3a: Sizing Mode - Fixed to fill_area_mm (no control) */}
         <p className="text-xs text-slate-500 dark:text-slate-500 mb-2">
           Sizing Mode: Fill Area (mm) - Fixed in Pro mode
@@ -806,11 +834,11 @@ function ProBaseplateConfigPanel({
 function EasyBoxConfigPanel({ }: { config: BoxConfig; onChange: (config: BoxConfig) => void }) {
   return (
     <div className="p-3 space-y-2.5">
-      <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+      <CollapsibleSection title="Easy Mode (Box)" icon="📦">
         <p className="text-sm text-slate-600 dark:text-slate-400">
           Easy mode controls will be specified separately.
         </p>
-      </div>
+      </CollapsibleSection>
     </div>
   );
 }
@@ -818,11 +846,11 @@ function EasyBoxConfigPanel({ }: { config: BoxConfig; onChange: (config: BoxConf
 function EasyBaseplateConfigPanel({ }: { config: BaseplateConfig; onChange: (config: BaseplateConfig) => void }) {
   return (
     <div className="p-3 space-y-2.5">
-      <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+      <CollapsibleSection title="Easy Mode (Baseplate)" icon="📏">
         <p className="text-sm text-slate-600 dark:text-slate-400">
           Easy mode controls will be specified separately.
         </p>
-      </div>
+      </CollapsibleSection>
     </div>
   );
 }

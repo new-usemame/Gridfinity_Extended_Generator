@@ -776,33 +776,35 @@ export function Generator() {
       <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Config Panel - Sidebar with independent scroll */}
         <aside className="w-96 flex-shrink-0 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 h-full flex flex-col">
-          {/* Tab Selector */}
-          <div className="flex-shrink-0 flex border-b border-slate-200 dark:border-slate-800">
-            <button
-              onClick={() => setActiveEditor('box')}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                activeEditor === 'box'
-                  ? 'bg-slate-100 dark:bg-slate-800 text-green-600 dark:text-green-400 border-b-2 border-green-500 dark:border-green-400'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/50 dark:hover:bg-slate-800/50'
-              }`}
-            >
-              Box Editor
-            </button>
-            <button
-              onClick={() => setActiveEditor('baseplate')}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                activeEditor === 'baseplate'
-                  ? 'bg-slate-100 dark:bg-slate-800 text-green-600 dark:text-green-400 border-b-2 border-green-500 dark:border-green-400'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/50 dark:hover:bg-slate-800/50'
-              }`}
-            >
-              Baseplate Editor
-            </button>
-          </div>
+          {/* Tab Selector (Expert mode only) */}
+          {mode === 'expert' && (
+            <div className="flex-shrink-0 flex border-b border-slate-200 dark:border-slate-800">
+              <button
+                onClick={() => setActiveEditor('box')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  activeEditor === 'box'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-green-600 dark:text-green-400 border-b-2 border-green-500 dark:border-green-400'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/50 dark:hover:bg-slate-800/50'
+                }`}
+              >
+                Box Editor
+              </button>
+              <button
+                onClick={() => setActiveEditor('baseplate')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  activeEditor === 'baseplate'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-green-600 dark:text-green-400 border-b-2 border-green-500 dark:border-green-400'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/50 dark:hover:bg-slate-800/50'
+                }`}
+              >
+                Baseplate Editor
+              </button>
+            </div>
+          )}
           {/* Active Editor Panel - Scrollable */}
           <div className="flex-1 overflow-y-auto min-h-0">
             <ConfigPanel
-              type={activeEditor}
+              type={mode === 'expert' ? activeEditor : 'combined'}
               mode={mode}
               boxConfig={boxConfig}
               baseplateConfig={baseplateConfig}
