@@ -218,3 +218,61 @@ input:focus, select:focus, button:focus {
     linear-gradient(90deg, rgba(22, 163, 74, 0.03) 1px, transparent 1px);
   background-size: 42px 42px;
 }
+
+/* Override Tailwind's hardcoded colors to use CSS variables for themed dark modes */
+/* This ensures blue, purple, and orange themes use their specific color palettes */
+/* We need to be more specific than Tailwind's .dark .dark\:bg-* selectors */
+
+/* Override background colors for themed dark modes */
+[data-theme="blue"] .dark [class*="dark:bg-slate-950"],
+[data-theme="blue"] .dark [class*="dark:bg-slate-900"],
+[data-theme="purple"] .dark [class*="dark:bg-slate-950"],
+[data-theme="purple"] .dark [class*="dark:bg-slate-900"],
+[data-theme="orange"] .dark [class*="dark:bg-slate-950"],
+[data-theme="orange"] .dark [class*="dark:bg-slate-900"] {
+  background-color: var(--bg-primary) !important;
+}
+
+[data-theme="blue"] .dark [class*="dark:bg-slate-800"],
+[data-theme="blue"] .dark [class*="dark:bg-slate-700"],
+[data-theme="purple"] .dark [class*="dark:bg-slate-800"],
+[data-theme="purple"] .dark [class*="dark:bg-slate-700"],
+[data-theme="orange"] .dark [class*="dark:bg-slate-800"],
+[data-theme="orange"] .dark [class*="dark:bg-slate-700"] {
+  background-color: var(--bg-tertiary) !important;
+}
+
+/* Override text colors for themed dark modes */
+[data-theme="blue"] .dark [class*="dark:text-white"],
+[data-theme="blue"] .dark [class*="dark:text-slate-100"],
+[data-theme="purple"] .dark [class*="dark:text-white"],
+[data-theme="purple"] .dark [class*="dark:text-slate-100"],
+[data-theme="orange"] .dark [class*="dark:text-white"],
+[data-theme="orange"] .dark [class*="dark:text-slate-100"] {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="blue"] .dark [class*="dark:text-slate-300"],
+[data-theme="blue"] .dark [class*="dark:text-slate-400"],
+[data-theme="purple"] .dark [class*="dark:text-slate-300"],
+[data-theme="purple"] .dark [class*="dark:text-slate-400"],
+[data-theme="orange"] .dark [class*="dark:text-slate-300"],
+[data-theme="orange"] .dark [class*="dark:text-slate-400"] {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="blue"] .dark [class*="dark:text-slate-500"],
+[data-theme="purple"] .dark [class*="dark:text-slate-500"],
+[data-theme="orange"] .dark [class*="dark:text-slate-500"] {
+  color: var(--text-muted) !important;
+}
+
+/* Override border colors for themed dark modes */
+[data-theme="blue"] .dark [class*="dark:border-slate-700"],
+[data-theme="blue"] .dark [class*="dark:border-slate-800"],
+[data-theme="purple"] .dark [class*="dark:border-slate-700"],
+[data-theme="purple"] .dark [class*="dark:border-slate-800"],
+[data-theme="orange"] .dark [class*="dark:border-slate-700"],
+[data-theme="orange"] .dark [class*="dark:border-slate-800"] {
+  border-color: var(--border-color) !important;
+}

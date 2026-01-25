@@ -271,8 +271,8 @@ export const userDb = {
   },
 
   findById: async (id: number) => {
-    const result = await dbQuery('SELECT id, email, created_at FROM users WHERE id = ?', [id]);
-    return result.row as { id: number; email: string; created_at: string } | undefined;
+    const result = await dbQuery('SELECT id, email, public_username, username_public, created_at FROM users WHERE id = ?', [id]);
+    return result.row as { id: number; email: string; public_username: string | null; username_public: boolean; created_at: string } | undefined;
   },
 
   findByPublicUsername: async (username: string, excludeUserId?: number) => {
@@ -439,7 +439,7 @@ export const gameScoresDb = {
   },
 
   getLeaderboard: async (limit: number = 100, requestingUserId: number | null = null): Promise<Array<GameScore & { rank: number }>> => {
-    // Get top scores - prioritize those with public usernames, but include all for ranking
+    // Get top scores ordered by score DESC
     const result = await dbQuery(
       `SELECT 
         gs.*,
@@ -447,24 +447,33 @@ export const gameScoresDb = {
       FROM game_scores gs
       ORDER BY gs.score DESC, gs.id ASC
       LIMIT ?`,
-      [limit * 2] // Get more to filter
+      [limit]
     );
     let rows = (result.rows || []) as Array<GameScore & { rank: number }>;
     
-    // Filter to show public usernames first, then include user's own score if authenticated
-    const publicRows = rows.filter(r => r.public_username !== null).slice(0, limit);
-    const userRow = requestingUserId ? rows.find(r => r.user_id === requestingUserId) : null;
-    
-    // Combine: public rows + user's row if not already included
-    const finalRows = [...publicRows];
-    if (userRow && !finalRows.find(r => r.user_id === requestingUserId)) {
-      finalRows.push(userRow);
+    // If requestingUserId is provided, ensure their score is included even if not in top N
+    if (requestingUserId) {
+      const userRow = await dbQuery(
+        `SELECT 
+          gs.*,
+          (SELECT COUNT(*) + 1 FROM game_scores gs2 
+           WHERE gs2.score > gs.score OR (gs2.score = gs.score AND gs2.id < gs.id)) as rank
+        FROM game_scores gs
+        WHERE gs.user_id = ?
+        ORDER BY gs.score DESC
+        LIMIT 1`,
+        [requestingUserId]
+      );
+      
+      if (userRow.row && !rows.find(r => r.user_id === requestingUserId)) {
+        rows.push(userRow.row as GameScore & { rank: number });
+        // Re-sort and limit
+        rows.sort((a, b) => a.rank - b.rank);
+        rows = rows.slice(0, limit);
+      }
     }
     
-    // Sort by rank
-    finalRows.sort((a, b) => a.rank - b.rank);
-    
-    return finalRows.slice(0, limit);
+    return rows;
   },
 
   getUserHighScore: async (userId: number): Promise<GameScore | null> => {

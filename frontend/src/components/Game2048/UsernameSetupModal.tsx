@@ -4,7 +4,7 @@ import { AuthModal } from '../AuthModal/AuthModal';
 
 interface UsernameSetupModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose: (wasSubmitted?: boolean) => void;
   score: number;
   elapsedTime: number;
   onScoreSubmitted: () => void;
@@ -62,6 +62,10 @@ export function UsernameSetupModal({
       setUserRank(data.rank);
       setSubmitted(true);
       onScoreSubmitted();
+      // Close modal after a brief delay to show success
+      setTimeout(() => {
+        onClose(true); // Pass true to indicate score was submitted
+      }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit score');
     } finally {
@@ -123,6 +127,10 @@ export function UsernameSetupModal({
       setUserRank(data.rank);
       setSubmitted(true);
       onScoreSubmitted();
+      // Close modal after a brief delay to show success
+      setTimeout(() => {
+        onClose(true); // Pass true to indicate score was submitted
+      }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit score');
     } finally {
@@ -142,7 +150,7 @@ export function UsernameSetupModal({
     <>
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
-        onClick={onClose}
+        onClick={() => onClose(false)}
       >
         <div
           className="bg-white dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700/50 rounded-3xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in zoom-in-95 duration-200"
@@ -160,7 +168,7 @@ export function UsernameSetupModal({
                 </p>
               </div>
               <button
-                onClick={onClose}
+                onClick={() => onClose(false)}
                 className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors p-1 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-lg"
                 aria-label="Close"
               >
@@ -183,7 +191,7 @@ export function UsernameSetupModal({
                   </div>
                 )}
                 <button
-                  onClick={onClose}
+                  onClick={() => onClose(false)}
                   className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-500 dark:from-green-500 dark:to-green-400 text-white rounded-xl font-semibold hover:from-green-500 hover:to-green-400 dark:hover:from-green-400 dark:hover:to-green-300 transition-all"
                 >
                   Close

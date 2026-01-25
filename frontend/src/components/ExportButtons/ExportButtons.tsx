@@ -215,8 +215,8 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig, 
   };
 
   return (
-    <div className="space-y-4 min-w-0">
-      {/* Summary */}
+    <div className="space-y-3 min-w-0">
+      {/* Primary Action: Download All */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 min-w-0">
         <div className="flex items-center gap-2 flex-wrap min-w-0">
           <span className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">Split baseplate:</span>
@@ -230,7 +230,6 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig, 
           )}
         </div>
         
-        {/* Download All */}
         <button
           onClick={downloadAllSequentially}
           disabled={isGenerating}
@@ -259,11 +258,10 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig, 
         </button>
       </div>
 
-      {/* Individual Downloads */}
-      <div className="p-3 bg-slate-100/50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 min-w-0">
-        <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">INDIVIDUAL DOWNLOADS</h4>
-        
-        <div className="flex flex-wrap gap-2 overflow-x-auto pb-1">
+      {/* Individual Downloads - Secondary Options */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-slate-500 dark:text-slate-500 whitespace-nowrap">Or download individually:</span>
+        <div className="flex flex-wrap gap-1.5">
           {result.segments.map((segment: SegmentGenerationResult) => {
             const segKey = `${segment.segmentX},${segment.segmentY}`;
             const isThisGenerating = isGenerating && generatingSegment === segKey;
@@ -272,12 +270,12 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig, 
                 key={`${segment.segmentX}-${segment.segmentY}`}
                 onClick={() => downloadSingleSegment(segment)}
                 disabled={isGenerating}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
                   isThisGenerating 
                     ? 'bg-cyan-600 dark:bg-cyan-700 text-white animate-pulse'
                     : isGenerating
                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 hover:text-slate-900 dark:hover:text-white'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 {isThisGenerating ? (
@@ -290,7 +288,7 @@ export function MultiSegmentExportButtons({ result, splitInfo, baseplateConfig, 
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                 )}
-                Segment [{segment.segmentX},{segment.segmentY}]
+                [{segment.segmentX},{segment.segmentY}]
               </button>
             );
           })}

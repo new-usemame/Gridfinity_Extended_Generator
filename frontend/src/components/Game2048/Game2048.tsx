@@ -14,6 +14,13 @@ interface GameState {
   pausedTime: number;
 }
 
+interface MoveResult {
+  newBoard: number[][];
+  scoreIncrease: number;
+  moved: boolean;
+  tileMovements?: Map<string, { from: [number, number]; to: [number, number] }>;
+}
+
 interface Game2048Props {
   isVisible: boolean;
   isPlayable: boolean;
@@ -54,12 +61,25 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
 
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [tilePositions, setTilePositions] = useState<Map<string, { from: [number, number]; to: [number, number] }>>(new Map());
   
-  const [elapsedTime, setElapsedTime] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const state = JSON.parse(saved) as GameState;
+        return state.elapsedTime || 0;
+      } catch {
+        return 0;
+      }
+    }
+    return 0;
+  });
   const startTimeRef = useRef<number | null>(null);
-  const pausedTimeRef = useRef<number>(0);
   const lastPauseTimeRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const savedElapsedTimeRef = useRef<number>(0); // Total elapsed time when last paused
 
   // Load saved state
   useEffect(() => {
@@ -71,30 +91,33 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
         if (state.score !== undefined) setScore(state.score);
         if (state.gameOver !== undefined) setGameOver(state.gameOver);
         if (state.won !== undefined) setWon(state.won);
-        if (state.elapsedTime !== undefined) setElapsedTime(state.elapsedTime);
-        if (state.pausedTime !== undefined) pausedTimeRef.current = state.pausedTime;
+        if (state.elapsedTime !== undefined) {
+          setElapsedTime(state.elapsedTime);
+          savedElapsedTimeRef.current = state.elapsedTime;
+        }
       } catch {
         // Invalid saved state, use defaults
       }
     }
   }, []);
 
-  // Timer logic
+  // Timer logic - properly handles pause/resume and saves state
   useEffect(() => {
     if (isVisible && isPlayable && !gameOver && !won) {
       // Resume timer
       if (startTimeRef.current === null) {
-        // Calculate what the start time should be based on current elapsed and paused time
-        const baseTime = Date.now() - elapsedTime - pausedTimeRef.current;
-        startTimeRef.current = baseTime;
+        // Start from the saved elapsed time (use current elapsedTime state if available)
+        const baseElapsed = savedElapsedTimeRef.current || elapsedTime;
+        startTimeRef.current = Date.now() - baseElapsed;
         lastPauseTimeRef.current = null;
       }
       
       const updateTimer = () => {
         if (startTimeRef.current !== null) {
           const now = Date.now();
-          const elapsed = now - startTimeRef.current - pausedTimeRef.current;
-          setElapsedTime(Math.max(0, elapsed));
+          const newElapsed = now - startTimeRef.current;
+          setElapsedTime(newElapsed);
+          savedElapsedTimeRef.current = newElapsed;
           animationFrameRef.current = requestAnimationFrame(updateTimer);
         }
       };
@@ -102,27 +125,57 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
       animationFrameRef.current = requestAnimationFrame(updateTimer);
       
       return () => {
+        // Cleanup: pause and save
         if (animationFrameRef.current !== null) {
           cancelAnimationFrame(animationFrameRef.current);
           animationFrameRef.current = null;
         }
-        // When pausing, update pausedTime
-        if (startTimeRef.current !== null && lastPauseTimeRef.current === null) {
+        
+        // Save current elapsed time when pausing
+        if (startTimeRef.current !== null) {
           const now = Date.now();
-          const sessionTime = now - startTimeRef.current;
-          pausedTimeRef.current += sessionTime;
-          lastPauseTimeRef.current = now;
+          const finalElapsed = now - startTimeRef.current;
+          savedElapsedTimeRef.current = finalElapsed;
+          setElapsedTime(finalElapsed);
           startTimeRef.current = null;
+          lastPauseTimeRef.current = now;
+          
+          // Immediately save to localStorage
+          const state: GameState = {
+            board,
+            score,
+            highScore,
+            gameOver,
+            won,
+            elapsedTime: finalElapsed,
+            startTime: null,
+            pausedTime: 0
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         }
       };
     } else {
-      // Pause timer
-      if (startTimeRef.current !== null && lastPauseTimeRef.current === null) {
+      // Pause timer and save state
+      if (startTimeRef.current !== null) {
         const now = Date.now();
-        const sessionTime = now - startTimeRef.current;
-        pausedTimeRef.current += sessionTime;
-        lastPauseTimeRef.current = now;
+        const finalElapsed = now - startTimeRef.current;
+        savedElapsedTimeRef.current = finalElapsed;
+        setElapsedTime(finalElapsed);
         startTimeRef.current = null;
+        lastPauseTimeRef.current = now;
+        
+        // Immediately save to localStorage
+        const state: GameState = {
+          board,
+          score,
+          highScore,
+          gameOver,
+          won,
+          elapsedTime: finalElapsed,
+          startTime: null,
+          pausedTime: 0
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       }
       
       if (animationFrameRef.current !== null) {
@@ -130,9 +183,9 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
         animationFrameRef.current = null;
       }
     }
-  }, [isVisible, isPlayable, gameOver, won, elapsedTime]);
+  }, [isVisible, isPlayable, gameOver, won, board, score, highScore, elapsedTime]);
 
-  // Save state to localStorage
+  // Save state to localStorage - save elapsed time frequently
   useEffect(() => {
     const state: GameState = {
       board,
@@ -140,12 +193,60 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
       highScore,
       gameOver,
       won,
-      elapsedTime,
+      elapsedTime: savedElapsedTimeRef.current, // Use saved elapsed time
       startTime: startTimeRef.current,
-      pausedTime: pausedTimeRef.current
+      pausedTime: 0 // No longer needed with new approach
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [board, score, highScore, gameOver, won, elapsedTime]);
+  
+  // Also save elapsed time periodically while running
+  useEffect(() => {
+    if (isVisible && isPlayable && !gameOver && !won && startTimeRef.current !== null) {
+      const saveInterval = setInterval(() => {
+        if (startTimeRef.current !== null) {
+          const now = Date.now();
+          const currentElapsed = now - startTimeRef.current;
+          savedElapsedTimeRef.current = currentElapsed;
+          const state: GameState = {
+            board,
+            score,
+            highScore,
+            gameOver,
+            won,
+            elapsedTime: currentElapsed,
+            startTime: startTimeRef.current,
+            pausedTime: 0
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+      }, 100); // Save every 100ms for fractional seconds
+      
+      return () => clearInterval(saveInterval);
+    }
+  }, [isVisible, isPlayable, gameOver, won, board, score, highScore]);
+  
+  // Save state on component unmount
+  useEffect(() => {
+    return () => {
+      // Save final state when component unmounts
+      const finalElapsed = startTimeRef.current !== null 
+        ? Date.now() - startTimeRef.current 
+        : savedElapsedTimeRef.current;
+      
+      const state: GameState = {
+        board,
+        score,
+        highScore,
+        gameOver,
+        won,
+        elapsedTime: finalElapsed,
+        startTime: null,
+        pausedTime: 0
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    };
+  }, [board, score, highScore, gameOver, won]);
 
   function initializeBoard(): number[][] {
     const newBoard = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
@@ -170,69 +271,145 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
     }
   }
 
-  function moveLeft(board: number[][]): { newBoard: number[][]; scoreIncrease: number } {
+  // Move tiles in a specific direction following 2048 rules
+  function move(board: number[][], direction: 'left' | 'right' | 'up' | 'down'): MoveResult {
     const newBoard = board.map(row => [...row]);
+    const movements = new Map<string, { from: [number, number]; to: [number, number] }>();
     let scoreIncrease = 0;
 
-    for (let i = 0; i < GRID_SIZE; i++) {
-      const row = newBoard[i].filter(val => val !== 0);
-      const newRow: number[] = [];
-      
-      for (let j = 0; j < row.length; j++) {
-        if (j < row.length - 1 && row[j] === row[j + 1]) {
-          const merged = row[j] * 2;
-          newRow.push(merged);
-          scoreIncrease += merged;
-          j++;
-        } else {
-          newRow.push(row[j]);
-        }
+    if (direction === 'left') {
+      for (let i = 0; i < GRID_SIZE; i++) {
+        const result = slideRowLeft(newBoard[i], i, movements);
+        newBoard[i] = result.row;
+        scoreIncrease += result.score;
       }
-      
-      while (newRow.length < GRID_SIZE) {
-        newRow.push(0);
+    } else if (direction === 'right') {
+      for (let i = 0; i < GRID_SIZE; i++) {
+        const result = slideRowRight(newBoard[i], i, movements);
+        newBoard[i] = result.row;
+        scoreIncrease += result.score;
       }
-      
-      newBoard[i] = newRow;
-    }
-
-    return { newBoard, scoreIncrease };
-  }
-
-  function rotateBoard(board: number[][]): number[][] {
-    const rotated = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
-    for (let i = 0; i < GRID_SIZE; i++) {
-      for (let j = 0; j < GRID_SIZE; j++) {
-        rotated[j][GRID_SIZE - 1 - i] = board[i][j];
-      }
-    }
-    return rotated;
-  }
-
-  function move(board: number[][], direction: 'left' | 'right' | 'up' | 'down'): { newBoard: number[][]; scoreIncrease: number; moved: boolean } {
-    let rotated = board;
-    let rotations = 0;
-
-    if (direction === 'right') {
-      rotated = rotateBoard(rotateBoard(board));
-      rotations = 2;
     } else if (direction === 'up') {
-      rotated = rotateBoard(board);
-      rotations = 1;
+      for (let j = 0; j < GRID_SIZE; j++) {
+        const column = newBoard.map(row => row[j]);
+        const tempMovements = new Map<string, { from: [number, number]; to: [number, number] }>();
+        const result = slideRowLeft(column, 0, tempMovements);
+        for (let i = 0; i < GRID_SIZE; i++) {
+          newBoard[i][j] = result.row[i];
+        }
+        // Convert row movements to column movements
+        tempMovements.forEach((mov) => {
+          const colKey = `${mov.from[0]}-${j}`;
+          movements.set(colKey, {
+            from: [mov.from[0], j],
+            to: [mov.to[0], j]
+          });
+        });
+        scoreIncrease += result.score;
+      }
     } else if (direction === 'down') {
-      rotated = rotateBoard(rotateBoard(rotateBoard(board)));
-      rotations = 3;
+      for (let j = 0; j < GRID_SIZE; j++) {
+        const column = newBoard.map(row => row[j]);
+        const tempMovements = new Map<string, { from: [number, number]; to: [number, number] }>();
+        const result = slideRowRight(column, 0, tempMovements);
+        for (let i = 0; i < GRID_SIZE; i++) {
+          newBoard[i][j] = result.row[i];
+        }
+        // Convert row movements to column movements
+        tempMovements.forEach((mov) => {
+          const colKey = `${mov.from[0]}-${j}`;
+          movements.set(colKey, {
+            from: [mov.from[0], j],
+            to: [mov.to[0], j]
+          });
+        });
+        scoreIncrease += result.score;
+      }
     }
 
-    const { newBoard, scoreIncrease } = moveLeft(rotated);
-    let finalBoard = newBoard;
+    const moved = JSON.stringify(board) !== JSON.stringify(newBoard);
+    return { newBoard, scoreIncrease, moved, tileMovements: movements };
+  }
 
-    for (let i = 0; i < rotations; i++) {
-      finalBoard = rotateBoard(finalBoard);
+  // Slide row left (base function)
+  function slideRowLeft(
+    row: number[],
+    rowIndex: number,
+    movements: Map<string, { from: [number, number]; to: [number, number] }>
+  ): { row: number[]; score: number } {
+    // Remove zeros and track original positions
+    const tiles: Array<{ value: number; originalPos: number }> = [];
+    row.forEach((val, pos) => {
+      if (val !== 0) {
+        tiles.push({ value: val, originalPos: pos });
+      }
+    });
+
+    // Merge and slide
+    const newRow: number[] = [];
+    let score = 0;
+    let i = 0;
+
+    while (i < tiles.length) {
+      if (i < tiles.length - 1 && tiles[i].value === tiles[i + 1].value) {
+        // Merge
+        const merged = tiles[i].value * 2;
+        newRow.push(merged);
+        score += merged;
+        
+        const targetPos = newRow.length - 1;
+        movements.set(`${rowIndex}-${tiles[i].originalPos}`, {
+          from: [rowIndex, tiles[i].originalPos],
+          to: [rowIndex, targetPos]
+        });
+        movements.set(`${rowIndex}-${tiles[i + 1].originalPos}`, {
+          from: [rowIndex, tiles[i + 1].originalPos],
+          to: [rowIndex, targetPos]
+        });
+        
+        i += 2;
+      } else {
+        // No merge
+        newRow.push(tiles[i].value);
+        const targetPos = newRow.length - 1;
+        if (tiles[i].originalPos !== targetPos) {
+          movements.set(`${rowIndex}-${tiles[i].originalPos}`, {
+            from: [rowIndex, tiles[i].originalPos],
+            to: [rowIndex, targetPos]
+          });
+        }
+        i++;
+      }
     }
 
-    const moved = JSON.stringify(board) !== JSON.stringify(finalBoard);
-    return { newBoard: finalBoard, scoreIncrease, moved };
+    // Fill with zeros
+    while (newRow.length < GRID_SIZE) {
+      newRow.push(0);
+    }
+
+    return { row: newRow, score };
+  }
+
+  // Slide row right (reverse of left)
+  function slideRowRight(
+    row: number[],
+    rowIndex: number,
+    movements: Map<string, { from: [number, number]; to: [number, number] }>
+  ): { row: number[]; score: number } {
+    // Reverse, slide left, then reverse back
+    const reversed = [...row].reverse();
+    const result = slideRowLeft(reversed, rowIndex, movements);
+    const finalRow = result.row.reverse();
+    
+    // Adjust movement positions for reversed direction
+    movements.forEach((mov, key) => {
+      if (key.startsWith(`${rowIndex}-`)) {
+        mov.from[1] = GRID_SIZE - 1 - mov.from[1];
+        mov.to[1] = GRID_SIZE - 1 - mov.to[1];
+      }
+    });
+    
+    return { row: finalRow, score: result.score };
   }
 
   function canMove(board: number[][]): boolean {
@@ -247,41 +424,49 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
   }
 
   const handleMove = useCallback((direction: 'left' | 'right' | 'up' | 'down') => {
-    if (gameOver || won || !isPlayable) return;
+    if (gameOver || won || !isPlayable || isAnimating) return;
 
-    const { newBoard, scoreIncrease, moved } = move(board, direction);
+    const { newBoard, scoreIncrease, moved, tileMovements } = move(board, direction);
     
     if (moved) {
-      addRandomTile(newBoard);
-      const newScore = score + scoreIncrease;
-      setScore(newScore);
-      setBoard(newBoard);
+      setIsAnimating(true);
+      setTilePositions(tileMovements || new Map());
+      
+      // Wait for animation to complete
+      setTimeout(() => {
+        addRandomTile(newBoard);
+        const newScore = score + scoreIncrease;
+        setScore(newScore);
+        setBoard(newBoard);
+        setIsAnimating(false);
+        setTilePositions(new Map());
 
-      if (newScore > highScore) {
-        setHighScore(newScore);
-        localStorage.setItem('gridfinity_2048_high_score', newScore.toString());
-      }
-
-      // Check for win (2048 tile)
-      if (!won && newBoard.some(row => row.some(cell => cell === 2048))) {
-        setWon(true);
-      }
-
-      // Check for game over
-      if (!canMove(newBoard)) {
-        setGameOver(true);
-        // Calculate current elapsed time directly
-        let currentElapsed = elapsedTime;
-        if (startTimeRef.current !== null) {
-          const now = Date.now();
-          currentElapsed = now - startTimeRef.current - pausedTimeRef.current;
+        if (newScore > highScore) {
+          setHighScore(newScore);
+          localStorage.setItem('gridfinity_2048_high_score', newScore.toString());
         }
-        if (onGameOver) {
-          onGameOver(newScore, Math.max(0, currentElapsed));
+
+        // Check for win (2048 tile)
+        if (!won && newBoard.some(row => row.some(cell => cell === 2048))) {
+          setWon(true);
         }
-      }
+
+        // Check for game over
+        if (!canMove(newBoard)) {
+          setGameOver(true);
+          // Calculate current elapsed time directly
+          let currentElapsed = savedElapsedTimeRef.current || elapsedTime;
+          if (startTimeRef.current !== null) {
+            const now = Date.now();
+            currentElapsed = now - startTimeRef.current;
+          }
+          if (onGameOver) {
+            onGameOver(newScore, Math.max(0, currentElapsed));
+          }
+        }
+      }, 150); // Animation duration
     }
-  }, [board, score, highScore, gameOver, won, isPlayable, elapsedTime, onGameOver]);
+  }, [board, score, highScore, gameOver, won, isPlayable, elapsedTime, onGameOver, isAnimating]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!isPlayable) return;
@@ -318,8 +503,8 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
     setGameOver(false);
     setWon(false);
     setElapsedTime(0);
+    savedElapsedTimeRef.current = 0;
     startTimeRef.current = null;
-    pausedTimeRef.current = 0;
     lastPauseTimeRef.current = null;
   };
 
@@ -384,19 +569,59 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
 
       {/* Game Board */}
       <div className="bg-transparent rounded-xl p-2 sm:p-4 relative">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2 relative">
+          {/* Static board cells */}
           {board.map((row, i) =>
-            row.map((cell, j) => (
-              <div
-                key={`${i}-${j}`}
-                className={`aspect-square flex items-center justify-center rounded-lg font-bold text-sm sm:text-base transition-colors ${
-                  getTileColor(cell)
-                }`}
-              >
-                {cell !== 0 && cell}
-              </div>
-            ))
+            row.map((cell, j) => {
+              const movementKey = `${i}-${j}`;
+              const isMoving = tilePositions.has(movementKey) && cell !== 0;
+              
+              return (
+                <div
+                  key={`cell-${i}-${j}`}
+                  className={`aspect-square flex items-center justify-center rounded-lg font-bold text-sm sm:text-base ${
+                    isMoving ? 'opacity-0' : getTileColor(cell)
+                  } transition-colors`}
+                >
+                  {!isMoving && cell !== 0 && cell}
+                </div>
+              );
+            })
           )}
+          
+          {/* Animated moving tiles */}
+          {Array.from(tilePositions.entries()).map(([key, movement]) => {
+            const [toRow, toCol] = movement.to;
+            const [fromRow, fromCol] = movement.from;
+            const cellValue = board[toRow]?.[toCol] || 0;
+            
+            if (cellValue === 0) return null;
+            
+            // Calculate positions as percentages
+            const cellWidth = 25; // 25% per cell
+            const gapPercent = 2; // approximate gap as % of container
+            const fromLeft = fromCol * (cellWidth + gapPercent);
+            const fromTop = fromRow * (cellWidth + gapPercent);
+            const toLeft = toCol * (cellWidth + gapPercent);
+            const toTop = toRow * (cellWidth + gapPercent);
+            
+            return (
+              <div
+                key={`moving-${key}`}
+                className="aspect-square flex items-center justify-center rounded-lg font-bold text-sm sm:text-base absolute transition-all duration-150 ease-out z-10"
+                style={{
+                  left: `${fromLeft}%`,
+                  top: `${fromTop}%`,
+                  width: 'calc(25% - 6px)',
+                  transform: `translate(${toLeft - fromLeft}%, ${toTop - fromTop}%)`,
+                }}
+              >
+                <div className={`w-full h-full flex items-center justify-center rounded-lg ${getTileColor(cellValue)}`}>
+                  {cellValue}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Game Over Overlay */}

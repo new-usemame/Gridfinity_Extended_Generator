@@ -23,12 +23,23 @@ export default {
         'slate': {
           850: '#172033',
           950: '#0a0f1a',
-        }
+        },
+        white: {
+          DEFAULT: '#ffffff',
+          '/10': 'rgba(255, 255, 255, 0.1)',
+          '/80': 'rgba(255, 255, 255, 0.8)',
+        },
+        black: {
+          DEFAULT: '#000000',
+          '/70': 'rgba(0, 0, 0, 0.7)',
+          '/80': 'rgba(0, 0, 0, 0.8)',
+          '/90': 'rgba(0, 0, 0, 0.9)',
+        },
       },
       fontFamily: {
         'display': ['JetBrains Mono', 'Fira Code', 'monospace'],
         'body': ['Inter', 'system-ui', 'sans-serif'],
-      }
+      },
     },
   },
   plugins: [],

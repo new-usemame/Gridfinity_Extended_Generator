@@ -266,20 +266,6 @@ function ProBoxConfigPanel({
           Rounds the vertical edges and the corner radius of the top of the feet. Standard: 3.75mm.
         </p>
 
-        {/* 2g: Lip Style */}
-        <SelectInput
-          label="Lip Style"
-          value={config.lipStyle}
-          options={[
-            { value: 'perfect_fit', label: 'Perfect Fit Lip' },
-            { value: 'standard', label: 'Standard (Full)' },
-            { value: 'reduced', label: 'Reduced' },
-            { value: 'minimum', label: 'Minimum' },
-            { value: 'none', label: 'None (Non-stackable)' }
-          ]}
-          onChange={(v) => update('lipStyle', v as BoxConfig['lipStyle'])}
-        />
-
         {/* 2h-i: Dividers X, Y */}
         <NumberInput
           label="Dividers X (Left-Right)"

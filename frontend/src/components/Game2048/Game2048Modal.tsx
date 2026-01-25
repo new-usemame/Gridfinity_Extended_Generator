@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Game2048 } from './Game2048';
 import { Leaderboard } from './Leaderboard';
 import { UsernameSetupModal } from './UsernameSetupModal';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Game2048ModalProps {
   isOpen: boolean;
@@ -10,6 +11,8 @@ interface Game2048ModalProps {
 }
 
 export function Game2048Modal({ isOpen, isGenerating, onClose }: Game2048ModalProps) {
+  const { user, token } = useAuth();
+  const [userHasPublicUsername, setUserHasPublicUsername] = useState<boolean | null>(null);
   const [showGame, setShowGame] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -24,6 +27,31 @@ export function Game2048Modal({ isOpen, isGenerating, onClose }: Game2048ModalPr
   });
   const [canClose, setCanClose] = useState(false);
   const pendingGameOverRef = useRef<{ score: number; elapsedTime: number } | null>(null);
+
+  // Check if user has a public username
+  useEffect(() => {
+    const checkUserUsername = async () => {
+      if (user && token) {
+        try {
+          const response = await fetch('/api/game/user-stats', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setUserHasPublicUsername(data.hasPublicUsername || false);
+          }
+        } catch (err) {
+          console.error('Failed to check user stats:', err);
+          setUserHasPublicUsername(false);
+        }
+      } else {
+        setUserHasPublicUsername(null);
+      }
+    };
+    checkUserUsername();
+  }, [user, token]);
 
   // Show loading screen after 1 second, then fade in game
   useEffect(() => {
@@ -79,21 +107,33 @@ export function Game2048Modal({ isOpen, isGenerating, onClose }: Game2048ModalPr
     setGameScore(score);
     setGameElapsedTime(elapsedTime);
     
-    // Check if this is the first game
-    if (!hasCompletedFirstGame && !usernamePromptDismissed) {
+    // Show username modal if:
+    // 1. First game and not dismissed, OR
+    // 2. User is logged in but doesn't have a public username set
+    const shouldShowUsernameModal = 
+      (!hasCompletedFirstGame && !usernamePromptDismissed) ||
+      (user && token && userHasPublicUsername === false);
+    
+    if (shouldShowUsernameModal) {
       setShowUsernameModal(true);
-      setHasCompletedFirstGame(true);
-      localStorage.setItem('gridfinity_2048_has_completed_first_game', 'true');
+      if (!hasCompletedFirstGame) {
+        setHasCompletedFirstGame(true);
+        localStorage.setItem('gridfinity_2048_has_completed_first_game', 'true');
+      }
     } else {
-      // Not first game, can close when generation completes
+      // Not showing modal, can close when generation completes
       pendingGameOverRef.current = { score, elapsedTime };
     }
   };
 
-  const handleUsernameModalClose = () => {
+  const handleUsernameModalClose = (wasSubmitted: boolean = false) => {
     setShowUsernameModal(false);
-    setUsernamePromptDismissed(true);
-    localStorage.setItem('gridfinity_2048_username_prompt_dismissed', 'true');
+    // Only mark as dismissed if user explicitly closes without submitting
+    // If they submitted a score, don't mark as dismissed so they can set username next time
+    if (!wasSubmitted) {
+      setUsernamePromptDismissed(true);
+      localStorage.setItem('gridfinity_2048_username_prompt_dismissed', 'true');
+    }
     
     // After username modal closes, allow closing when generation completes
     if (!isGenerating) {
@@ -101,8 +141,24 @@ export function Game2048Modal({ isOpen, isGenerating, onClose }: Game2048ModalPr
     }
   };
 
-  const handleScoreSubmitted = () => {
-    // Score submitted, can close when generation completes
+  const handleScoreSubmitted = async () => {
+    // Score submitted, refresh user stats to check if they now have a username
+    if (user && token) {
+      try {
+        const response = await fetch('/api/game/user-stats', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUserHasPublicUsername(data.hasPublicUsername || false);
+        }
+      } catch (err) {
+        console.error('Failed to refresh user stats:', err);
+      }
+    }
+    // Can close when generation completes
     if (!isGenerating) {
       setCanClose(true);
     }

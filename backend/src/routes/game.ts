@@ -130,11 +130,20 @@ router.get('/user-stats', authenticateToken, async (req: AuthRequest, res: Respo
 
     const highScore = await gameScoresDb.getUserHighScore(userId);
     const rank = await gameScoresDb.getUserRank(userId);
+    
+    // Check if user has a public username set
+    const { userDb } = await import('../services/database.js');
+    const user = await userDb.findById(userId);
+    // Handle both SQLite (0/1) and PostgreSQL (true/false) boolean values
+    const usernamePublic = (user as any)?.username_public;
+    const hasPublicUsername = user && 
+      (user as any).public_username && 
+      (usernamePublic === true || usernamePublic === 1 || usernamePublic === '1');
 
     res.json({
       highScore: highScore?.score || 0,
       rank,
-      hasPublicUsername: !!highScore?.public_username
+      hasPublicUsername: !!hasPublicUsername
     });
   } catch (error) {
     console.error('User stats error:', error);
