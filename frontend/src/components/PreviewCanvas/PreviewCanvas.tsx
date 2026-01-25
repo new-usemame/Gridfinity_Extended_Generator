@@ -17,6 +17,7 @@ interface PreviewCanvasProps {
   isCombinedView?: boolean;
   boxConfig?: BoxConfig;
   baseplateConfig?: BaseplateConfig;
+  hideLoadingOverlay?: boolean;
 }
 
 export function PreviewCanvas({ 
@@ -26,7 +27,8 @@ export function PreviewCanvas({
   isLoading, 
   isCombinedView = false,
   boxConfig,
-  baseplateConfig
+  baseplateConfig,
+  hideLoadingOverlay = false
 }: PreviewCanvasProps) {
   const [boxZOffset, setBoxZOffset] = useState(0); // mm offset for box position
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -110,7 +112,7 @@ export function PreviewCanvas({
   return (
     <div ref={containerRef} className="w-full h-full bg-gradient-to-b from-slate-100 to-white dark:from-slate-900 dark:to-slate-950 relative">
       {/* Loading Overlay */}
-      {isLoading && (
+      {isLoading && !hideLoadingOverlay && (
         <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-10">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 border-4 border-green-500/30 dark:border-green-500/30 border-t-green-500 dark:border-t-green-500 rounded-full animate-spin" />

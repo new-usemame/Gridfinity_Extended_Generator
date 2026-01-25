@@ -829,14 +829,25 @@ export function Generator() {
 
           {/* 3D Preview */}
           <div className="flex-1 relative min-h-0">
-            {isGenerating ? (
-              /* 2048 Game - shown during generation */
-              <div className="h-full flex items-center justify-center bg-transparent p-8 overflow-y-auto">
+            {/* Always render PreviewCanvas to preserve camera position */}
+            <PreviewCanvas
+              boxStlUrl={generateBox ? (boxResult?.stlUrl || null) : null}
+              baseplateStlUrl={generateBaseplate ? (baseplateResult?.stlUrl || null) : null}
+              isLoading={isGenerating}
+              isCombinedView={true}
+              boxConfig={boxConfig}
+              baseplateConfig={baseplateConfig}
+              hideLoadingOverlay={isGenerating}
+            />
+            
+            {/* 2048 Game Overlay - shown during generation */}
+            {isGenerating && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm z-20 p-8 overflow-y-auto">
                 <div className="w-full max-w-4xl">
                   <div className="flex flex-col sm:flex-row gap-6">
                     {/* Game */}
                     <div className="flex-1 min-w-0">
-                      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-lg">
+                      <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-lg">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Play 2048 While Generating</h3>
                         <Game2048
                           isVisible={isGenerating}
@@ -846,7 +857,7 @@ export function Generator() {
                     </div>
                     {/* Leaderboard */}
                     <div className="w-full sm:w-64 flex-shrink-0">
-                      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-lg">
+                      <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-lg">
                         <Leaderboard limit={10} compact={true} />
                       </div>
                     </div>
@@ -862,15 +873,6 @@ export function Generator() {
                   </div>
                 </div>
               </div>
-            ) : (
-              <PreviewCanvas
-                boxStlUrl={generateBox ? (boxResult?.stlUrl || null) : null}
-                baseplateStlUrl={generateBaseplate ? (baseplateResult?.stlUrl || null) : null}
-                isLoading={isGenerating}
-                isCombinedView={true}
-                boxConfig={boxConfig}
-                baseplateConfig={baseplateConfig}
-              />
             )}
           </div>
         </main>
