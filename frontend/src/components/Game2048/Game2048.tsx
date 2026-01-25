@@ -18,7 +18,7 @@ interface MoveResult {
   newBoard: number[][];
   scoreIncrease: number;
   moved: boolean;
-  tileMovements?: Map<string, { from: [number, number]; to: [number, number] }>;
+  tileMovements?: Map<string, { from: [number, number]; to: [number, number]; isMerging?: boolean; mergedValue?: number }>;
 }
 
 interface Game2048Props {
@@ -62,7 +62,21 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [tilePositions, setTilePositions] = useState<Map<string, { from: [number, number]; to: [number, number] }>>(new Map());
+  const [tilePositions, setTilePositions] = useState<Map<string, { from: [number, number]; to: [number, number]; isMerging?: boolean; mergedValue?: number }>>(new Map());
+  const [displayBoard, setDisplayBoard] = useState<number[][]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const state = JSON.parse(saved) as GameState;
+        return state.board || initializeBoard();
+      } catch {
+        return initializeBoard();
+      }
+    }
+    return initializeBoard();
+  });
+  const [newTiles, setNewTiles] = useState<Set<string>>(new Set());
+  const [mergingTiles, setMergingTiles] = useState<Set<string>>(new Set());
   
   const [elapsedTime, setElapsedTime] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -87,7 +101,10 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
     if (saved) {
       try {
         const state = JSON.parse(saved) as GameState;
-        if (state.board) setBoard(state.board);
+        if (state.board) {
+          setBoard(state.board);
+          setDisplayBoard(state.board);
+        }
         if (state.score !== undefined) setScore(state.score);
         if (state.gameOver !== undefined) setGameOver(state.gameOver);
         if (state.won !== undefined) setWon(state.won);
@@ -100,6 +117,13 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
       }
     }
   }, []);
+  
+  // Sync displayBoard with board when not animating
+  useEffect(() => {
+    if (!isAnimating) {
+      setDisplayBoard(board);
+    }
+  }, [board, isAnimating]);
 
   // Timer logic - properly handles pause/resume and saves state
   useEffect(() => {
@@ -274,7 +298,7 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
   // Move tiles in a specific direction following 2048 rules
   function move(board: number[][], direction: 'left' | 'right' | 'up' | 'down'): MoveResult {
     const newBoard = board.map(row => [...row]);
-    const movements = new Map<string, { from: [number, number]; to: [number, number] }>();
+    const movements = new Map<string, { from: [number, number]; to: [number, number]; isMerging?: boolean; mergedValue?: number }>();
     let scoreIncrease = 0;
 
     if (direction === 'left') {
@@ -292,7 +316,7 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
     } else if (direction === 'up') {
       for (let j = 0; j < GRID_SIZE; j++) {
         const column = newBoard.map(row => row[j]);
-        const tempMovements = new Map<string, { from: [number, number]; to: [number, number] }>();
+        const tempMovements = new Map<string, { from: [number, number]; to: [number, number]; isMerging?: boolean; mergedValue?: number }>();
         const result = slideRowLeft(column, 0, tempMovements);
         for (let i = 0; i < GRID_SIZE; i++) {
           newBoard[i][j] = result.row[i];
@@ -310,7 +334,7 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
     } else if (direction === 'down') {
       for (let j = 0; j < GRID_SIZE; j++) {
         const column = newBoard.map(row => row[j]);
-        const tempMovements = new Map<string, { from: [number, number]; to: [number, number] }>();
+        const tempMovements = new Map<string, { from: [number, number]; to: [number, number]; isMerging?: boolean; mergedValue?: number }>();
         const result = slideRowRight(column, 0, tempMovements);
         for (let i = 0; i < GRID_SIZE; i++) {
           newBoard[i][j] = result.row[i];
@@ -335,7 +359,7 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
   function slideRowLeft(
     row: number[],
     rowIndex: number,
-    movements: Map<string, { from: [number, number]; to: [number, number] }>
+    movements: Map<string, { from: [number, number]; to: [number, number]; isMerging?: boolean; mergedValue?: number }>
   ): { row: number[]; score: number } {
     // Remove zeros and track original positions
     const tiles: Array<{ value: number; originalPos: number }> = [];
@@ -360,11 +384,15 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
         const targetPos = newRow.length - 1;
         movements.set(`${rowIndex}-${tiles[i].originalPos}`, {
           from: [rowIndex, tiles[i].originalPos],
-          to: [rowIndex, targetPos]
+          to: [rowIndex, targetPos],
+          isMerging: true,
+          mergedValue: merged
         });
         movements.set(`${rowIndex}-${tiles[i + 1].originalPos}`, {
           from: [rowIndex, tiles[i + 1].originalPos],
-          to: [rowIndex, targetPos]
+          to: [rowIndex, targetPos],
+          isMerging: true,
+          mergedValue: merged
         });
         
         i += 2;
@@ -394,7 +422,7 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
   function slideRowRight(
     row: number[],
     rowIndex: number,
-    movements: Map<string, { from: [number, number]; to: [number, number] }>
+    movements: Map<string, { from: [number, number]; to: [number, number]; isMerging?: boolean; mergedValue?: number }>
   ): { row: number[]; score: number } {
     // Reverse, slide left, then reverse back
     const reversed = [...row].reverse();
@@ -432,39 +460,70 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
       setIsAnimating(true);
       setTilePositions(tileMovements || new Map());
       
-      // Wait for animation to complete
+      // Update display board immediately for smooth animation
+      setDisplayBoard(newBoard);
+      
+      // Track merging tiles
+      const mergeSet = new Set<string>();
+      tileMovements?.forEach((mov, key) => {
+        if (mov.isMerging) {
+          mergeSet.add(key);
+        }
+      });
+      setMergingTiles(mergeSet);
+      
+      // Wait for move animation to complete, then spawn new tile
       setTimeout(() => {
-        addRandomTile(newBoard);
-        const newScore = score + scoreIncrease;
-        setScore(newScore);
-        setBoard(newBoard);
-        setIsAnimating(false);
+        const boardWithNewTile = newBoard.map(row => [...row]);
+        addRandomTile(boardWithNewTile);
+        
+        // Find the new tile position
+        const newTileSet = new Set<string>();
+        for (let i = 0; i < GRID_SIZE; i++) {
+          for (let j = 0; j < GRID_SIZE; j++) {
+            if (boardWithNewTile[i][j] !== newBoard[i][j]) {
+              newTileSet.add(`${i}-${j}`);
+            }
+          }
+        }
+        setNewTiles(newTileSet);
+        setDisplayBoard(boardWithNewTile);
         setTilePositions(new Map());
+        setMergingTiles(new Set());
+        
+        // Update score and board after spawn animation
+        setTimeout(() => {
+          const newScore = score + scoreIncrease;
+          setScore(newScore);
+          setBoard(boardWithNewTile);
+          setIsAnimating(false);
+          setNewTiles(new Set());
 
-        if (newScore > highScore) {
-          setHighScore(newScore);
-          localStorage.setItem('gridfinity_2048_high_score', newScore.toString());
-        }
-
-        // Check for win (2048 tile)
-        if (!won && newBoard.some(row => row.some(cell => cell === 2048))) {
-          setWon(true);
-        }
-
-        // Check for game over
-        if (!canMove(newBoard)) {
-          setGameOver(true);
-          // Calculate current elapsed time directly
-          let currentElapsed = savedElapsedTimeRef.current || elapsedTime;
-          if (startTimeRef.current !== null) {
-            const now = Date.now();
-            currentElapsed = now - startTimeRef.current;
+          if (newScore > highScore) {
+            setHighScore(newScore);
+            localStorage.setItem('gridfinity_2048_high_score', newScore.toString());
           }
-          if (onGameOver) {
-            onGameOver(newScore, Math.max(0, currentElapsed));
+
+          // Check for win (2048 tile)
+          if (!won && boardWithNewTile.some(row => row.some(cell => cell === 2048))) {
+            setWon(true);
           }
-        }
-      }, 150); // Animation duration
+
+          // Check for game over
+          if (!canMove(boardWithNewTile)) {
+            setGameOver(true);
+            // Calculate current elapsed time directly
+            let currentElapsed = savedElapsedTimeRef.current || elapsedTime;
+            if (startTimeRef.current !== null) {
+              const now = Date.now();
+              currentElapsed = now - startTimeRef.current;
+            }
+            if (onGameOver) {
+              onGameOver(newScore, Math.max(0, currentElapsed));
+            }
+          }
+        }, 200); // Spawn animation duration
+      }, 200); // Move animation duration
     }
   }, [board, score, highScore, gameOver, won, isPlayable, elapsedTime, onGameOver, isAnimating]);
 
@@ -499,10 +558,14 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
   const newGame = () => {
     const newBoard = initializeBoard();
     setBoard(newBoard);
+    setDisplayBoard(newBoard);
     setScore(0);
     setGameOver(false);
     setWon(false);
     setElapsedTime(0);
+    setTilePositions(new Map());
+    setNewTiles(new Set());
+    setMergingTiles(new Set());
     savedElapsedTimeRef.current = 0;
     startTimeRef.current = null;
     lastPauseTimeRef.current = null;
@@ -570,58 +633,112 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
       {/* Game Board */}
       <div className="bg-transparent rounded-xl p-2 sm:p-4 relative">
         <div className="grid grid-cols-4 gap-2 relative">
-          {/* Static board cells */}
-          {board.map((row, i) =>
+          {/* Background grid cells */}
+          {Array(GRID_SIZE * GRID_SIZE).fill(0).map((_, idx) => {
+            const i = Math.floor(idx / GRID_SIZE);
+            const j = idx % GRID_SIZE;
+            return (
+              <div
+                key={`bg-cell-${i}-${j}`}
+                className="aspect-square rounded-lg bg-white/10 dark:bg-white/10"
+              />
+            );
+          })}
+          
+          {/* Display tiles - using displayBoard for smooth animations */}
+          {displayBoard.map((row, i) =>
             row.map((cell, j) => {
-              const movementKey = `${i}-${j}`;
-              const isMoving = tilePositions.has(movementKey) && cell !== 0;
+              if (cell === 0) return null;
+              
+              const cellKey = `${i}-${j}`;
+              const movement = tilePositions.get(cellKey);
+              const isNew = newTiles.has(cellKey);
+              const isMerging = mergingTiles.has(cellKey);
+              const isMoving = movement !== undefined;
+              
+              // Calculate position using grid-based percentages
+              // Grid has 4 columns with gap-2 (0.5rem = 8px)
+              // Each cell is approximately 25% minus gap spacing
+              // Use a simpler calculation: position based on grid cell index
+              const cellPercent = 25; // Each cell is ~25% of container
+              const gapPercent = 2; // Gap is ~2% (approximate)
+              
+              let fromRow = i;
+              let fromCol = j;
+              let toRow = i;
+              let toCol = j;
+              let transformX = 0;
+              let transformY = 0;
+              let scale = 1;
+              let zIndex = 10;
+              
+              if (movement) {
+                [fromRow, fromCol] = movement.from;
+                [toRow, toCol] = movement.to;
+                
+                // Calculate transform offset in percentage
+                const colDiff = toCol - fromCol;
+                const rowDiff = toRow - fromRow;
+                transformX = colDiff * (cellPercent + gapPercent);
+                transformY = rowDiff * (cellPercent + gapPercent);
+                zIndex = 20;
+              }
+              
+              if (isMerging) {
+                // Scale up for merge animation with bounce effect
+                scale = 1.2;
+                zIndex = 30;
+              } else if (isNew) {
+                // Start from scale 0 for spawn animation
+                scale = 0;
+                zIndex = 20;
+              }
+              
+              // Position at the target location (or from location if moving)
+              const finalRow = movement ? fromRow : toRow;
+              const finalCol = movement ? fromCol : toCol;
+              const left = `${finalCol * (cellPercent + gapPercent) + gapPercent / 2}%`;
+              const top = `${finalRow * (cellPercent + gapPercent) + gapPercent / 2}%`;
+              const width = `${cellPercent - gapPercent}%`;
+              
+              // Build transform string
+              const transforms: string[] = [];
+              if (transformX !== 0 || transformY !== 0) {
+                transforms.push(`translate(${transformX}%, ${transformY}%)`);
+              }
+              if (scale !== 1) {
+                transforms.push(`scale(${scale})`);
+              }
+              const transform = transforms.length > 0 ? transforms.join(' ') : 'none';
+              
+              // Use custom cubic-bezier for smoother animations
+              const easing = isMoving || isMerging || isNew 
+                ? 'cubic-bezier(0.4, 0.0, 0.2, 1)' // Material Design ease-out
+                : 'ease-out';
               
               return (
                 <div
-                  key={`cell-${i}-${j}`}
-                  className={`aspect-square flex items-center justify-center rounded-lg font-bold text-sm sm:text-base ${
-                    isMoving ? 'opacity-0' : getTileColor(cell)
-                  } transition-colors`}
+                  key={`tile-${i}-${j}`}
+                  className={`absolute flex items-center justify-center rounded-lg font-bold text-sm sm:text-base`}
+                  style={{
+                    left,
+                    top,
+                    width,
+                    height: width, // Square aspect ratio
+                    transform,
+                    zIndex,
+                    transition: `transform 200ms ${easing}, opacity 200ms ${easing}, scale 200ms ${easing}`,
+                  }}
                 >
-                  {!isMoving && cell !== 0 && cell}
+                  <div className={`w-full h-full flex items-center justify-center rounded-lg ${getTileColor(cell)} ${
+                    isMerging ? 'shadow-lg shadow-green-500/50' : ''
+                  }`}>
+                    {movement?.mergedValue || cell}
+                  </div>
                 </div>
               );
             })
           )}
-          
-          {/* Animated moving tiles */}
-          {Array.from(tilePositions.entries()).map(([key, movement]) => {
-            const [toRow, toCol] = movement.to;
-            const [fromRow, fromCol] = movement.from;
-            const cellValue = board[toRow]?.[toCol] || 0;
-            
-            if (cellValue === 0) return null;
-            
-            // Calculate positions as percentages
-            const cellWidth = 25; // 25% per cell
-            const gapPercent = 2; // approximate gap as % of container
-            const fromLeft = fromCol * (cellWidth + gapPercent);
-            const fromTop = fromRow * (cellWidth + gapPercent);
-            const toLeft = toCol * (cellWidth + gapPercent);
-            const toTop = toRow * (cellWidth + gapPercent);
-            
-            return (
-              <div
-                key={`moving-${key}`}
-                className="aspect-square flex items-center justify-center rounded-lg font-bold text-sm sm:text-base absolute transition-all duration-150 ease-out z-10"
-                style={{
-                  left: `${fromLeft}%`,
-                  top: `${fromTop}%`,
-                  width: 'calc(25% - 6px)',
-                  transform: `translate(${toLeft - fromLeft}%, ${toTop - fromTop}%)`,
-                }}
-              >
-                <div className={`w-full h-full flex items-center justify-center rounded-lg ${getTileColor(cellValue)}`}>
-                  {cellValue}
-                </div>
-              </div>
-            );
-          })}
         </div>
 
         {/* Game Over Overlay */}

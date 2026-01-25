@@ -41,10 +41,15 @@ export function ConfigPanel({
       );
     }
 
-    // Easy mode (placeholder until specified)
+    // Easy mode
     return (
       <div className="space-y-2.5">
-        <EasyBoxConfigPanel config={boxConfig} onChange={onBoxConfigChange} />
+        <EasyBoxConfigPanel 
+          config={boxConfig} 
+          baseplateConfig={baseplateConfig}
+          onChange={onBoxConfigChange}
+          onBaseplateConfigChange={onBaseplateConfigChange}
+        />
         <EasyBaseplateConfigPanel config={baseplateConfig} onChange={onBaseplateConfigChange} />
       </div>
     );
@@ -819,11 +824,129 @@ function ProBaseplateConfigPanel({
 // Easy Mode Box Panel
 function EasyBoxConfigPanel({ 
   config, 
-  onChange 
+  baseplateConfig,
+  onChange,
+  onBaseplateConfigChange
 }: { 
   config: BoxConfig; 
+  baseplateConfig?: BaseplateConfig;
   onChange: (config: BoxConfig) => void;
+  onBaseplateConfigChange?: (config: BaseplateConfig) => void;
 }) {
+  // Preset configurations (matching the JSON files exactly)
+  const presets = {
+    'less_material': {
+      boxConfig: {
+        width: 2,
+        depth: 2,
+        height: 3,
+        wallThickness: 1.5,
+        floorThickness: 0.7,
+        innerEdgeBevel: true,
+        cornerRadius: 4,
+        footChamferHeight: 3,
+        lipChamferHeight: 3,
+        dividersX: 0,
+        dividersY: 0,
+      } as Partial<BoxConfig>,
+      baseplateConfig: {
+        targetWidthMm: 130,
+        targetDepthMm: 130,
+        allowHalfCellsX: true,
+        allowHalfCellsY: true,
+        paddingAlignment: 'center' as const,
+        cornerRadius: 8,
+        socketChamferHeight: 3,
+        splitEnabled: true,
+        printerBedWidth: 220,
+        printerBedDepth: 210,
+        connectorEnabled: false,
+        edgePattern: 'wineglass' as const,
+        toothDepth: 5,
+        toothWidth: 4,
+        concaveDepth: 50,
+        wineglassAspectRatio: 1.3,
+        connectorRoofIntensity: 200,
+        connectorRoofDepth: 0,
+        connectorTolerance: 0.3,
+      } as Partial<BaseplateConfig>,
+    },
+    'recommended': {
+      boxConfig: {
+        width: 2,
+        depth: 2,
+        height: 3,
+        wallThickness: 1.5,
+        floorThickness: 0.7,
+        innerEdgeBevel: true,
+        cornerRadius: 4,
+        footChamferHeight: 5,
+        lipChamferHeight: 5,
+        dividersX: 0,
+        dividersY: 0,
+      } as Partial<BoxConfig>,
+      baseplateConfig: {
+        targetWidthMm: 130,
+        targetDepthMm: 130,
+        allowHalfCellsX: true,
+        allowHalfCellsY: true,
+        paddingAlignment: 'center' as const,
+        cornerRadius: 8,
+        socketChamferHeight: 5,
+        splitEnabled: false,
+        printerBedWidth: 220,
+        printerBedDepth: 210,
+        connectorEnabled: true,
+        edgePattern: 'wineglass' as const,
+        toothDepth: 5,
+        toothWidth: 5,
+        concaveDepth: 0,
+        wineglassAspectRatio: 1.3,
+        connectorRoofIntensity: 200,
+        connectorRoofDepth: 0,
+        connectorTolerance: 0.3,
+      } as Partial<BaseplateConfig>,
+    },
+    'high_bed_adhesion': {
+      boxConfig: {
+        width: 2,
+        depth: 2,
+        height: 3,
+        wallThickness: 1.5,
+        floorThickness: 0.7,
+        innerEdgeBevel: true,
+        cornerRadius: 4,
+        footChamferHeight: 9,
+        lipChamferHeight: 9,
+        dividersX: 0,
+        dividersY: 0,
+      } as Partial<BoxConfig>,
+      baseplateConfig: {
+        targetWidthMm: 130,
+        targetDepthMm: 130,
+        allowHalfCellsX: true,
+        allowHalfCellsY: true,
+        paddingAlignment: 'center' as const,
+        cornerRadius: 8,
+        socketChamferHeight: 9,
+        splitEnabled: false,
+        printerBedWidth: 220,
+        printerBedDepth: 220,
+        connectorEnabled: true,
+        edgePattern: 'wineglass' as const,
+        toothDepth: 7,
+        toothWidth: 7,
+        concaveDepth: 0,
+        wineglassAspectRatio: 1.3,
+        connectorRoofIntensity: 200,
+        connectorRoofDepth: 0,
+        connectorTolerance: 0.3,
+      } as Partial<BaseplateConfig>,
+    },
+  };
+
+  // Get current preset (simplified - just track the last applied preset)
+  const [currentPreset, setCurrentPreset] = useState<string | null>(null);
   // Enforce hardcoded values for Easy mode
   const enforceHardcoded = useCallback((newConfig: BoxConfig): BoxConfig => {
     return {
@@ -876,8 +999,61 @@ function EasyBoxConfigPanel({
     return 'max';
   };
 
+  // Apply preset
+  const applyPreset = (presetKey: string) => {
+    if (presetKey === 'none') {
+      setCurrentPreset(null);
+      return;
+    }
+
+    const preset = presets[presetKey as keyof typeof presets];
+    if (!preset) return;
+
+    setCurrentPreset(presetKey);
+
+    // Apply box config preset
+    const updatedBoxConfig = enforceHardcoded({
+      ...config,
+      ...preset.boxConfig,
+    });
+    onChange(updatedBoxConfig);
+
+    // Apply baseplate config preset if available
+    if (baseplateConfig && onBaseplateConfigChange && preset.baseplateConfig) {
+      const updatedBaseplateConfig = {
+        ...baseplateConfig,
+        ...preset.baseplateConfig,
+        // Ensure Easy mode constants are maintained
+        sizingMode: 'fill_area_mm' as const,
+        gridSize: 42,
+        cornerSegments: 32,
+        syncSocketWithFoot: true,
+        edgePattern: 'wineglass' as const,
+      };
+      onBaseplateConfigChange(updatedBaseplateConfig);
+    }
+  };
+
   return (
     <div className="p-3 space-y-2.5">
+      {/* Presets Section */}
+      <CollapsibleSection title="Presets" icon="⚙️" defaultOpen>
+        <SelectInput
+          label="Preset"
+          value={currentPreset || 'none'}
+          options={[
+            { value: 'none', label: 'Custom' },
+            { value: 'less_material', label: 'Less Material' },
+            { value: 'recommended', label: 'Recommended' },
+            { value: 'high_bed_adhesion', label: 'High Bed Adhesion' }
+          ]}
+          onChange={(v) => applyPreset(v as string)}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-500">
+          Quick presets to optimize for different printing scenarios.
+        </p>
+      </CollapsibleSection>
+
       {/* Box Section */}
       <CollapsibleSection title="Box" icon="📦">
         {/* Width, Depth, Height */}
