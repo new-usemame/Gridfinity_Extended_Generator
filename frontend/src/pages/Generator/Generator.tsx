@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { ConfigPanel } from '../../components/ConfigPanel/ConfigPanel';
 import { PreviewCanvas } from '../../components/PreviewCanvas/PreviewCanvas';
@@ -25,11 +24,7 @@ export function Generator() {
   const [pendingSave, setPendingSave] = useState(false);
   const [pendingSaveAfterAuth, setPendingSaveAfterAuth] = useState(false);
   const savedConfigsDropdownRef = useRef<SavedConfigsDropdownRef>(null);
-  const [isJsonDropdownOpen, setIsJsonDropdownOpen] = useState(false);
-  const jsonDropdownRef = useRef<HTMLDivElement>(null);
-  const jsonButtonRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [jsonDropdownPosition, setJsonDropdownPosition] = useState({ top: 0, right: 0 });
   const [mode, setMode] = useState<'easy' | 'pro' | 'expert'>('pro');
 
   // Enforce hardcoded values when in Easy/Pro mode
@@ -336,7 +331,6 @@ export function Generator() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    setIsJsonDropdownOpen(false);
   };
 
   // Detect file type from file
@@ -356,7 +350,6 @@ export function Generator() {
   // Handle loading configuration from file
   const handleLoadConfig = () => {
     fileInputRef.current?.click();
-    setIsJsonDropdownOpen(false);
   };
 
   // Handle click outside download dropdown
@@ -508,39 +501,12 @@ export function Generator() {
     }
   };
 
-  // Update JSON dropdown position when opening
-  useEffect(() => {
-    if (isJsonDropdownOpen && jsonButtonRef.current) {
-      const rect = jsonButtonRef.current.getBoundingClientRect();
-      setJsonDropdownPosition({
-        top: rect.bottom + 8,
-        right: window.innerWidth - rect.right,
-      });
-    }
-  }, [isJsonDropdownOpen]);
-
-  // Close JSON dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (jsonDropdownRef.current && !jsonDropdownRef.current.contains(event.target as Node) &&
-          jsonButtonRef.current && !jsonButtonRef.current.contains(event.target as Node)) {
-        setIsJsonDropdownOpen(false);
-      }
-    };
-
-    if (isJsonDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }
-  }, [isJsonDropdownOpen]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-white dark:bg-slate-950 grid-pattern">
       {/* Generator Controls Header */}
       <header className="flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm relative z-50">
-        <div className="px-4 py-3 flex items-center justify-between">
+        <div className="px-4 py-3 flex items-center gap-2">
           {/* Left side: Title/Logo */}
           <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center shadow-lg shadow-green-500/20">
@@ -557,235 +523,190 @@ export function Generator() {
             </div>
           </Link>
 
-          {/* Right side: Controls grouped logically */}
-          <div className="flex items-center gap-2">
-            {/* Settings Group: Theme & Mode */}
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1 border border-slate-300 dark:border-slate-700">
-                <button
-                  onClick={() => setMode('easy')}
-                  className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${
-                    mode === 'easy'
-                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  Easy
-                </button>
-                <button
-                  onClick={() => setMode('pro')}
-                  className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${
-                    mode === 'pro'
-                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  Pro
-                </button>
-                <button
-                  onClick={() => setMode('expert')}
-                  className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${
-                    mode === 'expert'
-                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  Expert
-                </button>
-              </div>
-            </div>
+          {/* Spacer */}
+          <div className="flex-1"></div>
 
-            <div className="h-6 w-px bg-slate-300 dark:bg-slate-700"></div>
+          {/* Theme button */}
+          <ThemeToggle />
 
-            {/* User Group: Auth & Saved Configs */}
-            <div className="flex items-center gap-2">
-              {!user ? (
-                <button
-                  onClick={() => setIsAuthModalOpen(true)}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2 border border-slate-300 dark:border-slate-700"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Sign In
-                </button>
-              ) : (
-                <>
-                  <UserDropdown />
-                  <SavedConfigsDropdown
-                    ref={savedConfigsDropdownRef}
-                    onLoadPreference={handleLoadPreference}
-                    currentBoxConfig={boxConfig}
-                    currentBaseplateConfig={baseplateConfig}
-                  />
-                </>
-              )}
-            </div>
+          {/* Easy, Pro, Expert buttons */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1 border border-slate-300 dark:border-slate-700">
+            <button
+              onClick={() => setMode('easy')}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${
+                mode === 'easy'
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Easy
+            </button>
+            <button
+              onClick={() => setMode('pro')}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${
+                mode === 'pro'
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Pro
+            </button>
+            <button
+              onClick={() => setMode('expert')}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${
+                mode === 'expert'
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Expert
+            </button>
+          </div>
 
-            <div className="h-6 w-px bg-slate-300 dark:bg-slate-700"></div>
+          {/* Save dropdown (with JSON buttons at top) */}
+          {user ? (
+            <SavedConfigsDropdown
+              ref={savedConfigsDropdownRef}
+              onLoadPreference={handleLoadPreference}
+              currentBoxConfig={boxConfig}
+              currentBaseplateConfig={baseplateConfig}
+              onSaveJSON={handleDownloadJSON}
+              onLoadJSON={handleLoadConfig}
+            />
+          ) : (
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2 border border-slate-300 dark:border-slate-700"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+              <span className="text-sm font-medium">Save</span>
+            </button>
+          )}
 
-            {/* Import/Export: JSON */}
-            <div className="relative">
+          {/* User button dropdown */}
+          {user ? (
+            <UserDropdown />
+          ) : (
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="flex items-center justify-center w-9 h-9 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-300 rounded-lg transition-colors"
+              title="Sign in"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </button>
+          )}
+
+          {/* Divider */}
+          <div className="h-6 w-px bg-slate-300 dark:bg-slate-700"></div>
+
+          {/* Box, Baseplate checkboxes */}
+          <div className="flex items-center gap-3 px-3 py-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json,application/json"
-                onChange={handleFileChange}
-                className="hidden"
+                type="checkbox"
+                checked={generateBox}
+                onChange={(e) => setGenerateBox(e.target.checked)}
+                className="w-4 h-4 text-green-600 dark:text-green-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-2 focus:ring-green-500/50 dark:focus:ring-green-500/50"
               />
-              <button
-                ref={jsonButtonRef}
-                onClick={() => setIsJsonDropdownOpen(!isJsonDropdownOpen)}
-                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-300 rounded-lg transition-colors flex items-center gap-2 border border-slate-300 dark:border-slate-700"
-                title="JSON configuration options"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                <span className="text-sm font-medium">JSON</span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${isJsonDropdownOpen ? 'rotate-180' : ''}`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-            </div>
+              <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">Box</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={generateBaseplate}
+                onChange={(e) => setGenerateBaseplate(e.target.checked)}
+                className="w-4 h-4 text-green-600 dark:text-green-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-2 focus:ring-green-500/50 dark:focus:ring-green-500/50"
+              />
+              <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">Baseplate</span>
+            </label>
+          </div>
 
-            {isJsonDropdownOpen && createPortal(
-              <div
-                ref={jsonDropdownRef}
-                className="fixed w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-[9999] overflow-hidden"
-                style={{
-                  top: `${jsonDropdownPosition.top}px`,
-                  right: `${jsonDropdownPosition.right}px`,
-                }}
-              >
-                <div className="p-2">
+          {/* Generate STL button */}
+          <div className="relative flex" ref={downloadDropdownRef}>
+            {/* Main Generate STL Button */}
+            <button
+              onClick={handleGenerate}
+              disabled={isGenerating || (!generateBox && !generateBaseplate)}
+              className={`px-6 py-2.5 rounded-l-xl font-medium text-sm transition-all duration-200 ${
+                isGenerating || (!generateBox && !generateBaseplate)
+                  ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-green-600 to-green-500 dark:from-green-500 dark:to-green-400 text-white hover:from-green-500 hover:to-green-400 dark:hover:from-green-400 dark:hover:to-green-300 shadow-lg shadow-green-500/25 hover:shadow-green-500/40'
+              }`}
+            >
+              {isGenerating ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Generating...
+                </span>
+              ) : (
+                <span className="flex flex-col items-center leading-tight">
+                  <span>Generate</span>
+                  <span className="text-xs">STL</span>
+                </span>
+              )}
+            </button>
+            
+            {/* Dropdown Arrow Button */}
+            <button
+              onClick={() => setIsDownloadDropdownOpen(!isDownloadDropdownOpen)}
+              disabled={isGenerating || (!generateBox && !generateBaseplate) || (!boxResult && !baseplateResult && !multiSegmentResult)}
+              className={`px-2 py-2.5 rounded-r-xl border-l border-white/20 dark:border-white/10 font-medium text-sm transition-all duration-200 ${
+                isGenerating || (!generateBox && !generateBaseplate) || (!boxResult && !baseplateResult && !multiSegmentResult)
+                  ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-green-600 to-green-500 dark:from-green-500 dark:to-green-400 text-white hover:from-green-500 hover:to-green-400 dark:hover:from-green-400 dark:hover:to-green-300 shadow-lg shadow-green-500/25 hover:shadow-green-500/40'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Dropdown Menu */}
+            {isDownloadDropdownOpen && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-50">
+                {generateBox && boxResult && (
                   <button
-                    onClick={handleDownloadJSON}
-                    className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-2"
+                    onClick={handleDownloadBox}
+                    className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    Download JSON
+                    Download Box
                   </button>
+                )}
+                {generateBaseplate && (baseplateResult || multiSegmentResult) && (
                   <button
-                    onClick={handleLoadConfig}
-                    className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-2"
+                    onClick={handleDownloadBaseplate}
+                    className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    Load JSON
+                    Download Baseplate
                   </button>
-                </div>
-              </div>,
-              document.body
-            )}
-
-            <div className="h-6 w-px bg-slate-300 dark:bg-slate-700"></div>
-
-            {/* Generation Group: Options & Generate */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3 px-3 py-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={generateBox}
-                    onChange={(e) => setGenerateBox(e.target.checked)}
-                    className="w-4 h-4 text-green-600 dark:text-green-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-2 focus:ring-green-500/50 dark:focus:ring-green-500/50"
-                  />
-                  <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">Box</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={generateBaseplate}
-                    onChange={(e) => setGenerateBaseplate(e.target.checked)}
-                    className="w-4 h-4 text-green-600 dark:text-green-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 rounded focus:ring-2 focus:ring-green-500/50 dark:focus:ring-green-500/50"
-                  />
-                  <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">Baseplate</span>
-                </label>
-              </div>
-              <div className="relative flex" ref={downloadDropdownRef}>
-                {/* Main Generate STL Button */}
-                <button
-                  onClick={handleGenerate}
-                  disabled={isGenerating || (!generateBox && !generateBaseplate)}
-                  className={`px-6 py-2.5 rounded-l-xl font-medium text-sm transition-all duration-200 ${
-                    isGenerating || (!generateBox && !generateBaseplate)
-                      ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-green-600 to-green-500 dark:from-green-500 dark:to-green-400 text-white hover:from-green-500 hover:to-green-400 dark:hover:from-green-400 dark:hover:to-green-300 shadow-lg shadow-green-500/25 hover:shadow-green-500/40'
-                  }`}
-                >
-                  {isGenerating ? (
-                    <span className="flex items-center gap-2">
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Generating...
-                    </span>
-                  ) : (
-                    <span className="flex flex-col items-center leading-tight">
-                      <span>Generate</span>
-                      <span className="text-xs">STL</span>
-                    </span>
-                  )}
-                </button>
-                
-                {/* Dropdown Arrow Button */}
-                <button
-                  onClick={() => setIsDownloadDropdownOpen(!isDownloadDropdownOpen)}
-                  disabled={isGenerating || (!generateBox && !generateBaseplate) || (!boxResult && !baseplateResult && !multiSegmentResult)}
-                  className={`px-2 py-2.5 rounded-r-xl border-l border-white/20 dark:border-white/10 font-medium text-sm transition-all duration-200 ${
-                    isGenerating || (!generateBox && !generateBaseplate) || (!boxResult && !baseplateResult && !multiSegmentResult)
-                      ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-green-600 to-green-500 dark:from-green-500 dark:to-green-400 text-white hover:from-green-500 hover:to-green-400 dark:hover:from-green-400 dark:hover:to-green-300 shadow-lg shadow-green-500/25 hover:shadow-green-500/40'
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {/* Dropdown Menu */}
-                {isDownloadDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-50">
-                    {generateBox && boxResult && (
-                      <button
-                        onClick={handleDownloadBox}
-                        className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        Download Box
-                      </button>
-                    )}
-                    {generateBaseplate && (baseplateResult || multiSegmentResult) && (
-                      <button
-                        onClick={handleDownloadBaseplate}
-                        className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        Download Baseplate
-                      </button>
-                    )}
-                  </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
         </div>
       </header>
+
+      {/* Hidden file input for JSON loading */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        onChange={handleFileChange}
+        className="hidden"
+      />
 
       {/* Auth Modal */}
       <AuthModal 

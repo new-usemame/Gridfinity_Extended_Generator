@@ -17,6 +17,8 @@ interface SavedConfigsDropdownProps {
   onLoadPreference: (boxConfig: BoxConfig | null, baseplateConfig: BaseplateConfig | null) => void;
   currentBoxConfig: BoxConfig;
   currentBaseplateConfig: BaseplateConfig;
+  onSaveJSON?: () => void;
+  onLoadJSON?: () => void;
 }
 
 export interface SavedConfigsDropdownRef {
@@ -25,7 +27,7 @@ export interface SavedConfigsDropdownRef {
 }
 
 export const SavedConfigsDropdown = forwardRef<SavedConfigsDropdownRef, SavedConfigsDropdownProps>(
-  ({ onLoadPreference, currentBoxConfig, currentBaseplateConfig }, ref) => {
+  ({ onLoadPreference, currentBoxConfig, currentBaseplateConfig, onSaveJSON, onLoadJSON }, ref) => {
   const { user, token } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [preferences, setPreferences] = useState<SavedPreference[]>([]);
@@ -216,6 +218,41 @@ export const SavedConfigsDropdown = forwardRef<SavedConfigsDropdownRef, SavedCon
           }}
         >
           <div className="max-h-96 overflow-y-auto">
+            {/* JSON Save/Load buttons at the top */}
+            {(onSaveJSON || onLoadJSON) && (
+              <div className="p-2 border-b border-slate-200 dark:border-slate-700">
+                <div className="flex gap-2">
+                  {onSaveJSON && (
+                    <button
+                      onClick={() => {
+                        onSaveJSON();
+                        setIsOpen(false);
+                      }}
+                      className="flex-1 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Save JSON
+                    </button>
+                  )}
+                  {onLoadJSON && (
+                    <button
+                      onClick={() => {
+                        onLoadJSON();
+                        setIsOpen(false);
+                      }}
+                      className="flex-1 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      Load JSON
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="p-2">
               <button
                 onClick={() => {
