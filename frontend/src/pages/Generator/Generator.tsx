@@ -9,7 +9,8 @@ import { SavedConfigsDropdown } from '../../components/SavedConfigsDropdown/Save
 import type { SavedConfigsDropdownRef } from '../../components/SavedConfigsDropdown/SavedConfigsDropdown';
 import { AuthModal } from '../../components/AuthModal/AuthModal';
 import { ThemeToggle } from '../../components/ThemeToggle/ThemeToggle';
-import { Game2048Modal } from '../../components/Game2048/Game2048Modal';
+import { Game2048 } from '../../components/Game2048/Game2048';
+import { Leaderboard } from '../../components/Game2048/Leaderboard';
 import { useAuth } from '../../contexts/AuthContext';
 import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, GenerationResult, MultiSegmentResult, normalizeBoxConfig, normalizeBaseplateConfig } from '../../types/config';
 import { compareConfigs } from '../../utils/configComparison';
@@ -708,17 +709,6 @@ export function Generator() {
         }} 
       />
 
-      {/* Game 2048 Modal - shows during generation */}
-      <Game2048Modal
-        isOpen={isGenerating}
-        isGenerating={isGenerating}
-      />
-
-      {/* Game 2048 Modal - shows during generation */}
-      <Game2048Modal
-        isOpen={isGenerating}
-        isGenerating={isGenerating}
-      />
 
       {/* Save Dialog */}
       {showSaveDialog && (
@@ -830,14 +820,40 @@ export function Generator() {
 
           {/* 3D Preview */}
           <div className="flex-1 relative min-h-0">
-            <PreviewCanvas
-              boxStlUrl={generateBox ? (boxResult?.stlUrl || null) : null}
-              baseplateStlUrl={generateBaseplate ? (baseplateResult?.stlUrl || null) : null}
-              isLoading={isGenerating}
-              isCombinedView={true}
-              boxConfig={boxConfig}
-              baseplateConfig={baseplateConfig}
-            />
+            {isGenerating ? (
+              /* 2048 Game - shown during generation */
+              <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 p-8">
+                <div className="w-full max-w-4xl">
+                  <div className="flex flex-col sm:flex-row gap-6">
+                    {/* Game */}
+                    <div className="flex-1 min-w-0">
+                      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-lg">
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Play 2048 While Generating</h3>
+                        <Game2048
+                          isVisible={isGenerating}
+                          isPlayable={isGenerating}
+                        />
+                      </div>
+                    </div>
+                    {/* Leaderboard */}
+                    <div className="w-full sm:w-64 flex-shrink-0">
+                      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-lg">
+                        <Leaderboard limit={10} compact={true} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <PreviewCanvas
+                boxStlUrl={generateBox ? (boxResult?.stlUrl || null) : null}
+                baseplateStlUrl={generateBaseplate ? (baseplateResult?.stlUrl || null) : null}
+                isLoading={isGenerating}
+                isCombinedView={true}
+                boxConfig={boxConfig}
+                baseplateConfig={baseplateConfig}
+              />
+            )}
           </div>
         </main>
       </div>

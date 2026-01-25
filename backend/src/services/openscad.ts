@@ -2199,29 +2199,64 @@ module cavity_with_inner_bevel(width, depth, height, corner_radius, bevel_enable
 }
 
 module gridfinity_base() {
-    for (gx = [0:width_units-1]) {
-        for (gy = [0:depth_units-1]) {
+    // Handle both full and half cells (same pattern as baseplate)
+    // Half cells go on the FAR edge (right/back) at high X, high Y
+    full_cells_x = floor(width_units);
+    full_cells_y = floor(depth_units);
+    has_half_x = width_units - full_cells_x >= 0.5;
+    has_half_y = depth_units - full_cells_y >= 0.5;
+    half_cell_size = grid_unit / 2;
+    
+    // Full grid cells
+    for (gx = [0:full_cells_x-1]) {
+        for (gy = [0:full_cells_y-1]) {
             translate([gx * grid_unit, gy * grid_unit, 0])
-            single_base_unit();
+            single_base_unit(grid_unit, grid_unit);
+        }
+    }
+    
+    // Half cells on X edge (far/right side) - AFTER full cells, at high X values
+    // Generate for all Y positions including the half Y row if it exists
+    if (has_half_x) {
+        // Full Y cells
+        for (gy = [0:full_cells_y-1]) {
+            translate([full_cells_x * grid_unit, gy * grid_unit, 0])
+            single_base_unit(half_cell_size, grid_unit);
+        }
+        // Half Y row (if it exists) - this creates the corner half cell when both X and Y have half cells
+        if (has_half_y) {
+            translate([full_cells_x * grid_unit, full_cells_y * grid_unit, 0])
+            single_base_unit(half_cell_size, half_cell_size);
+        }
+    }
+    
+    // Half cells on Y edge (far/back side) - AFTER full cells, at high Y values
+    // Only generate for full X cells (corner is already handled above)
+    if (has_half_y) {
+        for (gx = [0:full_cells_x-1]) {
+            translate([gx * grid_unit, full_cells_y * grid_unit, 0])
+            single_base_unit(grid_unit, half_cell_size);
         }
     }
 }
 
-module single_base_unit() {
+module single_base_unit(cell_width = grid_unit, cell_depth = grid_unit) {
     // Gridfinity base profile - matches baseplate sockets
     // Uses official dimensions from gridfinity_constants.scad
+    // Supports full cells (42mm) and half cells (21mm)
     
     difference() {
         // The stacking foot with proper chamfer profile
-        gridfinity_foot();
+        gridfinity_foot(cell_width, cell_depth);
         
-        // Magnet holes
-        if (magnet_enabled) {
+        // Magnet holes (only for full-size cells)
+        is_full_cell = cell_width >= grid_unit - 0.1 && cell_depth >= grid_unit - 0.1;
+        if (magnet_enabled && is_full_cell) {
             magnet_holes();
         }
         
-        // Screw holes
-        if (screw_enabled) {
+        // Screw holes (only for full-size cells)
+        if (screw_enabled && is_full_cell) {
             screw_holes();
         }
     }
@@ -2246,30 +2281,33 @@ module rounded_rect_profile(width, depth, height, radius) {
     }
 }
 
-module gridfinity_foot() {
+module gridfinity_foot(cell_width = grid_unit, cell_depth = grid_unit) {
     // ONE SIMPLE TAPER per foot
     // Small at bottom, expands to full size at top
     // This is what fits into the baseplate socket
     // Angle and height control the taper steepness and size
+    // Supports full cells (42mm) and half cells (21mm)
     
     // Use user-specified feet corner radius (0 means no rounding)
     foot_radius = feet_corner_radius;
-    foot_full_size = grid_unit - clearance * 2;  // 41.5mm at top
+    foot_full_width = cell_width - clearance * 2;
+    foot_full_depth = cell_depth - clearance * 2;
     
     // Bottom size - calculated from chamfer angle and height
     // foot_bottom_inset is pre-calculated: height / tan(angle)
-    bottom_size = foot_full_size - foot_bottom_inset * 2;
+    bottom_width = foot_full_width - foot_bottom_inset * 2;
+    bottom_depth = foot_full_depth - foot_bottom_inset * 2;
     bottom_radius = foot_bottom_corner_radius;
     
     translate([clearance, clearance, 0])
     hull() {
         // Bottom - smaller size (inset calculated from angle)
         translate([foot_bottom_inset, foot_bottom_inset, 0])
-        rounded_rect_profile(bottom_size, bottom_size, 0.01, bottom_radius);
+        rounded_rect_profile(bottom_width, bottom_depth, 0.01, bottom_radius);
         
         // Top - full size (ONE simple taper from bottom to here)
         translate([0, 0, foot_taper_height - 0.01])
-        rounded_rect_profile(foot_full_size, foot_full_size, 0.02, foot_radius);
+        rounded_rect_profile(foot_full_width, foot_full_depth, 0.02, foot_radius);
     }
 }
 

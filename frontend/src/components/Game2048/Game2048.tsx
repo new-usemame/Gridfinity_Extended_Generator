@@ -217,11 +217,11 @@ export function Game2048({ isVisible, isPlayable, onGameOver }: Game2048Props) {
       rotated = rotateBoard(rotateBoard(board));
       rotations = 2;
     } else if (direction === 'up') {
-      rotated = rotateBoard(rotateBoard(rotateBoard(board)));
-      rotations = 3;
-    } else if (direction === 'down') {
       rotated = rotateBoard(board);
       rotations = 1;
+    } else if (direction === 'down') {
+      rotated = rotateBoard(rotateBoard(rotateBoard(board)));
+      rotations = 3;
     }
 
     const { newBoard, scoreIncrease } = moveLeft(rotated);
