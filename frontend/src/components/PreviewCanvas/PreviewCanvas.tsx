@@ -353,10 +353,10 @@ function CombinedSceneContent({
       {/* Grid Floor */}
       <Grid
         args={[300, 300]}
-        cellSize={42}
+        cellSize={10}
         cellThickness={0.5}
         cellColor="#cbd5e1"
-        sectionSize={42}
+        sectionSize={10}
         sectionThickness={1}
         sectionColor="#16a34a"
         fadeDistance={400}
@@ -488,10 +488,10 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
       {/* Grid Floor */}
       <Grid
         args={[300, 300]}
-        cellSize={42}
+        cellSize={10}
         cellThickness={0.5}
         cellColor="#cbd5e1"
-        sectionSize={42}
+        sectionSize={10}
         sectionThickness={1}
         sectionColor="#16a34a"
         fadeDistance={400}
@@ -690,11 +690,12 @@ function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.Bu
 
   const centerX = (minX + maxX) / 2;
 
-  // For Z-axis ruler, we want it to start at the origin (Z=0) and extend in the negative Z direction
-  // This aligns with where the box appears (negative Z = positive OpenSCAD Y)
-  const rulerStartZ = Math.min(0, minZ);
-  const rulerEndZ = 0; // Always start from origin
-  const rulerDepth = rulerEndZ - rulerStartZ; // Depth is positive (extends from 0 to minZ)
+  // For Z-axis ruler, we want it to start at the origin (Z=0) and extend in the positive Z direction
+  // OpenSCAD Y starts at 0 and goes negative, so OpenSCAD -Y goes positive
+  // Three.js Z = -OpenSCAD Y, so positive Z corresponds to positive OpenSCAD -Y
+  const rulerStartZ = 0; // Always start from origin (OpenSCAD Y = 0)
+  const rulerEndZ = Math.max(0, maxZ);
+  const rulerDepth = rulerEndZ - rulerStartZ; // Depth is positive (extends from 0 to maxZ)
 
   return (
     <group>
@@ -731,31 +732,32 @@ function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.Bu
         ))}
       </group>
 
-      {/* Z-axis ruler (OpenSCAD Y) - along the left edge (minX) */}
-      {/* Three.js Z = -OpenSCAD Y, so OpenSCAD Y = -Three.js Z */}
-      {/* The ruler starts at the origin (Z=0) and extends in the negative Z direction */}
-      {/* Negative Z values correspond to positive OpenSCAD Y values */}
-      <group position={[minX, rulerHeight, rulerEndZ]} rotation={[0, Math.PI / 2, 0]}>
-        {/* Main ruler line - extends from origin (Z=0) in negative Z direction */}
+      {/* Z-axis ruler (OpenSCAD -Y) - along the left edge (minX) */}
+      {/* Three.js Z = -OpenSCAD Y, so OpenSCAD -Y = Three.js Z */}
+      {/* The ruler starts at the origin (Z=0, OpenSCAD Y=0) and extends in the positive Z direction */}
+      {/* Positive Z values correspond to positive OpenSCAD -Y values */}
+      {/* OpenSCAD Y starts at 0 and goes negative, so OpenSCAD -Y goes positive */}
+      <group position={[minX, rulerHeight, rulerStartZ]} rotation={[0, Math.PI / 2, 0]}>
+        {/* Main ruler line - extends from origin (Z=0) in positive Z direction */}
         <mesh>
           <boxGeometry args={[rulerDepth, 0.05, 0.05]} />
           <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
         </mesh>
-        {/* Tick marks - only show ticks in the negative Z range (where the box is) */}
-        {zTicks.filter(tick => tick.position <= 0).map((tick, i) => {
-          // Convert Three.js Z coordinate to OpenSCAD Y value
-          // Three.js Z = -OpenSCAD Y, so OpenSCAD Y = -Three.js Z
-          // Since tick.position is negative (or zero), OpenSCAD Y will be positive (or zero)
-          const openScadYValue = -tick.position;
-          // Position tick relative to ruler start (which is at rulerEndZ = 0)
-          // Negative Z values go in the positive X direction of the rotated ruler
+        {/* Tick marks - only show ticks in the positive Z range (OpenSCAD -Y) */}
+        {zTicks.filter(tick => tick.position >= 0).map((tick, i) => {
+          // Convert Three.js Z coordinate to OpenSCAD -Y value
+          // Three.js Z = -OpenSCAD Y, so OpenSCAD -Y = Three.js Z
+          // Since tick.position is positive (or zero), OpenSCAD -Y will be positive (or zero)
+          const openScadMinusYValue = tick.position;
+          // Position tick relative to ruler start (which is at rulerStartZ = 0)
+          // Positive Z values go in the positive X direction of the rotated ruler
           return (
-            <group key={`z-tick-${i}`} position={[tick.position - rulerEndZ, 0, 0]}>
+            <group key={`z-tick-${i}`} position={[tick.position - rulerStartZ, 0, 0]}>
               <mesh>
                 <boxGeometry args={[0.05, tick.isMajor ? tickLength : minorTickLength, 0.05]} />
                 <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
               </mesh>
-              {/* Labels for major ticks - show OpenSCAD Y value (positive) */}
+              {/* Labels for major ticks - show OpenSCAD -Y value (positive) */}
               {tick.isMajor && (
                 <Billboard position={[0, -tickLength - labelOffset, 0]}>
                   <Text 
@@ -766,15 +768,15 @@ function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.Bu
                     outlineWidth={0.1}
                     outlineColor="#000000"
                   >
-                    {openScadYValue.toFixed(0)}mm
+                    {openScadMinusYValue.toFixed(0)}mm
                   </Text>
                 </Billboard>
               )}
             </group>
           );
         })}
-        {/* Always show tick at origin (Z=0) if it's not already in zTicks */}
-        {(!zTicks.some(t => Math.abs(t.position) < 0.01) && rulerStartZ <= 0) && (
+        {/* Always show tick at origin (Z=0, OpenSCAD Y=0) if it's not already in zTicks */}
+        {(!zTicks.some(t => Math.abs(t.position) < 0.01) && rulerStartZ <= 0 && rulerEndZ >= 0) && (
           <group position={[0, 0, 0]}>
             <mesh>
               <boxGeometry args={[0.05, tickLength, 0.05]} />
