@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { ConfigPanel } from '../../components/ConfigPanel/ConfigPanel';
 import { PreviewCanvas } from '../../components/PreviewCanvas/PreviewCanvas';
-import { ExportButtons, MultiSegmentExportButtons } from '../../components/ExportButtons/ExportButtons';
 import { UserDropdown } from '../../components/UserDropdown/UserDropdown';
 import { SavedConfigsDropdown } from '../../components/SavedConfigsDropdown/SavedConfigsDropdown';
 import type { SavedConfigsDropdownRef } from '../../components/SavedConfigsDropdown/SavedConfigsDropdown';
@@ -13,7 +12,6 @@ import { Game2048 } from '../../components/Game2048/Game2048';
 import { Leaderboard } from '../../components/Game2048/Leaderboard';
 import { useAuth } from '../../contexts/AuthContext';
 import { BoxConfig, BaseplateConfig, defaultBoxConfig, defaultBaseplateConfig, GenerationResult, MultiSegmentResult, normalizeBoxConfig, normalizeBaseplateConfig } from '../../types/config';
-import { compareConfigs } from '../../utils/configComparison';
 
 export function Generator() {
   const { user, token } = useAuth();
@@ -26,7 +24,6 @@ export function Generator() {
   const [isSaving, setIsSaving] = useState(false);
   const [pendingSave, setPendingSave] = useState(false);
   const [pendingSaveAfterAuth, setPendingSaveAfterAuth] = useState(false);
-  const [savedPreferences, setSavedPreferences] = useState<any[]>([]);
   const savedConfigsDropdownRef = useRef<SavedConfigsDropdownRef>(null);
   const [isJsonDropdownOpen, setIsJsonDropdownOpen] = useState(false);
   const jsonDropdownRef = useRef<HTMLDivElement>(null);
@@ -120,6 +117,8 @@ export function Generator() {
   const [activeEditor, setActiveEditor] = useState<'box' | 'baseplate'>('box');
   const [generateBox, setGenerateBox] = useState(true);
   const [generateBaseplate, setGenerateBaseplate] = useState(true);
+  const [isDownloadDropdownOpen, setIsDownloadDropdownOpen] = useState(false);
+  const downloadDropdownRef = useRef<HTMLDivElement>(null);
 
   // Server-side generation
   const handleServerGenerate = useCallback(async () => {
@@ -241,15 +240,6 @@ export function Generator() {
     }
   }, []);
 
-  // Handle save button click
-  const handleSaveClick = () => {
-    if (!user || !token) {
-      setPendingSave(true);
-      setIsAuthModalOpen(true);
-      return;
-    }
-    setShowSaveDialog(true);
-  };
 
   // Open save dialog after successful login
   useEffect(() => {
@@ -307,42 +297,28 @@ export function Generator() {
     }
   };
 
-  // Load saved preferences to check for matches
+  // Load saved preferences to refresh dropdown
   const loadSavedPreferences = async () => {
     if (!token) return;
     try {
-      const response = await fetch('/api/preferences', {
+      await fetch('/api/preferences', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
-      if (response.ok) {
-        const data = await response.json();
-        setSavedPreferences(data.preferences || []);
-      }
+      // Preferences are loaded by SavedConfigsDropdown component
     } catch (error) {
       console.error('Failed to load preferences:', error);
     }
   };
 
-  // Load preferences when user logs in
+  // Refresh preferences when user logs in
   useEffect(() => {
     if (user && token) {
       loadSavedPreferences();
-    } else {
-      setSavedPreferences([]);
     }
   }, [user, token]);
 
-  // Check if current config matches any saved config
-  const matchingConfig = savedPreferences.find(pref => 
-    compareConfigs(
-      boxConfig,
-      baseplateConfig,
-      pref.box_config,
-      pref.baseplate_config
-    )
-  );
 
   // Handle downloading configuration
   const handleDownloadJSON = () => {
@@ -381,6 +357,88 @@ export function Generator() {
   const handleLoadConfig = () => {
     fileInputRef.current?.click();
     setIsJsonDropdownOpen(false);
+  };
+
+  // Handle click outside download dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (downloadDropdownRef.current && !downloadDropdownRef.current.contains(event.target as Node)) {
+        setIsDownloadDropdownOpen(false);
+      }
+    };
+
+    if (isDownloadDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isDownloadDropdownOpen]);
+
+  // Download handlers
+  const handleDownloadBox = () => {
+    if (!boxResult) return;
+    const link = document.createElement('a');
+    link.href = boxResult.stlUrl;
+    link.download = boxResult.filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setIsDownloadDropdownOpen(false);
+  };
+
+  const handleDownloadBaseplate = () => {
+    if (!baseplateResult && !multiSegmentResult) return;
+    
+    if (multiSegmentResult) {
+      // Handle multi-segment download
+      const downloadAllSequentially = async () => {
+        try {
+          const response = await fetch('/api/generate/segments-zip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              config: baseplateConfig
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to generate zip file');
+          }
+          
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `baseplate_segments_${Date.now()}.zip`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          console.error('Failed to download zip:', err);
+          // Fallback to single segment if available
+          if (baseplateResult) {
+            const link = document.createElement('a');
+            link.href = baseplateResult.stlUrl;
+            link.download = baseplateResult.filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        }
+      };
+      downloadAllSequentially();
+    } else if (baseplateResult) {
+      // Handle single baseplate download
+      const link = document.createElement('a');
+      link.href = baseplateResult.stlUrl;
+      link.download = baseplateResult.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    setIsDownloadDropdownOpen(false);
   };
 
   // Handle file input change
@@ -654,30 +712,76 @@ export function Generator() {
                   <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">Baseplate</span>
                 </label>
               </div>
-              <button
-                onClick={handleGenerate}
-                disabled={isGenerating || (!generateBox && !generateBaseplate)}
-                className={`px-6 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
-                  isGenerating || (!generateBox && !generateBaseplate)
-                    ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-green-600 to-green-500 dark:from-green-500 dark:to-green-400 text-white hover:from-green-500 hover:to-green-400 dark:hover:from-green-400 dark:hover:to-green-300 shadow-lg shadow-green-500/25 hover:shadow-green-500/40'
-                }`}
-              >
-                {isGenerating ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Generating...
-                  </span>
-                ) : (
-                  <span className="flex flex-col items-center leading-tight">
-                    <span>Generate</span>
-                    <span className="text-xs">STL</span>
-                  </span>
+              <div className="relative flex" ref={downloadDropdownRef}>
+                {/* Main Generate STL Button */}
+                <button
+                  onClick={handleGenerate}
+                  disabled={isGenerating || (!generateBox && !generateBaseplate)}
+                  className={`px-6 py-2.5 rounded-l-xl font-medium text-sm transition-all duration-200 ${
+                    isGenerating || (!generateBox && !generateBaseplate)
+                      ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-green-600 to-green-500 dark:from-green-500 dark:to-green-400 text-white hover:from-green-500 hover:to-green-400 dark:hover:from-green-400 dark:hover:to-green-300 shadow-lg shadow-green-500/25 hover:shadow-green-500/40'
+                  }`}
+                >
+                  {isGenerating ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Generating...
+                    </span>
+                  ) : (
+                    <span className="flex flex-col items-center leading-tight">
+                      <span>Generate</span>
+                      <span className="text-xs">STL</span>
+                    </span>
+                  )}
+                </button>
+                
+                {/* Dropdown Arrow Button */}
+                <button
+                  onClick={() => setIsDownloadDropdownOpen(!isDownloadDropdownOpen)}
+                  disabled={isGenerating || (!generateBox && !generateBaseplate) || (!boxResult && !baseplateResult && !multiSegmentResult)}
+                  className={`px-2 py-2.5 rounded-r-xl border-l border-white/20 dark:border-white/10 font-medium text-sm transition-all duration-200 ${
+                    isGenerating || (!generateBox && !generateBaseplate) || (!boxResult && !baseplateResult && !multiSegmentResult)
+                      ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-green-600 to-green-500 dark:from-green-500 dark:to-green-400 text-white hover:from-green-500 hover:to-green-400 dark:hover:from-green-400 dark:hover:to-green-300 shadow-lg shadow-green-500/25 hover:shadow-green-500/40'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Dropdown Menu */}
+                {isDownloadDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-50">
+                    {generateBox && boxResult && (
+                      <button
+                        onClick={handleDownloadBox}
+                        className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download Box
+                      </button>
+                    )}
+                    {generateBaseplate && (baseplateResult || multiSegmentResult) && (
+                      <button
+                        onClick={handleDownloadBaseplate}
+                        className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download Baseplate
+                      </button>
+                    )}
+                  </div>
                 )}
-              </button>
+              </div>
             </div>
           </div>
         </div>
@@ -851,59 +955,6 @@ export function Generator() {
         </main>
       </div>
 
-      {/* Export Buttons - Fixed to bottom of screen (only over preview area) */}
-      <div className="fixed bottom-0 left-96 right-0 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm p-4 space-y-4 overflow-x-auto min-w-0 z-10">
-        {generateBox && boxResult && (
-          <div>
-            <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">BOX</h4>
-            <ExportButtons
-              stlUrl={boxResult.stlUrl}
-              scadContent={boxResult.scadContent}
-              filename={boxResult.filename}
-              isConfigSaved={!!matchingConfig}
-              user={user}
-              onSaveRequest={handleSaveClick}
-              onAuthRequest={() => {
-                setPendingSaveAfterAuth(true);
-                setIsAuthModalOpen(true);
-              }}
-            />
-          </div>
-        )}
-        {generateBaseplate && (multiSegmentResult ? (
-          <div>
-            <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">BASEPLATE (SPLIT)</h4>
-            <MultiSegmentExportButtons
-              result={multiSegmentResult}
-              splitInfo={multiSegmentResult.splitInfo}
-              baseplateConfig={baseplateConfig}
-              isConfigSaved={!!matchingConfig}
-              user={user}
-              onSaveRequest={handleSaveClick}
-              onAuthRequest={() => {
-                setPendingSaveAfterAuth(true);
-                setIsAuthModalOpen(true);
-              }}
-            />
-          </div>
-        ) : baseplateResult && (
-          <div>
-            <h4 className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">BASEPLATE</h4>
-            <ExportButtons
-              stlUrl={baseplateResult.stlUrl}
-              scadContent={baseplateResult.scadContent}
-              filename={baseplateResult.filename}
-              isConfigSaved={!!matchingConfig}
-              user={user}
-              onSaveRequest={handleSaveClick}
-              onAuthRequest={() => {
-                setPendingSaveAfterAuth(true);
-                setIsAuthModalOpen(true);
-              }}
-            />
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
