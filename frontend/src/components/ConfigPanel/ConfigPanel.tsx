@@ -816,26 +816,514 @@ function ProBaseplateConfigPanel({
   );
 }
 
-// Easy Mode Placeholders
-function EasyBoxConfigPanel({ }: { config: BoxConfig; onChange: (config: BoxConfig) => void }) {
+// Easy Mode Box Panel
+function EasyBoxConfigPanel({ 
+  config, 
+  onChange 
+}: { 
+  config: BoxConfig; 
+  onChange: (config: BoxConfig) => void;
+}) {
+  // Enforce hardcoded values for Easy mode
+  const enforceHardcoded = useCallback((newConfig: BoxConfig): BoxConfig => {
+    return {
+      ...newConfig,
+      preventBottomOverhangs: true,
+      flatBase: 'off',
+      gridSize: 42, // Constant: Box grid unit size is 42mm
+      floorThickness: 0.70, // Constant: Box Floor thickness is 0.70mm
+      footBottomCornerRadius: 6.0, // Constant: Feet Corner Radius is 6.0mm
+      footChamferAngle: 60, // Constant: Feet Foot taper angle is 60 degrees
+      // innerEdgeBevel is conditional: true unless Corner Radius is 'Off'
+      innerEdgeBevel: newConfig.cornerRadius !== 0,
+    };
+  }, []);
+
+  const update = <K extends keyof BoxConfig>(key: K, value: BoxConfig[K]) => {
+    const updated = enforceHardcoded({ ...config, [key]: value });
+    onChange(updated);
+  };
+
+  // Update corner radius and handle innerEdgeBevel conditionally
+  const updateCornerRadius = (value: number) => {
+    const updated = enforceHardcoded({
+      ...config,
+      cornerRadius: value,
+      feetCornerRadius: value,
+      innerEdgeBevel: value !== 0, // Bevel Floor-Wall Edge is true unless Corner Radius is 'Off'
+    });
+    onChange(updated);
+  };
+
+  // Get current wall thickness option
+  const getWallThicknessOption = () => {
+    if (config.wallThickness <= 0.95) return 'thin';
+    if (config.wallThickness <= 1.5) return 'sturdy';
+    return 'thick';
+  };
+
+  // Get current corner radius option
+  const getCornerRadiusOption = () => {
+    if (config.cornerRadius === 0) return 'off';
+    if (config.cornerRadius <= 4) return 'normal';
+    return 'extra';
+  };
+
+  // Get current foot taper height option
+  const getFootTaperHeightOption = () => {
+    if (config.footChamferHeight <= 3) return 'min';
+    if (config.footChamferHeight <= 6) return 'normal';
+    return 'max';
+  };
+
   return (
     <div className="p-3 space-y-2.5">
-      <CollapsibleSection title="Easy Mode (Box)" icon="📦">
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          Easy mode controls will be specified separately.
+      {/* Box Section */}
+      <CollapsibleSection title="Box" icon="📦">
+        {/* Width, Depth, Height */}
+        <SliderInput
+          label="Width"
+          value={config.width}
+          min={0.5}
+          max={20}
+          step={0.5}
+          unit="units"
+          onChange={(v) => update('width', v)}
+        />
+        <SliderInput
+          label="Depth"
+          value={config.depth}
+          min={0.5}
+          max={20}
+          step={0.5}
+          unit="units"
+          onChange={(v) => update('depth', v)}
+        />
+        <SliderInput
+          label="Height"
+          value={config.height}
+          min={1}
+          max={25}
+          step={1}
+          unit="units"
+          onChange={(v) => update('height', v)}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-500">
+          Each height unit is 7mm. Standard Gridfinity specification.
+        </p>
+
+        {/* Wall Thickness - Select (3 options) */}
+        <SelectInput
+          label="Wall Thickness"
+          value={getWallThicknessOption()}
+          options={[
+            { value: 'thin', label: 'Thin (0.95mm)' },
+            { value: 'sturdy', label: 'Sturdy (1.5mm)' },
+            { value: 'thick', label: 'Thick (2.25mm)' }
+          ]}
+          onChange={(v) => {
+            const thicknessMap: Record<string, number> = {
+              'thin': 0.95,
+              'sturdy': 1.5,
+              'thick': 2.25
+            };
+            update('wallThickness', thicknessMap[v as string]);
+          }}
+        />
+
+        {/* Corner Radius - Select (3 options) */}
+        <SelectInput
+          label="Corner Radius"
+          value={getCornerRadiusOption()}
+          options={[
+            { value: 'off', label: 'Off (0mm)' },
+            { value: 'normal', label: 'Normal (4mm)' },
+            { value: 'extra', label: 'Extra (6mm)' }
+          ]}
+          onChange={(v) => {
+            const radiusMap: Record<string, number> = {
+              'off': 0,
+              'normal': 4,
+              'extra': 6
+            };
+            updateCornerRadius(radiusMap[v as string]);
+          }}
+        />
+
+        {/* Dividers X, Y */}
+        <NumberInput
+          label="Dividers X (Left-Right)"
+          value={config.dividersX}
+          min={0}
+          max={10}
+          step={1}
+          onChange={(v) => update('dividersX', v)}
+        />
+        <NumberInput
+          label="Dividers Y (Front-Back)"
+          value={config.dividersY}
+          min={0}
+          max={10}
+          step={1}
+          onChange={(v) => update('dividersY', v)}
+        />
+      </CollapsibleSection>
+
+      {/* Feet (Base) Section */}
+      <CollapsibleSection title="Feet" icon="👣">
+        {/* Foot Taper Height - Select (3 options) */}
+        <SelectInput
+          label="Foot Taper Height"
+          value={getFootTaperHeightOption()}
+          options={[
+            { value: 'min', label: 'Min (3mm)' },
+            { value: 'normal', label: 'Normal (6mm)' },
+            { value: 'max', label: 'Max (9mm)' }
+          ]}
+          onChange={(v) => {
+            const heightMap: Record<string, number> = {
+              'min': 3,
+              'normal': 6,
+              'max': 9
+            };
+            const updated = enforceHardcoded({
+              ...config,
+              footChamferHeight: heightMap[v as string],
+              lipChamferHeight: heightMap[v as string],
+            });
+            onChange(updated);
+          }}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-500">
+          Foot taper angle is fixed at 60 degrees. Corner radius is fixed at 6.0mm.
         </p>
       </CollapsibleSection>
     </div>
   );
 }
 
-function EasyBaseplateConfigPanel({ }: { config: BaseplateConfig; onChange: (config: BaseplateConfig) => void }) {
+// Easy Mode Baseplate Panel
+function EasyBaseplateConfigPanel({ 
+  config, 
+  onChange 
+}: { 
+  config: BaseplateConfig; 
+  onChange: (config: BaseplateConfig) => void;
+}) {
+  // Enforce hardcoded values for Easy mode
+  const enforceHardcoded = useCallback((newConfig: BaseplateConfig): BaseplateConfig => {
+    return {
+      ...newConfig,
+      sizingMode: 'fill_area_mm', // Constant: Baseplate sizing mode is fill_area_mm
+      gridSize: 42, // Constant: Baseplate grid unit size is 42mm
+      cornerSegments: 32,
+      syncSocketWithFoot: true,
+      // Printer Bed Splitting constants: edgePattern='wineglass', all other connector settings use defaults
+      edgePattern: 'wineglass', // Constant: Edge Pattern is 1. Wine Glass (Swoopy Bulb)
+      // Keep default values for other connector settings (they're hidden but need to be set)
+      connectorTolerance: newConfig.connectorTolerance ?? 0.3,
+      toothDepth: newConfig.toothDepth ?? 6,
+      toothWidth: newConfig.toothWidth ?? 5,
+      concaveDepth: newConfig.concaveDepth ?? 0,
+      wineglassAspectRatio: newConfig.wineglassAspectRatio ?? 1.0,
+      connectorRoofIntensity: newConfig.connectorRoofIntensity ?? 200,
+      connectorRoofDepth: newConfig.connectorRoofDepth ?? 0,
+    };
+  }, []);
+
+  const update = <K extends keyof BaseplateConfig>(key: K, value: BaseplateConfig[K]) => {
+    const updated = enforceHardcoded({ ...config, [key]: value });
+    onChange(updated);
+  };
+
+  // Get current half cells option
+  const getHalfCellsOption = () => {
+    if (config.allowHalfCellsX && config.allowHalfCellsY) return 'all';
+    if (config.allowHalfCellsX && !config.allowHalfCellsY) return 'x';
+    if (!config.allowHalfCellsX && config.allowHalfCellsY) return 'y';
+    return 'none';
+  };
+
+  // Update half cells based on dropdown selection
+  const updateHalfCells = (option: string) => {
+    const updates: Partial<BaseplateConfig> = {
+      allowHalfCellsX: option === 'all' || option === 'x',
+      allowHalfCellsY: option === 'all' || option === 'y',
+    };
+    onChange(enforceHardcoded({ ...config, ...updates }));
+  };
+
+  // Calculate grid preview for fill_area_mm mode
+  const gridCalc = useMemo(() => {
+    return calculateGridFromMm(
+      config.targetWidthMm,
+      config.targetDepthMm,
+      config.gridSize,
+      config.allowHalfCellsX,
+      config.allowHalfCellsY,
+      config.paddingAlignment
+    );
+  }, [config.targetWidthMm, config.targetDepthMm, config.gridSize, 
+      config.allowHalfCellsX, config.allowHalfCellsY, config.paddingAlignment]);
+
+  // Calculate split preview
+  const splitCalc = useMemo(() => {
+    if (!config.splitEnabled) return null;
+    
+    const totalUnitsX = Math.floor(gridCalc.gridUnitsX);
+    const totalUnitsY = Math.floor(gridCalc.gridUnitsY);
+    
+    return splitBaseplateForPrinter(
+      totalUnitsX,
+      totalUnitsY,
+      config.printerBedWidth,
+      config.printerBedDepth,
+      config.gridSize,
+      config.connectorEnabled,
+      gridCalc.gridUnitsX,
+      gridCalc.gridUnitsY,
+      gridCalc.gridCoverageMmX,
+      gridCalc.gridCoverageMmY,
+      gridCalc.paddingNearX,
+      gridCalc.paddingFarX,
+      gridCalc.paddingNearY,
+      gridCalc.paddingFarY
+    );
+  }, [config.splitEnabled, config.printerBedWidth, config.printerBedDepth, config.gridSize, 
+      config.connectorEnabled, gridCalc]);
+
+  // When enabling interlocking edges, set defaults
+  const updateConnectorEnabled = (enabled: boolean) => {
+    const updates: Partial<BaseplateConfig> = { connectorEnabled: enabled };
+    if (enabled) {
+      // Set default values for interlocking edges (hidden in Easy mode)
+      updates.edgePattern = 'wineglass';
+      updates.toothDepth = 6;
+      updates.toothWidth = 5;
+      updates.concaveDepth = 0;
+      updates.wineglassAspectRatio = 1.0;
+      updates.connectorRoofIntensity = 200;
+      updates.connectorRoofDepth = 0;
+      updates.connectorTolerance = 0.3;
+    }
+    onChange(enforceHardcoded({ ...config, ...updates }));
+  };
+
   return (
     <div className="p-3 space-y-2.5">
-      <CollapsibleSection title="Easy Mode (Baseplate)" icon="📏">
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          Easy mode controls will be specified separately.
+      {/* Baseplate Section */}
+      <CollapsibleSection title="Baseplate" icon="📏">
+        <p className="text-xs text-slate-500 dark:text-slate-500 mb-2">
+          Sizing Mode: Fill Area (mm) - Fixed in Easy mode
         </p>
+
+        {/* Target Width */}
+        <NumberInput
+          label="Target Width"
+          value={config.targetWidthMm}
+          min={42}
+          max={1000}
+          step={1}
+          unit="mm"
+          onChange={(v) => update('targetWidthMm', v)}
+        />
+
+        {/* Target Depth */}
+        <NumberInput
+          label="Target Depth"
+          value={config.targetDepthMm}
+          min={42}
+          max={1000}
+          step={1}
+          unit="mm"
+          onChange={(v) => update('targetDepthMm', v)}
+        />
+
+        {/* Half Cells - Dropdown (all, x, y, none) */}
+        <SelectInput
+          label="Half Cells"
+          value={getHalfCellsOption()}
+          options={[
+            { value: 'all', label: 'All (Width & Depth)' },
+            { value: 'x', label: 'X (Width only)' },
+            { value: 'y', label: 'Y (Depth only)' },
+            { value: 'none', label: 'None' }
+          ]}
+          onChange={(v) => updateHalfCells(v as string)}
+        />
+
+        {/* Padding Alignment */}
+        <SelectInput
+          label="Padding Alignment"
+          value={config.paddingAlignment}
+          options={[
+            { value: 'center', label: 'Center (Equal padding both sides)' },
+            { value: 'near', label: 'Near (Padding on left/front)' },
+            { value: 'far', label: 'Far (Padding on right/back)' }
+          ]}
+          onChange={(v) => update('paddingAlignment', v as BaseplateConfig['paddingAlignment'])}
+        />
+
+        {/* Outer Corner Radius */}
+        <SliderInput
+          label="Outer Corner Radius"
+          value={config.cornerRadius}
+          min={0}
+          max={20}
+          step={0.25}
+          unit="mm"
+          onChange={(v) => update('cornerRadius', v)}
+        />
+
+        {/* Grid Calculation Preview */}
+        {gridCalc && (
+          <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
+            <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2">CALCULATED GRID</h4>
+            <div className="space-y-1 text-xs">
+              <p className="text-slate-300">
+                <span className="text-slate-500">Grid size:</span>{' '}
+                <span className="font-mono text-emerald-300">
+                  {gridCalc.gridUnitsX} x {gridCalc.gridUnitsY}
+                </span>{' '}
+                units
+                {(gridCalc.hasHalfCellX || gridCalc.hasHalfCellY) && (
+                  <span className="text-amber-400 ml-1">
+                    ({gridCalc.hasHalfCellX && 'half-X'}{gridCalc.hasHalfCellX && gridCalc.hasHalfCellY && ', '}{gridCalc.hasHalfCellY && 'half-Y'})
+                  </span>
+                )}
+              </p>
+              <p className="text-slate-300">
+                <span className="text-slate-500">Grid coverage:</span>{' '}
+                <span className="font-mono">{gridCalc.gridCoverageMmX.toFixed(1)}mm x {gridCalc.gridCoverageMmY.toFixed(1)}mm</span>
+              </p>
+              {(gridCalc.totalPaddingX > 0 || gridCalc.totalPaddingY > 0) && (
+                <p className="text-slate-300">
+                  <span className="text-slate-500">Edge padding:</span>{' '}
+                  <span className="font-mono text-amber-300">
+                    {gridCalc.paddingNearX.toFixed(1)}/{gridCalc.paddingFarX.toFixed(1)}mm (L/R), {gridCalc.paddingNearY.toFixed(1)}/{gridCalc.paddingFarY.toFixed(1)}mm (F/B)
+                  </span>
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </CollapsibleSection>
+
+      {/* Printer Bed Splitting Section */}
+      <CollapsibleSection title="Printer Bed Splitting" icon="✂️">
+        <ToggleInput
+          label="Enable Printer Bed Splitting"
+          value={config.splitEnabled}
+          onChange={(v) => update('splitEnabled', v)}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-500">
+          Split large baseplates into smaller segments that fit on your 3D printer bed.
+        </p>
+
+        {config.splitEnabled && (
+          <>
+            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+              <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">PRINTER BED SIZE</h4>
+              <NumberInput
+                label="Bed Width"
+                value={config.printerBedWidth}
+                min={50}
+                max={1000}
+                step={5}
+                unit="mm"
+                onChange={(v) => update('printerBedWidth', v)}
+              />
+              <NumberInput
+                label="Bed Depth"
+                value={config.printerBedDepth}
+                min={50}
+                max={1000}
+                step={5}
+                unit="mm"
+                onChange={(v) => update('printerBedDepth', v)}
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-500">
+                Common sizes: Ender 3 (220x220), Prusa MK3 (250x210), Bambu X1 (256x256)
+              </p>
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+              <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">INTERLOCKING EDGES</h4>
+              <ToggleInput
+                label="Enable Interlocking Edges"
+                value={config.connectorEnabled}
+                onChange={updateConnectorEnabled}
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-500">
+                Add male/female interlocking edges between segments - snaps together without separate connectors. Edge pattern is fixed to Wine Glass (Swoopy Bulb) in Easy mode.
+              </p>
+            </div>
+
+            {/* Split Calculation Preview */}
+            {splitCalc && (
+              <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
+                <h4 className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 mb-2">SPLIT PREVIEW</h4>
+                <div className="space-y-1 text-xs">
+                  {splitCalc.needsSplit ? (
+                    <>
+                      <p className="text-slate-300">
+                        <span className="text-slate-500">Segments:</span>{' '}
+                        <span className="font-mono text-cyan-300">
+                          {splitCalc.segmentsX} x {splitCalc.segmentsY}
+                        </span>{' '}
+                        ({splitCalc.totalSegments} pieces)
+                      </p>
+                      <p className="text-slate-300">
+                        <span className="text-slate-500">Max segment size:</span>{' '}
+                        <span className="font-mono">
+                          {splitCalc.maxSegmentUnitsX} x {splitCalc.maxSegmentUnitsY} units
+                        </span>
+                      </p>
+                      <p className="text-slate-300">
+                        <span className="text-slate-500">Segment dimensions:</span>{' '}
+                        <span className="font-mono">
+                          {(splitCalc.maxSegmentUnitsX * config.gridSize).toFixed(0)}mm x {(splitCalc.maxSegmentUnitsY * config.gridSize).toFixed(0)}mm
+                        </span>
+                      </p>
+                      {config.connectorEnabled && (
+                        <p className="text-emerald-400 mt-2">
+                          Interlocking edges enabled with Wine Glass pattern
+                        </p>
+                      )}
+                      
+                      {/* Simple grid preview */}
+                      {!config.connectorEnabled && (
+                        <div className="mt-3 p-2 bg-slate-200 dark:bg-slate-800 rounded">
+                          <p className="text-slate-600 dark:text-slate-500 text-[10px] mb-1">Segment Layout:</p>
+                          <div 
+                            className="grid gap-1" 
+                            style={{ 
+                              gridTemplateColumns: `repeat(${splitCalc.segmentsX}, 1fr)`,
+                              maxWidth: '150px'
+                            }}
+                          >
+                            {splitCalc.segments.flat().map((seg, i) => (
+                              <div 
+                                key={i}
+                                className="bg-cyan-600/30 border border-cyan-500/50 rounded text-[8px] text-center py-1 text-cyan-300"
+                              >
+                                {seg.gridUnitsX}x{seg.gridUnitsY}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-emerald-400">
+                      No splitting needed - baseplate fits on printer bed!
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </CollapsibleSection>
     </div>
   );

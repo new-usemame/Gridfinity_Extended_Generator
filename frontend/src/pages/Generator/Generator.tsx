@@ -47,6 +47,25 @@ export function Generator() {
           sizingMode: 'fill_area_mm',
         }));
       }
+      // Easy mode specific constants
+      if (mode === 'easy') {
+        setBoxConfig(prev => ({
+          ...prev,
+          gridSize: 42, // Constant: Box grid unit size is 42mm
+          floorThickness: 0.70, // Constant: Box Floor thickness is 0.70mm
+          footBottomCornerRadius: 6.0, // Constant: Feet Corner Radius is 6.0mm
+          footChamferAngle: 60, // Constant: Feet Foot taper angle is 60 degrees
+          // Conditional: Bevel Floor-Wall Edge is true unless Corner Radius is 'Off'
+          innerEdgeBevel: prev.cornerRadius !== 0,
+        }));
+        setBaseplateConfig(prev => ({
+          ...prev,
+          gridSize: 42, // Constant: Baseplate grid unit size is 42mm
+          sizingMode: 'fill_area_mm', // Constant: Baseplate sizing mode is fill_area_mm
+          // Printer Bed Splitting constants: edgePattern='wineglass', all other connector settings use defaults
+          edgePattern: 'wineglass', // Constant: Edge Pattern is 1. Wine Glass (Swoopy Bulb)
+        }));
+      }
     }
   }, [mode]);
 
