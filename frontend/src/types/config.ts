@@ -226,7 +226,7 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   toothWidth: 5,
   concaveDepth: 0,
   wineglassAspectRatio: 1.3,
-  connectorRoofIntensity: 100,
+  connectorRoofIntensity: 200,
   connectorRoofDepth: 0,
   edgeOverrides: []
 };

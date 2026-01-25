@@ -226,7 +226,7 @@ export const defaultBaseplateConfig: BaseplateConfig = {
   toothWidth: 6,               // 6mm tooth width at base
   concaveDepth: 50,            // 50% concave swoop depth (0=shallow, 100=deep)
   wineglassAspectRatio: 1.0,   // 1.0 = circular (default)
-  connectorRoofIntensity: 0,   // 0 = flat (default), higher = more peaked roof
+  connectorRoofIntensity: 200, // 200% = intense peak (default), higher = more peaked roof
   connectorRoofDepth: 0,       // 0 = roof at top (default), higher = roof starts lower
   edgeOverrides: []            // Empty - use automatic male/female assignment
 };
