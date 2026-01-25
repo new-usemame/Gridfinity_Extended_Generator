@@ -663,6 +663,7 @@ function MeasurementRuler(_props: { geometries: THREE.BufferGeometry[]; boxZOffs
   }
 
   const centerX = 0; // Center at origin
+  const centerZ = 0; // Center at origin for X-axis ruler
 
   // For Z-axis ruler, we want it to start at the origin (Z=0) and extend in the negative Z direction
   // OpenSCAD Y starts at 0 and goes negative, so negative Three.js Z corresponds to positive OpenSCAD Y
@@ -673,8 +674,9 @@ function MeasurementRuler(_props: { geometries: THREE.BufferGeometry[]; boxZOffs
 
   return (
     <group>
-      {/* X-axis ruler (OpenSCAD X) - along the front edge (minZ) */}
-      <group position={[centerX, rulerHeight, minZ]}>
+      {/* X-axis ruler (OpenSCAD X) - along the X-axis at Z=0 */}
+      {/* OpenSCAD X = Three.js X (same direction) */}
+      <group position={[centerX, rulerHeight, centerZ]}>
         {/* Main ruler line */}
         <mesh>
           <boxGeometry args={[width, 0.05, 0.05]} />
@@ -687,7 +689,7 @@ function MeasurementRuler(_props: { geometries: THREE.BufferGeometry[]; boxZOffs
               <boxGeometry args={[0.05, tick.isMajor ? tickLength : minorTickLength, 0.05]} />
               <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
             </mesh>
-            {/* Labels for major ticks */}
+            {/* Labels for major ticks - show OpenSCAD X value (same as Three.js X) */}
             {tick.isMajor && (
               <Billboard position={[0, -tickLength - labelOffset, 0]}>
                 <Text 
@@ -706,7 +708,7 @@ function MeasurementRuler(_props: { geometries: THREE.BufferGeometry[]; boxZOffs
         ))}
       </group>
 
-      {/* Z-axis ruler (OpenSCAD Y) - along the left edge (minX) */}
+      {/* Z-axis ruler (OpenSCAD Y) - along the Z-axis at X=minX */}
       {/* Three.js Z = -OpenSCAD Y, so OpenSCAD Y = -Three.js Z */}
       {/* The ruler starts at the origin (Z=0, OpenSCAD Y=0) and extends in the negative Z direction */}
       {/* Negative Z values correspond to positive OpenSCAD Y values */}
