@@ -831,17 +831,8 @@ export function Generator() {
           <div className="flex-1 relative min-h-0">
             {isGenerating ? (
               /* 2048 Game - shown during generation */
-              <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 p-8 overflow-y-auto">
+              <div className="h-full flex items-center justify-center bg-transparent p-8 overflow-y-auto">
                 <div className="w-full max-w-4xl">
-                  {/* Loading Indicator */}
-                  <div className="mb-6 flex flex-col items-center justify-center">
-                    <div className="w-12 h-12 border-4 border-green-500/30 dark:border-green-500/30 border-t-green-500 dark:border-t-green-500 rounded-full animate-spin mb-3" />
-                    <div className="text-center">
-                      <div className="text-lg font-semibold text-slate-900 dark:text-white">Loading</div>
-                      <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">Please enjoy this game of 2048!</div>
-                    </div>
-                  </div>
-                  
                   <div className="flex flex-col sm:flex-row gap-6">
                     {/* Game */}
                     <div className="flex-1 min-w-0">
@@ -858,6 +849,15 @@ export function Generator() {
                       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 shadow-lg">
                         <Leaderboard limit={10} compact={true} />
                       </div>
+                    </div>
+                  </div>
+                  
+                  {/* Loading Indicator */}
+                  <div className="mt-6 flex flex-col items-center justify-center">
+                    <div className="w-12 h-12 border-4 border-green-500/30 dark:border-green-500/30 border-t-green-500 dark:border-t-green-500 rounded-full animate-spin mb-3" />
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-slate-900 dark:text-white">Loading</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">Please enjoy this game of 2048!</div>
                     </div>
                   </div>
                 </div>

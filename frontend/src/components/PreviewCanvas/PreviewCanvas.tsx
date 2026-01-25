@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState, useRef, useMemo } from 'react';
+import { Suspense, useEffect, useState, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, Grid, Text, Billboard } from '@react-three/drei';
 import { STLLoader } from 'three-stdlib';
@@ -369,13 +369,11 @@ function CombinedSceneContent({
       {/* Axis Indicator at origin */}
       <AxisIndicator size={30} />
 
-      {/* Measurement Rulers */}
-      {(baseplateGeometry || boxGeometry) && (
-        <MeasurementRuler 
-          geometries={[baseplateGeometry, boxGeometry].filter(Boolean) as THREE.BufferGeometry[]}
-          boxZOffset={boxZOffset}
-        />
-      )}
+      {/* Measurement Rulers - always visible as background elements */}
+      <MeasurementRuler 
+        geometries={[baseplateGeometry, boxGeometry].filter(Boolean) as THREE.BufferGeometry[]}
+        boxZOffset={boxZOffset}
+      />
 
       {/* Baseplate Model */}
       {baseplateGeometry && (
@@ -504,8 +502,8 @@ function SceneContent({ stlUrl }: { stlUrl: string | null }) {
       {/* Axis Indicator at origin */}
       <AxisIndicator size={30} />
 
-      {/* Measurement Rulers */}
-      {geometry && <MeasurementRuler geometries={[geometry]} />}
+      {/* Measurement Rulers - always visible as background elements */}
+      <MeasurementRuler geometries={geometry ? [geometry] : []} />
 
       {/* Model */}
       {geometry && <ModelMesh geometry={geometry} />}
@@ -620,7 +618,8 @@ function CameraFit({ geometry }: { geometry: THREE.BufferGeometry }) {
 
 // Measurement Ruler component
 // Shows rulers along X and Z axes (OpenSCAD X and Y) with millimeter markings
-function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.BufferGeometry[]; boxZOffset?: number }) {
+// Rulers are fixed-size background elements, independent of model geometry
+function MeasurementRuler(_props: { geometries: THREE.BufferGeometry[]; boxZOffset?: number }) {
   const rulerHeight = 0.2; // Height above ground plane
   const tickLength = 2; // Length of major ticks
   const minorTickLength = 1; // Length of minor ticks
@@ -630,72 +629,45 @@ function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.Bu
   const fontSize = 1.5;
   const rulerColor = '#ffffff';
   const rulerOpacity = 0.8;
-
-  // Compute combined bounding box
-  const boundingBox = useMemo(() => {
-    if (geometries.length === 0) return null;
-    
-    const box = new THREE.Box3();
-    geometries.forEach((geo, index) => {
-      geo.computeBoundingBox();
-      if (geo.boundingBox) {
-        // If there are multiple geometries and this is the last one (likely the box),
-        // and there's a Z offset, adjust the bounding box
-        // This handles the combined view where boxGeometry is offset
-        if (geometries.length > 1 && index === geometries.length - 1 && boxZOffset !== 0) {
-          const adjustedBox = geo.boundingBox.clone();
-          adjustedBox.translate(new THREE.Vector3(0, boxZOffset, 0));
-          box.union(adjustedBox);
-        } else {
-          box.union(geo.boundingBox);
-        }
-      }
-    });
-    return box;
-  }, [geometries, boxZOffset]);
-
-  if (!boundingBox) return null;
-
-  const minX = boundingBox.min.x;
-  const maxX = boundingBox.max.x;
-  const minZ = boundingBox.min.z;
-  const maxZ = boundingBox.max.z;
+  
+  // Fixed ruler range - independent of model size
+  const rulerRange = 1000; // Extend to 1000mm in each direction
+  const minX = -rulerRange;
+  const maxX = rulerRange;
+  const minZ = -rulerRange; // Negative Z (positive OpenSCAD Y)
+  const maxZ = rulerRange; // Positive Z (negative OpenSCAD Y)
   const width = maxX - minX;
 
-  // Generate tick marks for X axis (OpenSCAD X)
+  // Generate tick marks for X axis (OpenSCAD X) - full range
   const xTicks: Array<{ position: number; isMajor: boolean }> = [];
   const startX = Math.floor(minX / tickInterval) * tickInterval;
   const endX = Math.ceil(maxX / tickInterval) * tickInterval;
   for (let x = startX; x <= endX; x += tickInterval) {
-    if (x >= minX && x <= maxX) {
-      xTicks.push({
-        position: x,
-        isMajor: x % majorTickInterval === 0
-      });
-    }
+    xTicks.push({
+      position: x,
+      isMajor: x % majorTickInterval === 0
+    });
   }
 
-  // Generate tick marks for Z axis (OpenSCAD Y)
+  // Generate tick marks for Z axis (OpenSCAD Y) - full range
   const zTicks: Array<{ position: number; isMajor: boolean }> = [];
   const startZ = Math.floor(minZ / tickInterval) * tickInterval;
   const endZ = Math.ceil(maxZ / tickInterval) * tickInterval;
   for (let z = startZ; z <= endZ; z += tickInterval) {
-    if (z >= minZ && z <= maxZ) {
-      zTicks.push({
-        position: z,
-        isMajor: z % majorTickInterval === 0
-      });
-    }
+    zTicks.push({
+      position: z,
+      isMajor: z % majorTickInterval === 0
+    });
   }
 
-  const centerX = (minX + maxX) / 2;
+  const centerX = 0; // Center at origin
 
   // For Z-axis ruler, we want it to start at the origin (Z=0) and extend in the negative Z direction
   // OpenSCAD Y starts at 0 and goes negative, so negative Three.js Z corresponds to positive OpenSCAD Y
   // Three.js Z = -OpenSCAD Y, so negative Z corresponds to positive OpenSCAD Y
-  const rulerStartZ = Math.min(0, minZ); // Start from minZ (most negative)
+  const rulerStartZ = minZ; // Start from -1000mm
   const rulerEndZ = 0; // Always end at origin (OpenSCAD Y = 0)
-  const rulerDepth = rulerEndZ - rulerStartZ; // Depth is positive (extends from minZ to 0)
+  const rulerDepth = rulerEndZ - rulerStartZ; // Depth is 1000mm (extends from -1000 to 0)
 
   return (
     <group>
@@ -743,7 +715,7 @@ function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.Bu
           <boxGeometry args={[rulerDepth, 0.05, 0.05]} />
           <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
         </mesh>
-        {/* Tick marks - only show ticks in the negative Z range (OpenSCAD Y) */}
+        {/* Tick marks - show ticks in the negative Z range (OpenSCAD Y) */}
         {zTicks.filter(tick => tick.position <= 0).map((tick, i) => {
           // Convert Three.js Z coordinate to OpenSCAD Y value
           // Three.js Z = -OpenSCAD Y, so OpenSCAD Y = -Three.js Z
@@ -775,27 +747,25 @@ function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.Bu
             </group>
           );
         })}
-        {/* Always show tick at origin (Z=0, OpenSCAD Y=0) if it's not already in zTicks */}
-        {(!zTicks.some(t => Math.abs(t.position) < 0.01) && rulerStartZ <= 0 && rulerEndZ >= 0) && (
-          <group position={[0, 0, 0]}>
-            <mesh>
-              <boxGeometry args={[0.05, tickLength, 0.05]} />
-              <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
-            </mesh>
-            <Billboard position={[0, -tickLength - labelOffset, 0]}>
-              <Text 
-                fontSize={fontSize} 
-                color={rulerColor} 
-                anchorX="center" 
-                anchorY="top"
-                outlineWidth={0.1}
-                outlineColor="#000000"
-              >
-                0mm
-              </Text>
-            </Billboard>
-          </group>
-        )}
+        {/* Always show tick at origin (Z=0, OpenSCAD Y=0) */}
+        <group position={[0, 0, 0]}>
+          <mesh>
+            <boxGeometry args={[0.05, tickLength, 0.05]} />
+            <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
+          </mesh>
+          <Billboard position={[0, -tickLength - labelOffset, 0]}>
+            <Text 
+              fontSize={fontSize} 
+              color={rulerColor} 
+              anchorX="center" 
+              anchorY="top"
+              outlineWidth={0.1}
+              outlineColor="#000000"
+            >
+              0mm
+            </Text>
+          </Billboard>
+        </group>
       </group>
     </group>
   );
