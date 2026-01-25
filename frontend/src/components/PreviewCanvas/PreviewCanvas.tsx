@@ -690,11 +690,11 @@ function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.Bu
 
   const centerX = (minX + maxX) / 2;
 
-  // For Z-axis ruler, we want it to start at the origin (Z=0)
-  // Extend the ruler range to include the origin if it's not already included
+  // For Z-axis ruler, we want it to start at the origin (Z=0) and extend in the negative Z direction
+  // This aligns with where the box appears (negative Z = positive OpenSCAD Y)
   const rulerStartZ = Math.min(0, minZ);
-  const rulerEndZ = Math.max(0, maxZ);
-  const rulerDepth = rulerEndZ - rulerStartZ;
+  const rulerEndZ = 0; // Always start from origin
+  const rulerDepth = rulerEndZ - rulerStartZ; // Depth is positive (extends from 0 to minZ)
 
   return (
     <group>
@@ -731,30 +731,31 @@ function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.Bu
         ))}
       </group>
 
-      {/* Z-axis ruler (OpenSCAD -Y) - along the left edge (minX) */}
-      {/* Three.js Z = -OpenSCAD Y, so OpenSCAD -Y = Three.js Z */}
-      {/* The ruler starts at the origin (Z=0) and measurements increase with positive Z */}
-      <group position={[minX, rulerHeight, rulerStartZ]} rotation={[0, Math.PI / 2, 0]}>
-        {/* Main ruler line - extends from origin to cover the geometry */}
+      {/* Z-axis ruler (OpenSCAD Y) - along the left edge (minX) */}
+      {/* Three.js Z = -OpenSCAD Y, so OpenSCAD Y = -Three.js Z */}
+      {/* The ruler starts at the origin (Z=0) and extends in the negative Z direction */}
+      {/* Negative Z values correspond to positive OpenSCAD Y values */}
+      <group position={[minX, rulerHeight, rulerEndZ]} rotation={[0, Math.PI / 2, 0]}>
+        {/* Main ruler line - extends from origin (Z=0) in negative Z direction */}
         <mesh>
           <boxGeometry args={[rulerDepth, 0.05, 0.05]} />
           <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
         </mesh>
-        {/* Tick marks - generate ticks that include the origin */}
-        {zTicks.map((tick, i) => {
-          // Convert Three.js Z coordinate to OpenSCAD -Y value
-          // Three.js Z = -OpenSCAD Y, so OpenSCAD -Y = Three.js Z
-          // The ruler shows measurements starting at 0 at the origin
-          // So we use the Z value directly as the -Y measurement
-          const openScadMinusYValue = tick.position;
-          // Position tick relative to ruler start (which is at rulerStartZ, typically 0 or minZ)
+        {/* Tick marks - only show ticks in the negative Z range (where the box is) */}
+        {zTicks.filter(tick => tick.position <= 0).map((tick, i) => {
+          // Convert Three.js Z coordinate to OpenSCAD Y value
+          // Three.js Z = -OpenSCAD Y, so OpenSCAD Y = -Three.js Z
+          // Since tick.position is negative (or zero), OpenSCAD Y will be positive (or zero)
+          const openScadYValue = -tick.position;
+          // Position tick relative to ruler start (which is at rulerEndZ = 0)
+          // Negative Z values go in the positive X direction of the rotated ruler
           return (
-            <group key={`z-tick-${i}`} position={[tick.position - rulerStartZ, 0, 0]}>
+            <group key={`z-tick-${i}`} position={[tick.position - rulerEndZ, 0, 0]}>
               <mesh>
                 <boxGeometry args={[0.05, tick.isMajor ? tickLength : minorTickLength, 0.05]} />
                 <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
               </mesh>
-              {/* Labels for major ticks - show OpenSCAD -Y value */}
+              {/* Labels for major ticks - show OpenSCAD Y value (positive) */}
               {tick.isMajor && (
                 <Billboard position={[0, -tickLength - labelOffset, 0]}>
                   <Text 
@@ -765,7 +766,7 @@ function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.Bu
                     outlineWidth={0.1}
                     outlineColor="#000000"
                   >
-                    {openScadMinusYValue.toFixed(0)}mm
+                    {openScadYValue.toFixed(0)}mm
                   </Text>
                 </Billboard>
               )}
@@ -773,8 +774,8 @@ function MeasurementRuler({ geometries, boxZOffset = 0 }: { geometries: THREE.Bu
           );
         })}
         {/* Always show tick at origin (Z=0) if it's not already in zTicks */}
-        {(!zTicks.some(t => Math.abs(t.position) < 0.01) && rulerStartZ <= 0 && rulerEndZ >= 0) && (
-          <group position={[-rulerStartZ, 0, 0]}>
+        {(!zTicks.some(t => Math.abs(t.position) < 0.01) && rulerStartZ <= 0) && (
+          <group position={[0, 0, 0]}>
             <mesh>
               <boxGeometry args={[0.05, tickLength, 0.05]} />
               <meshBasicMaterial color={rulerColor} transparent opacity={rulerOpacity} />
