@@ -1035,144 +1035,169 @@ function EasyBoxConfigPanel({
   };
 
   return (
-    <div className="p-3 space-y-2.5">
+    <div className="p-2 space-y-1.5">
       {/* Presets Section */}
-      <CollapsibleSection title="Presets" icon="⚙️" defaultOpen>
-        <SelectInput
-          label="Preset"
-          value={currentPreset || 'none'}
-          options={[
-            { value: 'none', label: 'Custom' },
-            { value: 'less_material', label: 'Less Material' },
-            { value: 'recommended', label: 'Recommended' },
-            { value: 'high_bed_adhesion', label: 'High Bed Adhesion' }
-          ]}
-          onChange={(v) => applyPreset(v as string)}
-        />
-        <p className="text-xs text-slate-500 dark:text-slate-500">
-          Quick presets to optimize for different printing scenarios.
-        </p>
+      <CollapsibleSection title="Presets" icon="⚙️" defaultOpen compact>
+        <div className="space-y-2">
+          <SelectInput
+            label="Preset"
+            value={currentPreset || 'none'}
+            options={[
+              { value: 'none', label: 'Custom' },
+              { value: 'less_material', label: 'Less Material' },
+              { value: 'recommended', label: 'Recommended' },
+              { value: 'high_bed_adhesion', label: 'High Bed Adhesion' }
+            ]}
+            onChange={(v) => applyPreset(v as string)}
+          />
+          <p className="text-[10px] text-slate-500 dark:text-slate-500 leading-tight">
+            Quick presets to optimize for different printing scenarios.
+          </p>
+        </div>
       </CollapsibleSection>
 
       {/* Box Section */}
-      <CollapsibleSection title="Box" icon="📦">
-        {/* Width, Depth, Height */}
-        <SliderInput
-          label="Width"
-          value={config.width}
-          min={0.5}
-          max={20}
-          step={0.5}
-          unit="units"
-          onChange={(v) => update('width', v)}
-        />
-        <SliderInput
-          label="Depth"
-          value={config.depth}
-          min={0.5}
-          max={20}
-          step={0.5}
-          unit="units"
-          onChange={(v) => update('depth', v)}
-        />
-        <SliderInput
-          label="Height"
-          value={config.height}
-          min={1}
-          max={25}
-          step={1}
-          unit="units"
-          onChange={(v) => update('height', v)}
-        />
-        <p className="text-xs text-slate-500 dark:text-slate-500">
-          Each height unit is 7mm. Standard Gridfinity specification.
-        </p>
+      <CollapsibleSection title="Box" icon="📦" compact>
+        <div className="space-y-2">
+          {/* Width, Depth, Height - Grid Layout */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="[&>div]:space-y-1">
+              <SliderInput
+                label="Width"
+                value={config.width}
+                min={0.5}
+                max={20}
+                step={0.5}
+                unit="units"
+                onChange={(v) => update('width', v)}
+              />
+            </div>
+            <div className="[&>div]:space-y-1">
+              <SliderInput
+                label="Depth"
+                value={config.depth}
+                min={0.5}
+                max={20}
+                step={0.5}
+                unit="units"
+                onChange={(v) => update('depth', v)}
+              />
+            </div>
+            <div className="[&>div]:space-y-1">
+              <SliderInput
+                label="Height"
+                value={config.height}
+                min={1}
+                max={25}
+                step={1}
+                unit="units"
+                onChange={(v) => update('height', v)}
+              />
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-500 dark:text-slate-500 leading-tight -mt-1">
+            Each height unit is 7mm. Standard Gridfinity specification.
+          </p>
 
-        {/* Wall Thickness - Select (3 options) */}
-        <SelectInput
-          label="Wall Thickness"
-          value={getWallThicknessOption()}
-          options={[
-            { value: 'thin', label: 'Thin (0.95mm)' },
-            { value: 'sturdy', label: 'Sturdy (1.5mm)' },
-            { value: 'thick', label: 'Thick (2.25mm)' }
-          ]}
-          onChange={(v) => {
-            const thicknessMap: Record<string, number> = {
-              'thin': 0.95,
-              'sturdy': 1.5,
-              'thick': 2.25
-            };
-            update('wallThickness', thicknessMap[v as string]);
-          }}
-        />
+          {/* Wall Thickness & Corner Radius - Grid Layout */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="[&>div]:space-y-1">
+              <SelectInput
+                label="Wall Thickness"
+                value={getWallThicknessOption()}
+                options={[
+                  { value: 'thin', label: 'Thin (0.95mm)' },
+                  { value: 'sturdy', label: 'Sturdy (1.5mm)' },
+                  { value: 'thick', label: 'Thick (2.25mm)' }
+                ]}
+                onChange={(v) => {
+                  const thicknessMap: Record<string, number> = {
+                    'thin': 0.95,
+                    'sturdy': 1.5,
+                    'thick': 2.25
+                  };
+                  update('wallThickness', thicknessMap[v as string]);
+                }}
+              />
+            </div>
+            <div className="[&>div]:space-y-1">
+              <SelectInput
+                label="Corner Radius"
+                value={getCornerRadiusOption()}
+                options={[
+                  { value: 'off', label: 'Off (0mm)' },
+                  { value: 'normal', label: 'Normal (4mm)' },
+                  { value: 'extra', label: 'Extra (6mm)' }
+                ]}
+                onChange={(v) => {
+                  const radiusMap: Record<string, number> = {
+                    'off': 0,
+                    'normal': 4,
+                    'extra': 6
+                  };
+                  updateCornerRadius(radiusMap[v as string]);
+                }}
+              />
+            </div>
+          </div>
 
-        {/* Corner Radius - Select (3 options) */}
-        <SelectInput
-          label="Corner Radius"
-          value={getCornerRadiusOption()}
-          options={[
-            { value: 'off', label: 'Off (0mm)' },
-            { value: 'normal', label: 'Normal (4mm)' },
-            { value: 'extra', label: 'Extra (6mm)' }
-          ]}
-          onChange={(v) => {
-            const radiusMap: Record<string, number> = {
-              'off': 0,
-              'normal': 4,
-              'extra': 6
-            };
-            updateCornerRadius(radiusMap[v as string]);
-          }}
-        />
-
-        {/* Dividers X, Y */}
-        <NumberInput
-          label="Dividers X (Left-Right)"
-          value={config.dividersX}
-          min={0}
-          max={10}
-          step={1}
-          onChange={(v) => update('dividersX', v)}
-        />
-        <NumberInput
-          label="Dividers Y (Front-Back)"
-          value={config.dividersY}
-          min={0}
-          max={10}
-          step={1}
-          onChange={(v) => update('dividersY', v)}
-        />
+          {/* Dividers X, Y - Grid Layout */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="[&>div]:space-y-1">
+              <NumberInput
+                label="Dividers X"
+                value={config.dividersX}
+                min={0}
+                max={10}
+                step={1}
+                onChange={(v) => update('dividersX', v)}
+              />
+            </div>
+            <div className="[&>div]:space-y-1">
+              <NumberInput
+                label="Dividers Y"
+                value={config.dividersY}
+                min={0}
+                max={10}
+                step={1}
+                onChange={(v) => update('dividersY', v)}
+              />
+            </div>
+          </div>
+        </div>
       </CollapsibleSection>
 
       {/* Feet (Base) Section */}
-      <CollapsibleSection title="Feet" icon="👣">
-        {/* Foot Taper Height - Select (3 options) */}
-        <SelectInput
-          label="Foot Taper Height"
-          value={getFootTaperHeightOption()}
-          options={[
-            { value: 'min', label: 'Min (3mm)' },
-            { value: 'normal', label: 'Normal (6mm)' },
-            { value: 'max', label: 'Max (9mm)' }
-          ]}
-          onChange={(v) => {
-            const heightMap: Record<string, number> = {
-              'min': 3,
-              'normal': 6,
-              'max': 9
-            };
-            const updated = enforceHardcoded({
-              ...config,
-              footChamferHeight: heightMap[v as string],
-              lipChamferHeight: heightMap[v as string],
-            });
-            onChange(updated);
-          }}
-        />
-        <p className="text-xs text-slate-500 dark:text-slate-500">
-          Foot taper angle is fixed at 60 degrees. Corner radius is fixed at 6.0mm.
-        </p>
+      <CollapsibleSection title="Feet" icon="👣" compact>
+        <div className="space-y-2">
+          <div className="[&>div]:space-y-1">
+            <SelectInput
+              label="Foot Taper Height"
+              value={getFootTaperHeightOption()}
+              options={[
+                { value: 'min', label: 'Min (3mm)' },
+                { value: 'normal', label: 'Normal (6mm)' },
+                { value: 'max', label: 'Max (9mm)' }
+              ]}
+              onChange={(v) => {
+                const heightMap: Record<string, number> = {
+                  'min': 3,
+                  'normal': 6,
+                  'max': 9
+                };
+                const updated = enforceHardcoded({
+                  ...config,
+                  footChamferHeight: heightMap[v as string],
+                  lipChamferHeight: heightMap[v as string],
+                });
+                onChange(updated);
+              }}
+            />
+          </div>
+          <p className="text-[10px] text-slate-500 dark:text-slate-500 leading-tight -mt-1">
+            Foot taper angle is fixed at 60 degrees. Corner radius is fixed at 6.0mm.
+          </p>
+        </div>
       </CollapsibleSection>
     </div>
   );
@@ -1286,220 +1311,243 @@ function EasyBaseplateConfigPanel({
   };
 
   return (
-    <div className="p-3 space-y-2.5">
+    <div className="p-2 space-y-1.5">
       {/* Baseplate Section */}
-      <CollapsibleSection title="Baseplate" icon="📏">
-        <p className="text-xs text-slate-500 dark:text-slate-500 mb-2">
-          Sizing Mode: Fill Area (mm) - Fixed in Easy mode
-        </p>
+      <CollapsibleSection title="Baseplate" icon="📏" compact>
+        <div className="space-y-2">
+          <p className="text-[10px] text-slate-500 dark:text-slate-500 leading-tight -mt-1 mb-1">
+            Sizing Mode: Fill Area (mm) - Fixed in Easy mode
+          </p>
 
-        {/* Target Width */}
-        <NumberInput
-          label="Target Width"
-          value={config.targetWidthMm}
-          min={42}
-          max={1000}
-          step={1}
-          unit="mm"
-          onChange={(v) => update('targetWidthMm', v)}
-        />
-
-        {/* Target Depth */}
-        <NumberInput
-          label="Target Depth"
-          value={config.targetDepthMm}
-          min={42}
-          max={1000}
-          step={1}
-          unit="mm"
-          onChange={(v) => update('targetDepthMm', v)}
-        />
-
-        {/* Half Cells - Dropdown (all, x, y, none) */}
-        <SelectInput
-          label="Half Cells"
-          value={getHalfCellsOption()}
-          options={[
-            { value: 'all', label: 'All (Width & Depth)' },
-            { value: 'x', label: 'X (Width only)' },
-            { value: 'y', label: 'Y (Depth only)' },
-            { value: 'none', label: 'None' }
-          ]}
-          onChange={(v) => updateHalfCells(v as string)}
-        />
-
-        {/* Padding Alignment */}
-        <SelectInput
-          label="Padding Alignment"
-          value={config.paddingAlignment}
-          options={[
-            { value: 'center', label: 'Center (Equal padding both sides)' },
-            { value: 'near', label: 'Near (Padding on left/front)' },
-            { value: 'far', label: 'Far (Padding on right/back)' }
-          ]}
-          onChange={(v) => update('paddingAlignment', v as BaseplateConfig['paddingAlignment'])}
-        />
-
-        {/* Outer Corner Radius */}
-        <SliderInput
-          label="Outer Corner Radius"
-          value={config.cornerRadius}
-          min={0}
-          max={20}
-          step={0.25}
-          unit="mm"
-          onChange={(v) => update('cornerRadius', v)}
-        />
-
-        {/* Grid Calculation Preview */}
-        {gridCalc && (
-          <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
-            <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2">CALCULATED GRID</h4>
-            <div className="space-y-1 text-xs">
-              <p className="text-slate-300">
-                <span className="text-slate-500">Grid size:</span>{' '}
-                <span className="font-mono text-emerald-300">
-                  {gridCalc.gridUnitsX} x {gridCalc.gridUnitsY}
-                </span>{' '}
-                units
-                {(gridCalc.hasHalfCellX || gridCalc.hasHalfCellY) && (
-                  <span className="text-amber-400 ml-1">
-                    ({gridCalc.hasHalfCellX && 'half-X'}{gridCalc.hasHalfCellX && gridCalc.hasHalfCellY && ', '}{gridCalc.hasHalfCellY && 'half-Y'})
-                  </span>
-                )}
-              </p>
-              <p className="text-slate-300">
-                <span className="text-slate-500">Grid coverage:</span>{' '}
-                <span className="font-mono">{gridCalc.gridCoverageMmX.toFixed(1)}mm x {gridCalc.gridCoverageMmY.toFixed(1)}mm</span>
-              </p>
-              {(gridCalc.totalPaddingX > 0 || gridCalc.totalPaddingY > 0) && (
-                <p className="text-slate-300">
-                  <span className="text-slate-500">Edge padding:</span>{' '}
-                  <span className="font-mono text-amber-300">
-                    {gridCalc.paddingNearX.toFixed(1)}/{gridCalc.paddingFarX.toFixed(1)}mm (L/R), {gridCalc.paddingNearY.toFixed(1)}/{gridCalc.paddingFarY.toFixed(1)}mm (F/B)
-                  </span>
-                </p>
-              )}
+          {/* Target Width & Depth - Grid Layout */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="[&>div]:space-y-1">
+              <NumberInput
+                label="Target Width"
+                value={config.targetWidthMm}
+                min={42}
+                max={1000}
+                step={1}
+                unit="mm"
+                onChange={(v) => update('targetWidthMm', v)}
+              />
+            </div>
+            <div className="[&>div]:space-y-1">
+              <NumberInput
+                label="Target Depth"
+                value={config.targetDepthMm}
+                min={42}
+                max={1000}
+                step={1}
+                unit="mm"
+                onChange={(v) => update('targetDepthMm', v)}
+              />
             </div>
           </div>
-        )}
+
+          {/* Half Cells & Padding Alignment - Grid Layout */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="[&>div]:space-y-1">
+              <SelectInput
+                label="Half Cells"
+                value={getHalfCellsOption()}
+                options={[
+                  { value: 'all', label: 'All (Width & Depth)' },
+                  { value: 'x', label: 'X (Width only)' },
+                  { value: 'y', label: 'Y (Depth only)' },
+                  { value: 'none', label: 'None' }
+                ]}
+                onChange={(v) => updateHalfCells(v as string)}
+              />
+            </div>
+            <div className="[&>div]:space-y-1">
+              <SelectInput
+                label="Padding Alignment"
+                value={config.paddingAlignment}
+                options={[
+                  { value: 'center', label: 'Center (Equal padding both sides)' },
+                  { value: 'near', label: 'Near (Padding on left/front)' },
+                  { value: 'far', label: 'Far (Padding on right/back)' }
+                ]}
+                onChange={(v) => update('paddingAlignment', v as BaseplateConfig['paddingAlignment'])}
+              />
+            </div>
+          </div>
+
+          {/* Outer Corner Radius */}
+          <div className="[&>div]:space-y-1">
+            <SliderInput
+              label="Outer Corner Radius"
+              value={config.cornerRadius}
+              min={0}
+              max={20}
+              step={0.25}
+              unit="mm"
+              onChange={(v) => update('cornerRadius', v)}
+            />
+          </div>
+
+          {/* Grid Calculation Preview - More Compact */}
+          {gridCalc && (
+            <div className="mt-2 p-2 bg-slate-100 dark:bg-slate-700/50 rounded border border-slate-200 dark:border-slate-600">
+              <h4 className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mb-1.5">CALCULATED GRID</h4>
+              <div className="space-y-0.5 text-[10px] leading-tight">
+                <p className="text-slate-600 dark:text-slate-300">
+                  <span className="text-slate-500 dark:text-slate-400">Grid:</span>{' '}
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                    {gridCalc.gridUnitsX} x {gridCalc.gridUnitsY}
+                  </span>
+                  {(gridCalc.hasHalfCellX || gridCalc.hasHalfCellY) && (
+                    <span className="text-amber-500 dark:text-amber-400 ml-1">
+                      ({gridCalc.hasHalfCellX && 'half-X'}{gridCalc.hasHalfCellX && gridCalc.hasHalfCellY && ', '}{gridCalc.hasHalfCellY && 'half-Y'})
+                    </span>
+                  )}
+                </p>
+                <p className="text-slate-600 dark:text-slate-300">
+                  <span className="text-slate-500 dark:text-slate-400">Coverage:</span>{' '}
+                  <span className="font-mono">{gridCalc.gridCoverageMmX.toFixed(1)}mm x {gridCalc.gridCoverageMmY.toFixed(1)}mm</span>
+                </p>
+                {(gridCalc.totalPaddingX > 0 || gridCalc.totalPaddingY > 0) && (
+                  <p className="text-slate-600 dark:text-slate-300">
+                    <span className="text-slate-500 dark:text-slate-400">Padding:</span>{' '}
+                    <span className="font-mono text-amber-500 dark:text-amber-400">
+                      {gridCalc.paddingNearX.toFixed(1)}/{gridCalc.paddingFarX.toFixed(1)}mm (L/R), {gridCalc.paddingNearY.toFixed(1)}/{gridCalc.paddingFarY.toFixed(1)}mm (F/B)
+                    </span>
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </CollapsibleSection>
 
       {/* Printer Bed Splitting Section */}
-      <CollapsibleSection title="Printer Bed Splitting" icon="✂️">
-        <ToggleInput
-          label="Enable Printer Bed Splitting"
-          value={config.splitEnabled}
-          onChange={(v) => update('splitEnabled', v)}
-        />
-        <p className="text-xs text-slate-500 dark:text-slate-500">
-          Split large baseplates into smaller segments that fit on your 3D printer bed.
-        </p>
+      <CollapsibleSection title="Printer Bed Splitting" icon="✂️" compact>
+        <div className="space-y-2">
+          <div className="[&>div]:space-y-1">
+            <ToggleInput
+              label="Enable Printer Bed Splitting"
+              value={config.splitEnabled}
+              onChange={(v) => update('splitEnabled', v)}
+            />
+          </div>
+          <p className="text-[10px] text-slate-500 dark:text-slate-500 leading-tight -mt-1">
+            Split large baseplates into smaller segments that fit on your 3D printer bed.
+          </p>
 
-        {config.splitEnabled && (
-          <>
-            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
-              <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">PRINTER BED SIZE</h4>
-              <NumberInput
-                label="Bed Width"
-                value={config.printerBedWidth}
-                min={50}
-                max={1000}
-                step={5}
-                unit="mm"
-                onChange={(v) => update('printerBedWidth', v)}
-              />
-              <NumberInput
-                label="Bed Depth"
-                value={config.printerBedDepth}
-                min={50}
-                max={1000}
-                step={5}
-                unit="mm"
-                onChange={(v) => update('printerBedDepth', v)}
-              />
-              <p className="text-xs text-slate-500 dark:text-slate-500">
-                Common sizes: Ender 3 (220x220), Prusa MK3 (250x210), Bambu X1 (256x256)
-              </p>
-            </div>
-
-            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
-              <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">INTERLOCKING EDGES</h4>
-              <ToggleInput
-                label="Enable Interlocking Edges"
-                value={config.connectorEnabled}
-                onChange={updateConnectorEnabled}
-              />
-              <p className="text-xs text-slate-500 dark:text-slate-500">
-                Add male/female interlocking edges between segments - snaps together without separate connectors. Edge pattern is fixed to Wine Glass (Swoopy Bulb) in Easy mode.
-              </p>
-            </div>
-
-            {/* Split Calculation Preview */}
-            {splitCalc && (
-              <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
-                <h4 className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 mb-2">SPLIT PREVIEW</h4>
-                <div className="space-y-1 text-xs">
-                  {splitCalc.needsSplit ? (
-                    <>
-                      <p className="text-slate-300">
-                        <span className="text-slate-500">Segments:</span>{' '}
-                        <span className="font-mono text-cyan-300">
-                          {splitCalc.segmentsX} x {splitCalc.segmentsY}
-                        </span>{' '}
-                        ({splitCalc.totalSegments} pieces)
-                      </p>
-                      <p className="text-slate-300">
-                        <span className="text-slate-500">Max segment size:</span>{' '}
-                        <span className="font-mono">
-                          {splitCalc.maxSegmentUnitsX} x {splitCalc.maxSegmentUnitsY} units
-                        </span>
-                      </p>
-                      <p className="text-slate-300">
-                        <span className="text-slate-500">Segment dimensions:</span>{' '}
-                        <span className="font-mono">
-                          {(splitCalc.maxSegmentUnitsX * config.gridSize).toFixed(0)}mm x {(splitCalc.maxSegmentUnitsY * config.gridSize).toFixed(0)}mm
-                        </span>
-                      </p>
-                      {config.connectorEnabled && (
-                        <p className="text-emerald-400 mt-2">
-                          Interlocking edges enabled with Wine Glass pattern
-                        </p>
-                      )}
-                      
-                      {/* Simple grid preview */}
-                      {!config.connectorEnabled && (
-                        <div className="mt-3 p-2 bg-slate-200 dark:bg-slate-800 rounded">
-                          <p className="text-slate-600 dark:text-slate-500 text-[10px] mb-1">Segment Layout:</p>
-                          <div 
-                            className="grid gap-1" 
-                            style={{ 
-                              gridTemplateColumns: `repeat(${splitCalc.segmentsX}, 1fr)`,
-                              maxWidth: '150px'
-                            }}
-                          >
-                            {splitCalc.segments.flat().map((seg, i) => (
-                              <div 
-                                key={i}
-                                className="bg-cyan-600/30 border border-cyan-500/50 rounded text-[8px] text-center py-1 text-cyan-300"
-                              >
-                                {seg.gridUnitsX}x{seg.gridUnitsY}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-emerald-400">
-                      No splitting needed - baseplate fits on printer bed!
-                    </p>
-                  )}
+          {config.splitEnabled && (
+            <>
+              <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                <h4 className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1.5">PRINTER BED SIZE</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="[&>div]:space-y-1">
+                    <NumberInput
+                      label="Bed Width"
+                      value={config.printerBedWidth}
+                      min={50}
+                      max={1000}
+                      step={5}
+                      unit="mm"
+                      onChange={(v) => update('printerBedWidth', v)}
+                    />
+                  </div>
+                  <div className="[&>div]:space-y-1">
+                    <NumberInput
+                      label="Bed Depth"
+                      value={config.printerBedDepth}
+                      min={50}
+                      max={1000}
+                      step={5}
+                      unit="mm"
+                      onChange={(v) => update('printerBedDepth', v)}
+                    />
+                  </div>
                 </div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-500 leading-tight mt-1">
+                  Common sizes: Ender 3 (220x220), Prusa MK3 (250x210), Bambu X1 (256x256)
+                </p>
               </div>
-            )}
-          </>
-        )}
+
+              <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                <h4 className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1.5">INTERLOCKING EDGES</h4>
+                <div className="[&>div]:space-y-1">
+                  <ToggleInput
+                    label="Enable Interlocking Edges"
+                    value={config.connectorEnabled}
+                    onChange={updateConnectorEnabled}
+                  />
+                </div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-500 leading-tight mt-1">
+                  Add male/female interlocking edges between segments - snaps together without separate connectors. Edge pattern is fixed to Wine Glass (Swoopy Bulb) in Easy mode.
+                </p>
+              </div>
+
+              {/* Split Calculation Preview - More Compact */}
+              {splitCalc && (
+                <div className="mt-2 p-2 bg-slate-100 dark:bg-slate-700/50 rounded border border-slate-200 dark:border-slate-600">
+                  <h4 className="text-[10px] font-semibold text-cyan-600 dark:text-cyan-400 mb-1.5">SPLIT PREVIEW</h4>
+                  <div className="space-y-0.5 text-[10px] leading-tight">
+                    {splitCalc.needsSplit ? (
+                      <>
+                        <p className="text-slate-600 dark:text-slate-300">
+                          <span className="text-slate-500 dark:text-slate-400">Segments:</span>{' '}
+                          <span className="font-mono text-cyan-600 dark:text-cyan-400">
+                            {splitCalc.segmentsX} x {splitCalc.segmentsY}
+                          </span>{' '}
+                          ({splitCalc.totalSegments} pieces)
+                        </p>
+                        <p className="text-slate-600 dark:text-slate-300">
+                          <span className="text-slate-500 dark:text-slate-400">Max segment:</span>{' '}
+                          <span className="font-mono">
+                            {splitCalc.maxSegmentUnitsX} x {splitCalc.maxSegmentUnitsY} units
+                          </span>
+                        </p>
+                        <p className="text-slate-600 dark:text-slate-300">
+                          <span className="text-slate-500 dark:text-slate-400">Dimensions:</span>{' '}
+                          <span className="font-mono">
+                            {(splitCalc.maxSegmentUnitsX * config.gridSize).toFixed(0)}mm x {(splitCalc.maxSegmentUnitsY * config.gridSize).toFixed(0)}mm
+                          </span>
+                        </p>
+                        {config.connectorEnabled && (
+                          <p className="text-emerald-500 dark:text-emerald-400 mt-1">
+                            Interlocking edges enabled with Wine Glass pattern
+                          </p>
+                        )}
+                        
+                        {/* Simple grid preview */}
+                        {!config.connectorEnabled && (
+                          <div className="mt-2 p-1.5 bg-slate-200 dark:bg-slate-800 rounded">
+                            <p className="text-slate-600 dark:text-slate-500 text-[9px] mb-1">Segment Layout:</p>
+                            <div 
+                              className="grid gap-0.5" 
+                              style={{ 
+                                gridTemplateColumns: `repeat(${splitCalc.segmentsX}, 1fr)`,
+                                maxWidth: '120px'
+                              }}
+                            >
+                              {splitCalc.segments.flat().map((seg, i) => (
+                                <div 
+                                  key={i}
+                                  className="bg-cyan-600/30 border border-cyan-500/50 rounded text-[7px] text-center py-0.5 text-cyan-600 dark:text-cyan-400"
+                                >
+                                  {seg.gridUnitsX}x{seg.gridUnitsY}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-emerald-500 dark:text-emerald-400">
+                        No splitting needed - baseplate fits on printer bed!
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </CollapsibleSection>
     </div>
   );
@@ -2885,28 +2933,30 @@ function CollapsibleSection({
   icon, 
   children, 
   defaultOpen = false,
-  wip = false
+  wip = false,
+  compact = false
 }: { 
   title: string; 
   icon: string; 
   children: React.ReactNode; 
   defaultOpen?: boolean;
   wip?: boolean;
+  compact?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
     <div className={`rounded-lg bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200/30 dark:border-slate-700/30 overflow-hidden ${wip ? 'opacity-60' : ''}`}>
       <button
-        className="w-full px-3 py-2.5 flex items-center justify-between text-left hover:bg-slate-200/50 dark:hover:bg-slate-700/30 transition-colors"
+        className={`w-full flex items-center justify-between text-left hover:bg-slate-200/50 dark:hover:bg-slate-700/30 transition-colors ${compact ? 'px-2 py-1.5' : 'px-3 py-2.5'}`}
         onClick={() => setIsOpen(!isOpen)}
       >
-        <h3 className={`text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 ${wip ? 'italic' : ''}`}>
+        <h3 className={`${compact ? 'text-xs' : 'text-sm'} font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 ${wip ? 'italic' : ''}`}>
           <span>{icon}</span>
           {title}
         </h3>
         <svg 
-          className={`w-4 h-4 text-slate-500 dark:text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`${compact ? 'w-3 h-3' : 'w-4 h-4'} text-slate-500 dark:text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none" 
           viewBox="0 0 24 24" 
           stroke="currentColor"
@@ -2915,7 +2965,7 @@ function CollapsibleSection({
         </svg>
       </button>
       {isOpen && (
-        <div className="px-3 pb-3 pt-1.5 space-y-3 border-t border-slate-200/30 dark:border-slate-700/30">
+        <div className={`${compact ? 'px-2 pb-2 pt-1' : 'px-3 pb-3 pt-1.5'} ${compact ? 'space-y-2' : 'space-y-3'} border-t border-slate-200/30 dark:border-slate-700/30`}>
           {children}
         </div>
       )}
