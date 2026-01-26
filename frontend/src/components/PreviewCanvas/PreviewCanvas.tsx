@@ -18,6 +18,8 @@ interface PreviewCanvasProps {
   boxConfig?: BoxConfig;
   baseplateConfig?: BaseplateConfig;
   hideLoadingOverlay?: boolean;
+  isDownloadingBox?: boolean;
+  isDownloadingBaseplate?: boolean;
 }
 
 export function PreviewCanvas({ 
@@ -28,7 +30,9 @@ export function PreviewCanvas({
   isCombinedView = false,
   boxConfig,
   baseplateConfig,
-  hideLoadingOverlay = false
+  hideLoadingOverlay = false,
+  isDownloadingBox = false,
+  isDownloadingBaseplate = false
 }: PreviewCanvasProps) {
   const [boxZOffset, setBoxZOffset] = useState(0); // mm offset for box position
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -82,6 +86,10 @@ export function PreviewCanvas({
   const controlHeight = 150; // Approximate height
   const padding = 16; // 1rem = 16px
   const exportButtonsHeight = 200; // Approximate height of export buttons area at bottom
+  const loadingIndicatorHeight = 80; // Approximate height of loading indicator
+  
+  // Check if downloading
+  const isDownloading = isDownloadingBox || isDownloadingBaseplate;
   
   // Use container dimensions instead of window dimensions
   const availableWidth = containerSize.width;
@@ -100,14 +108,28 @@ export function PreviewCanvas({
   }
   
   // Check if there's enough vertical space
-  if (availableHeight < controlHeight + padding * 2) {
+  // When downloading, push Position Control down by the loading indicator height
+  const topOffset = isDownloading ? loadingIndicatorHeight + padding : 0;
+  if (availableHeight < controlHeight + padding * 2 + topOffset) {
     // Not enough vertical space, move down (but above export buttons)
     positionControlStyle.top = 'auto';
     positionControlStyle.bottom = `${exportButtonsHeight + padding}px`;
   } else {
-    positionControlStyle.top = `${padding}px`;
+    positionControlStyle.top = `${padding + topOffset}px`;
     positionControlStyle.bottom = 'auto';
   }
+  
+  // Loading indicator style (positioned above Position Control)
+  const loadingIndicatorStyle: React.CSSProperties = {};
+  if (availableWidth < controlWidth + padding * 2) {
+    loadingIndicatorStyle.right = 'auto';
+    loadingIndicatorStyle.left = `${padding}px`;
+  } else {
+    const maxRight = availableWidth - controlWidth - padding;
+    loadingIndicatorStyle.right = `${Math.max(padding, maxRight)}px`;
+    loadingIndicatorStyle.left = 'auto';
+  }
+  loadingIndicatorStyle.top = `${padding}px`;
 
   return (
     <div ref={containerRef} className="w-full h-full bg-gradient-to-b from-slate-100 to-white dark:from-slate-900 dark:to-slate-950 relative">
@@ -167,6 +189,30 @@ export function PreviewCanvas({
           )}
         </Suspense>
       </Canvas>
+
+      {/* Download Loading Indicator - appears above Position Control */}
+      {isCombinedView && hasModel && isDownloading && (
+        <div 
+          className="absolute w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm rounded-xl border border-slate-200 dark:border-slate-700 p-4 z-10 shadow-lg"
+          style={loadingIndicatorStyle}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 border-2 border-green-500/30 dark:border-green-500/30 border-t-green-500 dark:border-t-green-500 rounded-full animate-spin flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                {isDownloadingBox && isDownloadingBaseplate 
+                  ? 'Downloading...' 
+                  : isDownloadingBox 
+                    ? 'Downloading Box' 
+                    : 'Downloading Baseplate'}
+              </div>
+              <div className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                Preparing STL file...
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Combined View Controls */}
       {isCombinedView && hasModel && (

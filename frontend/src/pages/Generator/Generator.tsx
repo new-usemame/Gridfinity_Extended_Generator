@@ -25,7 +25,7 @@ export function Generator() {
   const [pendingSaveAfterAuth, setPendingSaveAfterAuth] = useState(false);
   const savedConfigsDropdownRef = useRef<SavedConfigsDropdownRef>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [mode, setMode] = useState<'easy' | 'pro' | 'expert'>('pro');
+  const [mode, setMode] = useState<'easy' | 'pro' | 'expert'>('easy');
 
   // Enforce hardcoded values when in Easy/Pro mode
   useEffect(() => {
@@ -133,6 +133,8 @@ export function Generator() {
   const [generateBaseplate, setGenerateBaseplate] = useState(true);
   const [isDownloadDropdownOpen, setIsDownloadDropdownOpen] = useState(false);
   const downloadDropdownRef = useRef<HTMLDivElement>(null);
+  const [isDownloadingBox, setIsDownloadingBox] = useState(false);
+  const [isDownloadingBaseplate, setIsDownloadingBaseplate] = useState(false);
 
   // Server-side generation
   const handleServerGenerate = useCallback(async () => {
@@ -388,69 +390,96 @@ export function Generator() {
   }, [isDownloadDropdownOpen]);
 
   // Download handlers
-  const handleDownloadBox = () => {
+  const handleDownloadBox = async () => {
     if (!boxResult) return;
-    const link = document.createElement('a');
-    link.href = boxResult.stlUrl;
-    link.download = boxResult.filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    setIsDownloadingBox(true);
     setIsDownloadDropdownOpen(false);
-  };
-
-  const handleDownloadBaseplate = () => {
-    if (!baseplateResult && !multiSegmentResult) return;
     
-    if (multiSegmentResult) {
-      // Handle multi-segment download
-      const downloadAllSequentially = async () => {
-        try {
-          const response = await fetch('/api/generate/segments-zip', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              config: baseplateConfig
-            })
-          });
-          
-          if (!response.ok) {
-            throw new Error('Failed to generate zip file');
-          }
-          
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `baseplate_segments_${Date.now()}.zip`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-        } catch (err) {
-          console.error('Failed to download zip:', err);
-          // Fallback to single segment if available
-          if (baseplateResult) {
-            const link = document.createElement('a');
-            link.href = baseplateResult.stlUrl;
-            link.download = baseplateResult.filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }
-        }
-      };
-      downloadAllSequentially();
-    } else if (baseplateResult) {
-      // Handle single baseplate download
+    try {
+      // Fetch the file to ensure it's ready
+      const response = await fetch(boxResult.stlUrl);
+      if (!response.ok) throw new Error('Failed to fetch STL');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = baseplateResult.stlUrl;
-      link.download = baseplateResult.filename;
+      link.href = url;
+      link.download = boxResult.filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download box:', err);
+      // Fallback to direct link
+      const link = document.createElement('a');
+      link.href = boxResult.stlUrl;
+      link.download = boxResult.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      setIsDownloadingBox(false);
     }
+  };
+
+  const handleDownloadBaseplate = async () => {
+    if (!baseplateResult && !multiSegmentResult) return;
+    
+    setIsDownloadingBaseplate(true);
     setIsDownloadDropdownOpen(false);
+    
+    try {
+      if (multiSegmentResult) {
+        // Handle multi-segment download
+        const response = await fetch('/api/generate/segments-zip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            config: baseplateConfig
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to generate zip file');
+        }
+        
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `baseplate_segments_${Date.now()}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } else if (baseplateResult) {
+        // Handle single baseplate download
+        const response = await fetch(baseplateResult.stlUrl);
+        if (!response.ok) throw new Error('Failed to fetch STL');
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = baseplateResult.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error('Failed to download baseplate:', err);
+      // Fallback to direct link if available
+      if (baseplateResult) {
+        const link = document.createElement('a');
+        link.href = baseplateResult.stlUrl;
+        link.download = baseplateResult.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } finally {
+      setIsDownloadingBaseplate(false);
+    }
   };
 
   // Handle file input change
@@ -857,6 +886,8 @@ export function Generator() {
               boxConfig={boxConfig}
               baseplateConfig={baseplateConfig}
               hideLoadingOverlay={isGenerating}
+              isDownloadingBox={isDownloadingBox}
+              isDownloadingBaseplate={isDownloadingBaseplate}
             />
             
             {/* 2048 Game Overlay - shown during generation */}
